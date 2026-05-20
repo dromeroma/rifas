@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -21,7 +22,8 @@ settings = get_settings()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Hook de arranque/cierre (migrations, cache warm-up, etc.)
+    # Asegura que el directorio de uploads exista (en Render free es /tmp/uploads)
+    Path(settings.upload_dir).mkdir(parents=True, exist_ok=True)
     yield
 
 

@@ -1,0 +1,55 @@
+# Infraestructura como código para Render.
+# Permite importar este archivo en render.com → Blueprints, en vez de configurar
+# el servicio manualmente.
+#
+# Ver: https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    name: rifas-backend
+    runtime: python
+    plan: free
+    region: oregon
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: "false"
+      - key: PYTHON_VERSION
+        value: 3.12.0
+
+      # Estas se DEBEN configurar en el dashboard de Render (no se comprometen al repo):
+      - key: DATABASE_URL
+        sync: false
+      - key: ALEMBIC_DATABASE_URL
+        sync: false
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: FRONTEND_URL
+        sync: false        # se llena con la URL de Vercel cuando esté lista
+      - key: CORS_ORIGINS
+        sync: false        # idem
+      - key: RESEND_ENABLED
+        value: "true"
+      - key: RESEND_API_KEY
+        sync: false
+      - key: RESEND_FROM_EMAIL
+        value: onboarding@resend.dev
+      - key: RESEND_FROM_NAME
+        value: Loterías y Rifas 2026
+      - key: ADMIN_NOTIFY_EMAIL
+        sync: false
+
+      - key: UPLOAD_DIR
+        value: /tmp/uploads        # filesystem efímero en plan free; ver docs/deploy.md
+      - key: MAX_UPLOAD_MB
+        value: "10"
+      - key: RESERVATION_HOURS
+        value: "24"
+      - key: LOCK_DAYS_BEFORE_DRAW
+        value: "7"
