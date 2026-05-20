@@ -17,12 +17,20 @@ from app.models.raffle import Raffle
 from app.models.ticket import Ticket
 from app.models.user import User, UserRole
 from app.schemas.payment import PaymentListItem, PaymentOut, PaymentRejection
+from app.models.prize import Prize
+from app.models.ticket_number import TicketNumber
 from app.services.audit_service import log_action
+from app.services.email_service import (
+    send_admin_pending_payment_email,
+    send_ticket_paid_email,
+)
+from app.services.image_service import build_ticket_image
 from app.services.payment_service import (
     confirm_payment,
     reject_payment,
     submit_payment,
 )
+from app.services.qr_service import build_verify_url
 
 settings = get_settings()
 router = APIRouter(prefix="/payments", tags=["payments"])
@@ -73,6 +81,27 @@ async def submit_payment_endpoint(
     )
     await db.commit()
     await db.refresh(payment)
+
+    # Notificación al admin (best-effort, no falla la transacción)
+    try:
+        customer = (await db.execute(select(Customer).where(Customer.id == payment.customer_id))).scalar_one()
+        raffle = (await db.execute(select(Raffle).where(Raffle.id == ticket.raffle_id))).scalar_one()
+        seller = None
+        if payment.seller_id:
+            seller = (await db.execute(select(User).where(User.id == payment.seller_id))).scalar_one_or_none()
+        await send_admin_pending_payment_email(
+            raffle_name=raffle.name,
+            ticket_label=ticket.number_label,
+            customer_name=customer.full_name,
+            customer_phone=customer.phone,
+            seller_name=seller.full_name if seller else None,
+            amount=float(payment.amount),
+            method=payment.method.value,
+            reference=payment.reference,
+        )
+    except Exception:
+        pass  # no romper la respuesta por un email
+
     return payment
 
 
@@ -173,6 +202,65 @@ async def confirm_payment_endpoint(
     )
     await db.commit()
     await db.refresh(payment)
+
+    # Email al cliente con la boleta (best-effort)
+    try:
+        customer = (await db.execute(select(Customer).where(Customer.id == payment.customer_id))).scalar_one()
+        if customer.email:
+            raffle = (
+                await db.execute(
+                    select(Raffle).options(selectinload(Raffle.prizes)).where(Raffle.id == ticket.raffle_id)
+                )
+            ).scalar_one()
+            # Cargar números ordenados
+            tn_rows = (
+                await db.execute(
+                    select(TicketNumber).where(TicketNumber.ticket_id == ticket.id).order_by(TicketNumber.position)
+                )
+            ).scalars().all()
+            numbers_ordered = [n.number for n in tn_rows]
+
+            prizes = [{"name": p.name, "draw_date": p.draw_date.isoformat()} for p in raffle.prizes]
+            verify_url = f"{settings.frontend_url}/verify/{ticket.code}"
+
+            # Generar imagen de boleta para adjuntar
+            image_png = None
+            try:
+                image_png = build_ticket_image(
+                    raffle_name=raffle.name,
+                    ticket_label=ticket.number_label,
+                    ticket_code=ticket.code,
+                    numbers=numbers_ordered,
+                    prizes=prizes,
+                    customer_name=customer.full_name,
+                    is_paid=True,
+                    primary_color=raffle.primary_color,
+                    lottery_name=raffle.lottery_name,
+                    responsible_name=raffle.responsible_name,
+                    responsible_phone=raffle.responsible_phone,
+                    final_draw_date=raffle.final_draw_date.isoformat(),
+                )
+            except Exception:
+                pass  # adjuntar imagen es opcional
+
+            await send_ticket_paid_email(
+                to_email=customer.email,
+                customer_name=customer.full_name,
+                raffle_name=raffle.name,
+                ticket_label=ticket.number_label,
+                ticket_code=ticket.code,
+                numbers=sorted(numbers_ordered),
+                prizes=prizes,
+                final_draw_date=raffle.final_draw_date.isoformat(),
+                lottery_name=raffle.lottery_name,
+                responsible_name=raffle.responsible_name,
+                responsible_phone=raffle.responsible_phone,
+                verify_url=verify_url,
+                image_png=image_png,
+            )
+    except Exception:
+        pass
+
     return payment
 
 

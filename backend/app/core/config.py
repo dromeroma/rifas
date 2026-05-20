@@ -54,6 +54,13 @@ class Settings(BaseSettings):
     reservation_hours: int = 24
     lock_days_before_draw: int = 7
 
+    # Resend (emails)
+    resend_enabled: bool = False
+    resend_api_key: str = ""
+    resend_from_email: str = "onboarding@resend.dev"
+    resend_from_name: str = "Sistema de Rifas"
+    admin_notify_email: str = ""
+
     @cached_property
     def cors_origins(self) -> List[str]:
         return [o.strip() for o in self.cors_origins_raw.split(",") if o.strip()]
