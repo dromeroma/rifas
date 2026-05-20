@@ -47,6 +47,7 @@ async def create_raffle(
         ticket_price=payload.ticket_price,
         seller_commission=payload.seller_commission,
         commission_tiers=tiers_data,
+        min_paid_threshold=payload.min_paid_threshold,
         final_draw_date=payload.final_draw_date,
         logo_url=payload.logo_url,
         primary_color=payload.primary_color,

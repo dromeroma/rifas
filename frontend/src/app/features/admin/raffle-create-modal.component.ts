@@ -94,8 +94,14 @@ interface TierForm {
             }
           </div>
 
-          <app-input label="Precio por boleta (COP) *" type="number" inputmode="numeric"
-                      [(ngModel)]="form.ticket_price" name="ticket_price" icon="payments" />
+          <div class="row">
+            <app-input label="Precio por boleta (COP) *" type="number" inputmode="numeric"
+                        [(ngModel)]="form.ticket_price" name="ticket_price" icon="payments" />
+            <app-input label="Umbral para sortear *" type="number" inputmode="numeric"
+                        [(ngModel)]="form.min_paid_threshold" name="min_paid_threshold"
+                        icon="flag"
+                        hint="Boletas pagadas mínimas para habilitar el botón 'Registrar ganador'. Editable luego." />
+          </div>
         </section>
 
         <!-- ============ COMISIÓN VENDEDOR ============ -->
@@ -400,6 +406,7 @@ export class RaffleCreateModalComponent {
     seller_commission: number;
     useTiers: boolean;
     commission_tiers: TierForm[];
+    min_paid_threshold: number;
     final_draw_date: string;
     primary_color: string;
     lottery_name: string;
@@ -444,6 +451,7 @@ export class RaffleCreateModalComponent {
         { from_count: 31, to_count: 50,   amount_per_ticket: 4000 },
         { from_count: 51, to_count: null, amount_per_ticket: 5000 },
       ],
+      min_paid_threshold: 200,
       final_draw_date: inThreeMonths.toISOString().slice(0, 10),
       primary_color: '#1e8e54',
       lottery_name: '',
@@ -553,6 +561,10 @@ export class RaffleCreateModalComponent {
       this.error.set('El precio de la boleta debe ser mayor a cero.');
       return;
     }
+    if (!this.form.min_paid_threshold || this.form.min_paid_threshold < 1) {
+      this.error.set('El umbral para sortear debe ser al menos 1 boleta.');
+      return;
+    }
     if (!this.mathValid()) {
       this.error.set('La matemática no cuadra: revisa total de boletas, números por boleta y el rango.');
       return;
@@ -623,6 +635,7 @@ export class RaffleCreateModalComponent {
         number_max: Number(this.form.number_max),
         number_digits: Number(this.form.number_digits),
         ticket_price: Number(this.form.ticket_price),
+        min_paid_threshold: Number(this.form.min_paid_threshold),
         seller_commission: this.form.useTiers ? 0 : Number(this.form.seller_commission || 0),
         commission_tiers: this.form.useTiers
           ? this.form.commission_tiers.map(t => ({

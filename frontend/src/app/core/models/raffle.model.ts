@@ -42,6 +42,7 @@ export interface Raffle {
   ticket_price: number;
   seller_commission: number;
   commission_tiers?: CommissionTier[] | null;
+  min_paid_threshold: number;
   final_draw_date: string;
   status: RaffleStatus;
   numbers_generated: boolean;
@@ -60,6 +61,7 @@ export interface RaffleUpdatePayload {
   name?: string;
   description?: string | null;
   final_draw_date?: string;
+  min_paid_threshold?: number;
   logo_url?: string | null;
   primary_color?: string | null;
   lottery_name?: string | null;

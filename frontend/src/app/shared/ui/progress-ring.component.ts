@@ -8,7 +8,7 @@ import { Component, computed, input } from '@angular/core';
   template: `
     <div class="ring" [style.--size.px]="size()" [style.--pct]="clamped()" [style.--stroke]="color()">
       <div class="ring__inner">
-        <strong class="tabular">{{ clamped() }}%</strong>
+        <strong class="tabular">{{ display() }}%</strong>
         @if (label()) { <small>{{ label() }}</small> }
       </div>
     </div>
@@ -47,5 +47,15 @@ export class ProgressRingComponent {
   readonly size = input<number>(96);
   readonly color = input<string>('var(--accent)');
 
-  readonly clamped = computed(() => Math.max(0, Math.min(100, Math.round(this.value()))));
+  readonly clamped = computed(() => Math.max(0, Math.min(100, this.value())));
+
+  /** Texto del porcentaje: muestra hasta 2 decimales, sin ceros sobrantes
+   *  (100 → "100", 22.34 → "22,34", 22.3 → "22,3"). */
+  readonly display = computed(() => {
+    const v = this.clamped();
+    return new Intl.NumberFormat('es-CO', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    }).format(v);
+  });
 }

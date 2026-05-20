@@ -20,9 +20,6 @@ from app.services.commission_service import (
     resolve_commission_amount,
 )
 
-# Umbral por defecto para "ya se puede correr el sorteo".
-MIN_PAID_THRESHOLD = 200
-
 router = APIRouter(tags=["stats"])
 
 
@@ -82,7 +79,7 @@ async def raffle_stats(
             seconds_remaining=max(secs, 0),
         )
 
-    threshold = MIN_PAID_THRESHOLD
+    threshold = raffle.min_paid_threshold or 0
     return RaffleStats(
         raffle_id=raffle.id,
         total_tickets=raffle.total_tickets,
@@ -95,7 +92,7 @@ async def raffle_stats(
         revenue_potential=revenue_potential,
         can_run_draw=sold >= threshold,
         min_threshold=threshold,
-        threshold_progress_pct=round(min(sold / threshold * 100, 100), 1) if threshold else 0,
+        threshold_progress_pct=round(min(sold / threshold * 100, 100), 2) if threshold else 0,
         next_draw=next_draw,
         final_draw_date=raffle.final_draw_date,
         days_to_final_draw=max((raffle.final_draw_date - today).days, 0),

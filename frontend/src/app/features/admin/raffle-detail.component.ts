@@ -76,7 +76,10 @@ import { TicketActionsModalComponent } from '../seller/ticket-actions-modal.comp
             } @else {
               <div class="threshold">
                 <strong>Faltan {{ st.min_threshold - st.sold }}</strong>
-                <small class="muted">{{ st.sold }} / {{ st.min_threshold }} pagadas</small>
+                <small class="muted">
+                  {{ st.sold }} / {{ st.min_threshold }} pagadas ·
+                  {{ pct(st.threshold_progress_pct) }}%
+                </small>
               </div>
             }
           </section>
@@ -215,6 +218,9 @@ import { TicketActionsModalComponent } from '../seller/ticket-actions-modal.comp
           <app-input label="Nombre de la rifa" [(ngModel)]="edit.name" name="name" icon="title" />
           <app-input label="Lotería con la que juega" [(ngModel)]="edit.lottery_name" name="lottery_name" icon="casino"
                       hint="Ej: Lotería de Bogotá, Lotería del Cauca, etc." />
+          <app-input label="Umbral para sortear" type="number" inputmode="numeric"
+                      [(ngModel)]="edit.min_paid_threshold" name="min_paid_threshold" icon="flag"
+                      hint="Boletas pagadas mínimas para habilitar 'Registrar ganador'." />
           <div class="form-row">
             <app-input label="Responsable" [(ngModel)]="edit.responsible_name" name="responsible_name" icon="person" />
             <app-input label="Teléfono de contacto" [(ngModel)]="edit.responsible_phone" name="responsible_phone" icon="phone" inputmode="tel" />
@@ -482,13 +488,15 @@ export class RaffleDetailComponent implements OnInit {
   edit: {
     name: string;
     lottery_name: string;
+    min_paid_threshold: number;
     responsible_name: string;
     responsible_phone: string;
     responsible_email: string;
     primary_color: string;
     terms: string;
   } = {
-    name: '', lottery_name: '', responsible_name: '',
+    name: '', lottery_name: '', min_paid_threshold: 200,
+    responsible_name: '',
     responsible_phone: '', responsible_email: '',
     primary_color: '', terms: '',
   };
@@ -649,6 +657,7 @@ export class RaffleDetailComponent implements OnInit {
     this.edit = {
       name: r.name,
       lottery_name: r.lottery_name ?? '',
+      min_paid_threshold: r.min_paid_threshold ?? 200,
       responsible_name: r.responsible_name ?? '',
       responsible_phone: r.responsible_phone ?? '',
       responsible_email: r.responsible_email ?? '',
@@ -662,10 +671,15 @@ export class RaffleDetailComponent implements OnInit {
   saveEdit() {
     const id = this.raffle()?.id;
     if (!id) return;
+    if (!this.edit.min_paid_threshold || this.edit.min_paid_threshold < 1) {
+      this.toast.error('Umbral inválido', 'El umbral para sortear debe ser al menos 1 boleta.');
+      return;
+    }
     this.savingEdit.set(true);
     const payload = {
       name: this.edit.name || undefined,
       lottery_name: this.edit.lottery_name || null,
+      min_paid_threshold: Number(this.edit.min_paid_threshold),
       responsible_name: this.edit.responsible_name || null,
       responsible_phone: this.edit.responsible_phone || null,
       responsible_email: this.edit.responsible_email || null,
@@ -688,5 +702,14 @@ export class RaffleDetailComponent implements OnInit {
 
   fmt(v: number): string {
     return new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 }).format(v);
+  }
+
+  /** Porcentaje con hasta 2 decimales. */
+  pct(v: number | null | undefined): string {
+    if (v == null) return '0';
+    return new Intl.NumberFormat('es-CO', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(Number(v));
   }
 }

@@ -40,6 +40,9 @@ class Raffle(Base, TimestampMixin):
     ticket_price: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False)
     seller_commission: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False, default=0)
 
+    # Umbral de boletas pagadas para poder lanzar el sorteo (editable).
+    min_paid_threshold: Mapped[int] = mapped_column(Integer, nullable=False, default=200)
+
     # Comisión escalonada por tramos. Inmutable después de crear la rifa.
     # Estructura: [{"from_count": 1, "to_count": 30, "amount_per_ticket": 3000}, ...]
     # to_count=null en el último tramo indica "sin límite superior".

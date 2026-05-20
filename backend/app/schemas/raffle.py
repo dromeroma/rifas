@@ -77,6 +77,7 @@ class RaffleCreate(BaseModel):
     ticket_price: Decimal = Field(gt=0)
     seller_commission: Decimal = Field(ge=0, default=0)
     commission_tiers: Optional[List[CommissionTier]] = Field(default=None)
+    min_paid_threshold: int = Field(ge=1, default=200, description="Boletas pagadas mínimas para poder lanzar el sorteo")
     final_draw_date: date
     logo_url: Optional[str] = None
     primary_color: Optional[str] = None
@@ -108,6 +109,7 @@ class RaffleUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
     final_draw_date: Optional[date] = None
+    min_paid_threshold: Optional[int] = Field(default=None, ge=1)
     logo_url: Optional[str] = None
     primary_color: Optional[str] = None
     lottery_name: Optional[str] = None
@@ -129,6 +131,7 @@ class RaffleOut(BaseModel):
     ticket_price: Decimal
     seller_commission: Decimal
     commission_tiers: Optional[List[CommissionTier]] = None
+    min_paid_threshold: int = 200
     final_draw_date: date
     status: RaffleStatus
     numbers_generated: bool
