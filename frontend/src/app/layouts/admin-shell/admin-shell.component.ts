@@ -123,7 +123,7 @@ export class AdminShellComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    if (!this.user()) this.auth.loadUser();
+    if (!this.user()) this.auth.loadUser().subscribe();
   }
 
   toggleSidebar() { this.collapsed.update((v) => !v); }

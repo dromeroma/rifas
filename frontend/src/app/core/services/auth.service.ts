@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { Observable, switchMap, tap } from 'rxjs';
+import { Observable, catchError, of, shareReplay, switchMap, tap } from 'rxjs';
 
 import { environment } from '@env/environment';
 import { TokenPair, User } from '../models/user.model';
@@ -18,8 +18,19 @@ export class AuthService {
   readonly isAuthenticated = computed(() => !!this.user());
   readonly role = computed(() => this.user()?.role ?? null);
 
+  /** Carga en curso de /auth/me, compartida para evitar múltiples requests simultáneos. */
+  private loadInFlight$: Observable<User | null> | null = null;
+
   get accessToken(): string | null {
     return localStorage.getItem(ACCESS_KEY);
+  }
+
+  /**
+   * Landing por rol. Si no hay rol cargado, default al área de admin
+   * (el roleGuard de /admin redirigirá al vendedor si corresponde).
+   */
+  landingPath(): string {
+    return this.role() === 'seller' ? '/seller' : '/admin';
   }
 
   /**
@@ -40,18 +51,39 @@ export class AuthService {
       );
   }
 
-  loadUser(): void {
-    if (!this.accessToken) return;
-    this.http.get<User>(`${environment.apiUrl}/auth/me`).subscribe({
-      next: (u) => this.user.set(u),
-      error: () => this.logout(),
-    });
+  /**
+   * Carga el usuario actual con el token guardado. Devuelve el User o null
+   * si no hay token / el token ya no es válido (en cuyo caso cierra sesión).
+   * Múltiples llamadas concurrentes comparten un solo request en vuelo.
+   */
+  loadUser(): Observable<User | null> {
+    if (!this.accessToken) return of(null);
+    if (this.user()) return of(this.user());
+
+    if (!this.loadInFlight$) {
+      this.loadInFlight$ = this.http.get<User>(`${environment.apiUrl}/auth/me`).pipe(
+        tap((u) => this.user.set(u)),
+        catchError(() => {
+          this.clearSession();
+          return of(null);
+        }),
+        tap(() => (this.loadInFlight$ = null)),
+        shareReplay(1),
+      );
+    }
+    return this.loadInFlight$;
   }
 
-  logout(): void {
+  /** Limpia tokens y signal sin navegar (uso interno desde guards/interceptor). */
+  clearSession(): void {
     localStorage.removeItem(ACCESS_KEY);
     localStorage.removeItem(REFRESH_KEY);
     this.user.set(null);
+    this.loadInFlight$ = null;
+  }
+
+  logout(): void {
+    this.clearSession();
     this.router.navigate(['/login']);
   }
 }
