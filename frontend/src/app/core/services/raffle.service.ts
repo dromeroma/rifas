@@ -3,7 +3,10 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 
 import { environment } from '@env/environment';
-import { Raffle, RaffleUpdatePayload, Ticket } from '../models/raffle.model';
+import { Prize, Raffle, RaffleUpdatePayload, Ticket } from '../models/raffle.model';
+
+export type PrizeCreatePayload = Omit<Prize, 'id' | 'raffle_id' | 'winning_number'>;
+export type PrizeUpdatePayload = Partial<Omit<Prize, 'id' | 'raffle_id' | 'winning_number'>>;
 
 @Injectable({ providedIn: 'root' })
 export class RaffleService {
@@ -28,6 +31,18 @@ export class RaffleService {
 
   update(id: number, payload: RaffleUpdatePayload): Observable<Raffle> {
     return this.http.patch<Raffle>(`${this.base}/${id}`, payload);
+  }
+
+  addPrize(raffleId: number, payload: PrizeCreatePayload): Observable<Prize> {
+    return this.http.post<Prize>(`${this.base}/${raffleId}/prizes`, payload);
+  }
+
+  updatePrize(raffleId: number, prizeId: number, payload: PrizeUpdatePayload): Observable<Prize> {
+    return this.http.patch<Prize>(`${this.base}/${raffleId}/prizes/${prizeId}`, payload);
+  }
+
+  deletePrize(raffleId: number, prizeId: number): Observable<void> {
+    return this.http.delete<void>(`${this.base}/${raffleId}/prizes/${prizeId}`);
   }
 
   tickets(raffleId: number): Observable<Ticket[]> {

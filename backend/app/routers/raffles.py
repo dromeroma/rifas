@@ -11,7 +11,7 @@ from app.core.exceptions import ImmutableRaffleError
 from app.models.prize import Prize
 from app.models.raffle import Raffle
 from app.models.user import User, UserRole
-from app.schemas.raffle import PrizeCreate, PrizeOut, RaffleCreate, RaffleOut, RaffleUpdate
+from app.schemas.raffle import PrizeCreate, PrizeOut, PrizeUpdate, RaffleCreate, RaffleOut, RaffleUpdate
 from app.services.audit_service import log_action
 from app.services.number_generator import generate_raffle_numbers
 
@@ -141,7 +141,7 @@ async def add_prize(
     payload: PrizeCreate,
     request: Request,
     db: Annotated[AsyncSession, Depends(get_db)],
-    actor: Annotated[User, Depends(require_roles(UserRole.SUPER_ADMIN))],
+    actor: Annotated[User, Depends(require_roles(UserRole.ADMIN, UserRole.SUPER_ADMIN))],
 ):
     raffle = (await db.execute(select(Raffle).where(Raffle.id == raffle_id))).scalar_one_or_none()
     if not raffle:
@@ -156,3 +156,69 @@ async def add_prize(
     await db.commit()
     await db.refresh(prize)
     return prize
+
+
+@router.patch("/{raffle_id}/prizes/{prize_id}", response_model=PrizeOut)
+async def update_prize(
+    raffle_id: int,
+    prize_id: int,
+    payload: PrizeUpdate,
+    request: Request,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    actor: Annotated[User, Depends(require_roles(UserRole.ADMIN, UserRole.SUPER_ADMIN))],
+):
+    prize = (
+        await db.execute(select(Prize).where(Prize.id == prize_id, Prize.raffle_id == raffle_id))
+    ).scalar_one_or_none()
+    if not prize:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "premio no encontrado")
+
+    # No permitir cambios estructurales si ya tiene ganador registrado.
+    if prize.winning_number:
+        forbidden = {"position", "name", "draw_date"}
+        offending = [k for k in forbidden if getattr(payload, k) is not None]
+        if offending:
+            raise HTTPException(
+                status.HTTP_409_CONFLICT,
+                f"este premio ya tiene ganador; no se puede modificar: {', '.join(offending)}",
+            )
+
+    data = payload.model_dump(exclude_unset=True)
+    for field, value in data.items():
+        setattr(prize, field, value)
+
+    await log_action(
+        db, actor_id=actor.id, action="prize.update",
+        entity_type="prize", entity_id=prize.id, request=request,
+        metadata={k: (v.isoformat() if hasattr(v, "isoformat") else v) for k, v in data.items()},
+    )
+    await db.commit()
+    await db.refresh(prize)
+    return prize
+
+
+@router.delete("/{raffle_id}/prizes/{prize_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_prize(
+    raffle_id: int,
+    prize_id: int,
+    request: Request,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    actor: Annotated[User, Depends(require_roles(UserRole.ADMIN, UserRole.SUPER_ADMIN))],
+):
+    prize = (
+        await db.execute(select(Prize).where(Prize.id == prize_id, Prize.raffle_id == raffle_id))
+    ).scalar_one_or_none()
+    if not prize:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "premio no encontrado")
+    if prize.winning_number:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT, "no se puede eliminar un premio que ya tiene ganador"
+        )
+
+    await log_action(
+        db, actor_id=actor.id, action="prize.delete",
+        entity_type="prize", entity_id=prize.id, request=request,
+        metadata={"name": prize.name, "position": prize.position},
+    )
+    await db.delete(prize)
+    await db.commit()

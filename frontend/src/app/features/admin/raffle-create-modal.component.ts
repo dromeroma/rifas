@@ -200,8 +200,12 @@ interface TierForm {
               Agregar premio
             </app-button>
           </div>
+          <p class="muted hint">
+            Debes registrar al menos el <strong>premio mayor</strong> (posición 1). Los premios
+            menores los puedes agregar aquí o más tarde desde la página de la rifa.
+          </p>
           @if (!form.prizes.length) {
-            <p class="muted hint">Aún no hay premios. Agrega al menos uno antes de crear la rifa.</p>
+            <p class="muted hint">Aún no hay premios. Agrega el premio mayor antes de crear la rifa.</p>
           }
           @for (p of form.prizes; track $index; let i = $index) {
             <div class="prize-card">
@@ -570,7 +574,11 @@ export class RaffleCreateModalComponent {
       return;
     }
     if (!this.form.prizes.length) {
-      this.error.set('Agrega al menos un premio antes de crear la rifa.');
+      this.error.set('Agrega al menos el premio mayor antes de crear la rifa.');
+      return;
+    }
+    if (!this.form.prizes.some((p) => p.position === 1)) {
+      this.error.set('Debes incluir el premio mayor (posición 1).');
       return;
     }
     for (const p of this.form.prizes) {

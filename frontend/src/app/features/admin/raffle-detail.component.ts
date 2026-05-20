@@ -3,7 +3,7 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 
-import { Raffle, Ticket, TicketStatus } from '@core/models/raffle.model';
+import { Prize, Raffle, Ticket, TicketStatus } from '@core/models/raffle.model';
 import { RaffleStats } from '@core/models/stats.model';
 import { AdminService } from '@core/services/admin.service';
 import { ConfirmService } from '@core/services/confirm.service';
@@ -114,6 +114,61 @@ import { TicketActionsModalComponent } from '../seller/ticket-actions-modal.comp
           </app-card>
         }
 
+        <!-- Premios y fechas de sorteo -->
+        <app-card title="Premios" [subtitle]="r.prizes.length + ' premio(s) configurados'">
+          <div slot="actions">
+            <app-button variant="secondary" size="sm" icon="add" (click)="openPrizeModal()">
+              Agregar premio
+            </app-button>
+          </div>
+
+          @if (!r.prizes.length) {
+            <p class="muted">Aún no hay premios. Empieza agregando el premio mayor.</p>
+          } @else {
+            <ul class="prizes-list">
+              @for (p of sortedPrizes(); track p.id) {
+                <li class="prize-item">
+                  <div class="prize-item__icon">
+                    @if (p.position === 1) {
+                      <span class="material-icons">military_tech</span>
+                    } @else {
+                      <span class="material-icons">workspace_premium</span>
+                    }
+                  </div>
+                  <div class="prize-item__body">
+                    <strong>#{{ p.position }} · {{ p.name }}</strong>
+                    <small class="muted">
+                      Sorteo: <strong>{{ p.draw_date }}</strong>
+                      @if (p.estimated_value) { · valor estimado: {{ '$' + fmt(p.estimated_value) }} }
+                      @if (p.winning_number) {
+                        · <span class="prize-won">ganador: {{ p.winning_number }}</span>
+                      }
+                    </small>
+                    @if (p.description) {
+                      <small class="muted prize-item__desc">{{ p.description }}</small>
+                    }
+                  </div>
+                  <div class="prize-item__actions">
+                    <button type="button" class="icon-btn" (click)="openPrizeModal(p)"
+                            [disabled]="!!p.winning_number && p.position === 1"
+                            [attr.aria-label]="'Editar premio ' + p.position"
+                            title="Editar premio">
+                      <span class="material-icons">edit</span>
+                    </button>
+                    <button type="button" class="icon-btn icon-btn--danger"
+                            [disabled]="!!p.winning_number"
+                            [attr.aria-label]="'Eliminar premio ' + p.position"
+                            title="Eliminar premio"
+                            (click)="deletePrize(p)">
+                      <span class="material-icons">delete_outline</span>
+                    </button>
+                  </div>
+                </li>
+              }
+            </ul>
+          }
+        </app-card>
+
         @if (selectedTicket()) {
           <app-ticket-actions-modal
             [open]="modalOpen()"
@@ -202,6 +257,41 @@ import { TicketActionsModalComponent } from '../seller/ticket-actions-modal.comp
           <app-button variant="secondary" (click)="closeDrawModal()">Cerrar</app-button>
           <app-button variant="primary" icon="check" [loading]="drawing()" (click)="doDraw()">
             {{ drawing() ? 'Registrando...' : 'Registrar ganador' }}
+          </app-button>
+        </ng-container>
+      </app-modal>
+
+      <!-- ============ CREAR / EDITAR PREMIO ============ -->
+      <app-modal
+        [open]="prizeOpen()"
+        [title]="prizeForm.id ? 'Editar premio' : 'Agregar premio'"
+        [subtitle]="prizeForm.id ? 'Cambia los datos del premio y/o la fecha de sorteo.' : 'Crea un premio adicional con su propia fecha de sorteo.'"
+        size="md"
+        (close)="closePrizeModal()"
+      >
+        <form class="edit-form">
+          <div class="form-row">
+            <app-input label="Posición *" type="number" inputmode="numeric"
+                        [(ngModel)]="prizeForm.position" name="prize_position"
+                        icon="format_list_numbered"
+                        hint="1 = premio mayor. Los demás son menores (2, 3, ...)." />
+            <app-input label="Fecha de sorteo *" type="date"
+                        [(ngModel)]="prizeForm.draw_date" name="prize_draw_date" icon="event" />
+          </div>
+          <app-input label="Nombre del premio *"
+                      [(ngModel)]="prizeForm.name" name="prize_name" icon="emoji_events" />
+          <app-input label="Valor estimado (COP)" type="number" inputmode="numeric"
+                      [(ngModel)]="prizeForm.estimated_value" name="prize_value" icon="payments" />
+          <label class="textarea-field">
+            <span>Descripción (opcional)</span>
+            <textarea rows="2" [(ngModel)]="prizeForm.description" name="prize_description"
+                      placeholder="Detalles, marca, modelo, etc."></textarea>
+          </label>
+        </form>
+        <ng-container slot="footer">
+          <app-button variant="secondary" (click)="closePrizeModal()">Cancelar</app-button>
+          <app-button variant="primary" icon="check" [loading]="savingPrize()" (click)="savePrize()">
+            {{ savingPrize() ? 'Guardando...' : (prizeForm.id ? 'Guardar cambios' : 'Crear premio') }}
           </app-button>
         </ng-container>
       </app-modal>
@@ -336,6 +426,44 @@ import { TicketActionsModalComponent } from '../seller/ticket-actions-modal.comp
       font-variant-numeric: tabular-nums;
     }
     .tier-pill strong .muted { color: var(--text-muted); font-weight: 400; font-size: 12px; }
+
+    .prizes-list { list-style: none; padding: 0; margin: 0; display: grid; gap: var(--s-2); }
+    .prize-item {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: var(--s-3);
+      align-items: center;
+      padding: var(--s-3);
+      background: var(--bg-base);
+      border: 1px solid var(--border);
+      border-radius: var(--r-md);
+    }
+    .prize-item__icon {
+      width: 36px; height: 36px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      border-radius: 50%;
+      display: grid; place-items: center;
+    }
+    .prize-item__icon .material-icons { font-size: 22px; }
+    .prize-item__body { display: grid; gap: 2px; min-width: 0; }
+    .prize-item__body strong { font-size: 14px; color: var(--text); }
+    .prize-item__body small { font-size: 12px; line-height: 1.4; }
+    .prize-item__desc { font-style: italic; }
+    .prize-won { color: #f5b400; font-weight: 700; }
+    .prize-item__actions { display: flex; gap: 4px; }
+    .icon-btn {
+      width: 32px; height: 32px;
+      background: transparent; border: 0; border-radius: var(--r-sm);
+      color: var(--text-muted);
+      cursor: pointer;
+      display: grid; place-items: center;
+    }
+    .icon-btn:hover { background: var(--bg-hover); color: var(--text); }
+    .icon-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+    .icon-btn:disabled:hover { background: transparent; color: var(--text-muted); }
+    .icon-btn--danger:hover { background: var(--danger-soft); color: var(--danger); }
+    .icon-btn .material-icons { font-size: 18px; }
 
     .preview { display: grid; gap: var(--s-3); justify-items: start; }
     .preview__actions { display: flex; gap: 8px; }
@@ -500,6 +628,24 @@ export class RaffleDetailComponent implements OnInit {
     responsible_phone: '', responsible_email: '',
     primary_color: '', terms: '',
   };
+
+  // Gestión de premios
+  prizeOpen = signal(false);
+  savingPrize = signal(false);
+  prizeForm: {
+    id: number | null;
+    position: number;
+    name: string;
+    draw_date: string;
+    estimated_value: number | null;
+    description: string;
+  } = this.blankPrize();
+
+  readonly sortedPrizes = computed<Prize[]>(() => {
+    const r = this.raffle();
+    if (!r) return [];
+    return [...r.prizes].sort((a, b) => a.position - b.position);
+  });
 
   filter = '';
   query = '';
@@ -697,6 +843,114 @@ export class RaffleDetailComponent implements OnInit {
         this.savingEdit.set(false);
         this.toast.error('No se pudo guardar', e?.error?.detail ?? 'Intenta de nuevo.');
       },
+    });
+  }
+
+  // ============ Gestión de premios ============
+
+  private blankPrize() {
+    const r = this.raffle();
+    const used = new Set<number>((r?.prizes ?? []).map((p) => p.position));
+    let pos = 1;
+    while (used.has(pos)) pos++;
+    const today = new Date();
+    const inMonth = new Date(today.getFullYear(), today.getMonth() + Math.max(pos, 1), today.getDate());
+    return {
+      id: null as number | null,
+      position: pos,
+      name: '',
+      draw_date: inMonth.toISOString().slice(0, 10),
+      estimated_value: null as number | null,
+      description: '',
+    };
+  }
+
+  openPrizeModal(prize?: Prize) {
+    if (prize) {
+      this.prizeForm = {
+        id: prize.id ?? null,
+        position: prize.position,
+        name: prize.name,
+        draw_date: prize.draw_date,
+        estimated_value: prize.estimated_value ?? null,
+        description: prize.description ?? '',
+      };
+    } else {
+      this.prizeForm = this.blankPrize();
+    }
+    this.prizeOpen.set(true);
+  }
+
+  closePrizeModal() {
+    this.prizeOpen.set(false);
+  }
+
+  savePrize() {
+    const r = this.raffle();
+    if (!r) return;
+
+    const { id, position, name, draw_date, estimated_value, description } = this.prizeForm;
+    if (!name?.trim() || !draw_date || !position) {
+      this.toast.error('Datos faltantes', 'Posición, nombre y fecha de sorteo son obligatorios.');
+      return;
+    }
+
+    const payload = {
+      position: Number(position),
+      name: name.trim(),
+      draw_date,
+      estimated_value: estimated_value != null && estimated_value !== ('' as any)
+        ? Number(estimated_value)
+        : null,
+      description: description?.trim() || null,
+    };
+
+    this.savingPrize.set(true);
+    const obs$ = id
+      ? this.raffleSvc.updatePrize(r.id, id, payload)
+      : this.raffleSvc.addPrize(r.id, payload as any);
+
+    obs$.subscribe({
+      next: (saved) => {
+        this.savingPrize.set(false);
+        this.prizeOpen.set(false);
+        const updated = { ...r };
+        if (id) {
+          updated.prizes = r.prizes.map((p) => (p.id === id ? { ...p, ...saved } : p));
+        } else {
+          updated.prizes = [...r.prizes, saved];
+        }
+        this.raffle.set(updated);
+        this.toast.success(id ? 'Premio actualizado' : 'Premio creado', saved.name);
+      },
+      error: (e) => {
+        this.savingPrize.set(false);
+        this.toast.error('No se pudo guardar el premio', e?.error?.detail ?? 'Intenta de nuevo.');
+      },
+    });
+  }
+
+  deletePrize(prize: Prize) {
+    const r = this.raffle();
+    if (!r || !prize.id) return;
+    this.confirmSvc.ask({
+      title: `¿Eliminar premio #${prize.position}?`,
+      message: `Se eliminará "${prize.name}" de esta rifa. Esta acción no se puede deshacer.`,
+      tone: 'warning',
+      icon: 'delete_outline',
+      confirmLabel: 'Sí, eliminar',
+      cancelLabel: 'Cancelar',
+    }).subscribe((yes) => {
+      if (!yes) return;
+      this.raffleSvc.deletePrize(r.id, prize.id!).subscribe({
+        next: () => {
+          this.raffle.set({ ...r, prizes: r.prizes.filter((p) => p.id !== prize.id) });
+          this.toast.success('Premio eliminado', prize.name);
+        },
+        error: (e) => {
+          this.toast.error('No se pudo eliminar', e?.error?.detail ?? 'Intenta de nuevo.');
+        },
+      });
     });
   }
 

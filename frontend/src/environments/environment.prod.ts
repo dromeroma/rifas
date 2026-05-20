@@ -1,5 +1,5 @@
 export const environment = {
   production: true,
   apiUrl: "https://rifas-nehd.onrender.com",
-  version: "0.0.3",
+  version: "0.0.4",
 };

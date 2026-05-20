@@ -55,6 +55,15 @@ class PrizeCreate(PrizeBase):
     pass
 
 
+class PrizeUpdate(BaseModel):
+    position: Optional[int] = Field(default=None, ge=1)
+    name: Optional[str] = Field(default=None, min_length=2, max_length=200)
+    description: Optional[str] = None
+    estimated_value: Optional[Decimal] = None
+    draw_date: Optional[date] = None
+    image_url: Optional[str] = None
+
+
 class PrizeOut(PrizeBase):
     id: int
     raffle_id: int
