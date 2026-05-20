@@ -26,7 +26,12 @@ if (!existsSync(pkgPath)) {
 
 const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'));
 const version = pkg.version || '0.0.0';
-const apiUrl = process.env.API_URL ?? '/api';
+
+// Default a la URL del backend en Render. Vercel puede sobreescribir esto
+// con la variable de entorno API_URL si en algún momento se redespliega
+// a otro backend.
+const DEFAULT_API_URL = 'https://rifas-nehd.onrender.com';
+const apiUrl = process.env.API_URL || DEFAULT_API_URL;
 
 const prodContent = `export const environment = {
   production: true,
