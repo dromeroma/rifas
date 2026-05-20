@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.Python
+.venv/
+venv/
+env/
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# Node / Angular
+node_modules/
+dist/
+.angular/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Env / secretos
+.env
+.env.*
+!.env.example
+
+# OS / IDE / Claude
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+.claude/
+
+# Docker / DB
+postgres-data/
+redis-data/
+uploads/
+*.sqlite3
+
+# Build artifacts
+*.pdf
+!docs/**/*.pdf

@@ -1,0 +1,106 @@
+<div class="dash">
+  @if (loading()) {
+    <div class="skeleton-row">
+      <div class="sk sk-hero"></div>
+      <div class="sk-kpis"><div class="sk sk-kpi"></div><div class="sk sk-kpi"></div><div class="sk sk-kpi"></div><div class="sk sk-kpi"></div></div>
+    </div>
+  } @else if (!items().length) {
+    <app-empty
+      icon="casino"
+      title="No hay rifas creadas"
+      description="Crea tu primera rifa desde la sección Rifas para empezar a vender."
+    />
+  } @else {
+    <!-- Selector de rifa (chips horizontales) -->
+    <div class="raffle-chips">
+      @for (it of items(); track it.raffle.id; let i = $index) {
+        <button class="r-chip"
+                [class.r-chip--active]="i === selectedIdx()"
+                (click)="selectRaffle(i)">
+          {{ it.raffle.name }}
+        </button>
+      }
+    </div>
+
+    @if (selected(); as sel) {
+      @if (!sel.raffle.numbers_generated) {
+        <app-card>
+          <div class="warn">
+            <span class="material-icons">warning</span>
+            <div>
+              <strong>Sin números generados</strong>
+              <p class="muted">La rifa <strong>{{ sel.raffle.name }}</strong> aún no tiene números.</p>
+            </div>
+            <a class="warn__cta" [routerLink]="['/admin/raffles', sel.raffle.id]">Generar →</a>
+          </div>
+        </app-card>
+      } @else if (sel.stats; as st) {
+
+        <!-- Hero: countdown + ring de progreso -->
+        <section class="hero">
+          <div class="hero__main">
+            @if (st.next_draw) {
+              <app-countdown
+                [seconds]="st.next_draw.seconds_remaining"
+                [label]="'Próximo sorteo · ' + st.next_draw.prize_name"
+              />
+              <small class="hero__date">{{ st.next_draw.draw_date }} · sorteo final {{ st.final_draw_date }}</small>
+            } @else {
+              <strong>Sin sorteos pendientes</strong>
+              <small class="muted">Sorteo final: {{ st.final_draw_date }}</small>
+            }
+          </div>
+
+          <div class="hero__ring">
+            <app-progress-ring [value]="st.threshold_progress_pct" label="umbral" />
+            <div class="hero__threshold">
+              @if (st.can_run_draw) {
+                <app-chip tone="paid">✓ Listo para sortear</app-chip>
+                <small>{{ st.sold }} / {{ st.min_threshold }} pagadas</small>
+              } @else {
+                <strong>Faltan {{ st.min_threshold - st.sold }}</strong>
+                <small>boletas pagadas para sortear</small>
+              }
+            </div>
+          </div>
+        </section>
+
+        <!-- KPIs -->
+        <section class="kpis">
+          <app-kpi label="Total boletas" [value]="st.total_tickets" icon="confirmation_number" />
+          <app-kpi label="Pagadas"       [value]="st.sold"          icon="check_circle"     tone="accent" />
+          <app-kpi label="Reservadas"    [value]="st.reserved"      icon="schedule"         tone="warning" />
+          <app-kpi label="Disponibles"   [value]="st.available"     icon="inventory_2"      tone="info" />
+          <app-kpi
+            label="Recaudado"
+            [value]="'$' + fmtMoney(st.revenue_collected)"
+            [hint]="'de $' + fmtMoney(st.revenue_potential) + ' potencial'"
+            icon="payments"
+            tone="accent"
+          />
+        </section>
+
+        <!-- Distribución -->
+        <app-card title="Distribución por estado" subtitle="Composición actual de las boletas">
+          <div class="status-grid">
+            @for (sc of st.by_status; track sc.status) {
+              @let pct = (sc.count / st.total_tickets) * 100;
+              <div class="status-row">
+                <app-chip [tone]="$any(sc.status)">{{ statusLabel(sc.status) }}</app-chip>
+                <div class="bar"><span class="bar__fill" [style.width.%]="pct"></span></div>
+                <span class="num count">{{ sc.count }}</span>
+              </div>
+            }
+          </div>
+        </app-card>
+
+        <!-- Acciones -->
+        <div class="cta">
+          <app-button variant="primary" icon="arrow_forward" (click)="goToRaffle(sel.raffle.id)">
+            Ver detalle y boletas
+          </app-button>
+        </div>
+      }
+    }
+  }
+</div>

@@ -1,0 +1,112 @@
+<div class="shell" [class.shell--collapsed]="collapsed()">
+  <!-- ============ SIDEBAR (tablet/desktop) ============ -->
+  <aside class="sidebar">
+    <div class="sidebar__brand">
+      <span class="brand__logo">🎟️</span>
+      <span class="brand__name">Rifas</span>
+    </div>
+
+    <nav class="sidebar__nav" role="navigation" aria-label="Principal">
+      @for (item of visibleNav(); track item.path) {
+        @if (item.children && item.children.length) {
+          <!-- Item con submenús -->
+          <button
+            type="button"
+            class="nav__item nav__item--group"
+            [class.nav__item--active]="hasActiveChild(item)"
+            [class.nav__item--expanded]="isExpanded(item)"
+            (click)="toggleMenu(item, $event)"
+            [title]="item.label"
+            [attr.aria-expanded]="isExpanded(item)"
+          >
+            <span class="material-icons">{{ item.icon }}</span>
+            <span class="nav__label">{{ item.label }}</span>
+            <span class="material-icons nav__caret">{{ isExpanded(item) ? 'expand_less' : 'expand_more' }}</span>
+          </button>
+          @if (isExpanded(item)) {
+            <div class="nav__sub">
+              @for (sub of item.children; track sub.path) {
+                <a
+                  [routerLink]="sub.path"
+                  class="nav__item nav__item--child"
+                  [class.nav__item--active]="isActive(sub)"
+                >
+                  <span class="material-icons">{{ sub.icon }}</span>
+                  <span class="nav__label">{{ sub.label }}</span>
+                </a>
+              }
+            </div>
+          }
+        } @else {
+          <!-- Item simple -->
+          <a
+            [routerLink]="item.path"
+            class="nav__item"
+            [class.nav__item--active]="isActive(item)"
+            [title]="item.label"
+          >
+            <span class="material-icons">{{ item.icon }}</span>
+            <span class="nav__label">{{ item.label }}</span>
+          </a>
+        }
+      }
+    </nav>
+
+    <div class="sidebar__footer">
+      <button class="collapse-btn" (click)="toggleSidebar()" [title]="collapsed() ? 'Expandir' : 'Colapsar'">
+        <span class="material-icons">{{ collapsed() ? 'chevron_right' : 'chevron_left' }}</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- ============ MAIN ============ -->
+  <div class="main">
+    <header class="topbar">
+      <div class="topbar__left">
+        <a routerLink="/admin" class="topbar__brand">
+          <span class="brand__logo">🎟️</span>
+          <span class="brand__name">Sistema Rifas</span>
+        </a>
+      </div>
+
+      <div class="topbar__right">
+        <app-theme-toggle />
+
+        @if (user(); as u) {
+          <div class="profile-wrap" (click)="toggleProfile()">
+            <app-avatar [name]="u.full_name" [size]="36" />
+            <div class="profile-info">
+              <strong>{{ u.full_name }}</strong>
+              <small>{{ u.role }}</small>
+            </div>
+            <span class="material-icons profile-caret">expand_more</span>
+
+            @if (profileOpen()) {
+              <div class="profile-menu" (click)="$event.stopPropagation()">
+                <div class="profile-menu__head">
+                  <strong>{{ u.full_name }}</strong>
+                  <small>{{ u.email }}</small>
+                </div>
+                <button class="profile-menu__item" (click)="logout()">
+                  <span class="material-icons">logout</span>
+                  Cerrar sesión
+                </button>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </header>
+
+    <main class="content">
+      <router-outlet />
+    </main>
+  </div>
+
+  <!-- ============ BOTTOM NAV (móvil) ============ -->
+  <app-bottom-nav [nav]="nav" />
+</div>
+
+@if (profileOpen()) {
+  <div class="profile-backdrop" (click)="closeProfile()"></div>
+}

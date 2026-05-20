@@ -1,0 +1,65 @@
+<article class="ticket" [style.--grass]="primaryColor()">
+  <header class="ticket__header">
+    <div class="ticket__title">
+      <span class="brand">RIFA</span>
+      <strong>{{ raffleName() }}</strong>
+    </div>
+    <div class="ticket__meta">
+      <span class="label">Boleta</span>
+      <span class="number">{{ ticket().number_label }}</span>
+    </div>
+  </header>
+
+  <section class="field" aria-label="Cancha de fútbol con los 20 números">
+    <!-- Líneas de la cancha -->
+    <svg class="field__lines" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+      <!-- borde -->
+      <rect x="2" y="2" width="96" height="96" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="0.6" />
+      <!-- línea media -->
+      <line x1="2" y1="50" x2="98" y2="50" stroke="rgba(255,255,255,0.85)" stroke-width="0.5" />
+      <!-- círculo central -->
+      <circle cx="50" cy="50" r="8" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="0.5" />
+      <circle cx="50" cy="50" r="0.8" fill="rgba(255,255,255,0.95)" />
+      <!-- áreas grandes -->
+      <rect x="25" y="2"  width="50" height="10" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="0.5" />
+      <rect x="25" y="88" width="50" height="10" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="0.5" />
+      <!-- áreas pequeñas -->
+      <rect x="38" y="2"  width="24" height="4" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="0.4" />
+      <rect x="38" y="94" width="24" height="4" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="0.4" />
+    </svg>
+
+    <!-- 20 jugadores / números -->
+    @for (p of positioned(); track $index) {
+      <div
+        class="player"
+        [style.left.%]="p.x"
+        [style.top.%]="p.y"
+        [attr.data-index]="$index + 1"
+      >
+        <span class="player__chip">{{ p.number }}</span>
+      </div>
+    }
+  </section>
+
+  <footer class="ticket__footer">
+    <div class="ticket__qr">
+      @if (qrImageUrl()) {
+        <img [src]="qrImageUrl()!" alt="QR de verificación" />
+      } @else {
+        <div class="qr-placeholder">QR</div>
+      }
+      <small class="ticket__code">{{ ticket().code }}</small>
+    </div>
+    <div class="ticket__prizes">
+      <h4>Premios</h4>
+      <ul>
+        @for (prize of prizes(); track prize.position) {
+          <li>
+            <span class="prize__name">{{ prize.position }}. {{ prize.name }}</span>
+            <span class="prize__date">{{ prize.draw_date }}</span>
+          </li>
+        }
+      </ul>
+    </div>
+  </footer>
+</article>

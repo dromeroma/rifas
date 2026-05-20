@@ -1,0 +1,183 @@
+:host {
+  display: inline-block;
+  --grass: #1b8b3b;
+  --grass-stripe: #16762f;
+  --ticket-border: #0b3d91;
+  --chip-bg: #ffffff;
+  --chip-fg: #0b3d91;
+}
+
+.ticket {
+  width: 320px;
+  background: #fff;
+  border-radius: var(--radius, 12px);
+  overflow: hidden;
+  box-shadow: var(--shadow-md, 0 4px 12px rgba(0, 0, 0, 0.1));
+  border: 1px solid rgba(11, 61, 145, 0.15);
+  display: flex;
+  flex-direction: column;
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+.ticket__header {
+  background: var(--ticket-border);
+  color: #fff;
+  padding: 12px 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  .brand {
+    display: block;
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    opacity: 0.7;
+  }
+  strong {
+    display: block;
+    font-size: 15px;
+    line-height: 1.15;
+    max-width: 200px;
+  }
+  .ticket__meta {
+    text-align: right;
+    .label {
+      display: block;
+      font-size: 10px;
+      opacity: 0.7;
+      letter-spacing: 0.12em;
+    }
+    .number {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+    }
+  }
+}
+
+.field {
+  position: relative;
+  aspect-ratio: 2 / 3;        // vertical
+  background:
+    repeating-linear-gradient(
+      to bottom,
+      var(--grass) 0,
+      var(--grass) 5%,
+      var(--grass-stripe) 5%,
+      var(--grass-stripe) 10%
+    );
+  border-top: 4px solid var(--ticket-border);
+  border-bottom: 4px solid var(--ticket-border);
+  overflow: hidden;
+}
+
+.field__lines {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.player {
+  position: absolute;
+  transform: translate(-50%, -50%);
+}
+
+.player__chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 38px;
+  height: 38px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--chip-bg);
+  color: var(--chip-fg);
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  border: 2px solid var(--ticket-border);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  font-variant-numeric: tabular-nums;
+}
+
+.ticket__footer {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 12px;
+  padding: 10px 12px 12px;
+  background: #fafbff;
+}
+
+.ticket__qr {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+
+  img,
+  .qr-placeholder {
+    width: 84px;
+    height: 84px;
+    border-radius: 8px;
+    background: #fff;
+    border: 1px dashed #cbd5e1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #94a3b8;
+    font-weight: 600;
+  }
+
+  .ticket__code {
+    font-family: ui-monospace, monospace;
+    font-size: 10px;
+    color: #475569;
+    letter-spacing: 0.04em;
+  }
+}
+
+.ticket__prizes {
+  h4 {
+    margin: 0 0 4px;
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    color: var(--ticket-border);
+    text-transform: uppercase;
+  }
+  ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 2px;
+  }
+  li {
+    display: flex;
+    justify-content: space-between;
+    gap: 6px;
+    font-size: 11px;
+    color: #1f2937;
+
+    .prize__date {
+      color: #6b7280;
+      font-variant-numeric: tabular-nums;
+    }
+  }
+}
+
+@media (max-width: 360px) {
+  .ticket { width: 100%; }
+}
+
+/* Estilos de impresión: A6 vertical */
+@media print {
+  :host { display: block; }
+  .ticket {
+    width: 105mm;
+    box-shadow: none;
+    border: none;
+    page-break-after: always;
+  }
+}

@@ -1,0 +1,66 @@
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+
+from app.core.config import get_settings
+from app.core.exceptions import (
+    DomainError,
+    ImmutableRaffleError,
+    ReservationLockedError,
+    TicketUnavailableError,
+)
+from app.routers import assignments, auth, customers, raffles, stats, tickets, users, verify
+
+settings = get_settings()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Hook de arranque/cierre (migrations, cache warm-up, etc.)
+    yield
+
+
+app = FastAPI(
+    title="Sistema de Rifas API",
+    version="0.1.0",
+    description="API profesional para gestión de rifas con trazabilidad y antifraude.",
+    lifespan=lifespan,
+    docs_url="/docs",
+    redoc_url="/redoc",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+@app.exception_handler(DomainError)
+async def domain_error_handler(_: Request, exc: DomainError):
+    status_map = {
+        ImmutableRaffleError: 409,
+        ReservationLockedError: 423,
+        TicketUnavailableError: 409,
+    }
+    code = status_map.get(type(exc), 400)
+    return JSONResponse(status_code=code, content={"detail": str(exc), "error": exc.__class__.__name__})
+
+
+@app.get("/health", tags=["meta"])
+async def health():
+    return {"status": "ok", "env": settings.app_env}
+
+
+app.include_router(auth.router)
+app.include_router(raffles.router)
+app.include_router(tickets.router)
+app.include_router(stats.router)
+app.include_router(users.router)
+app.include_router(customers.router)
+app.include_router(assignments.router)
+app.include_router(verify.router)
