@@ -3,6 +3,7 @@ from datetime import date, datetime
 from typing import TYPE_CHECKING
 
 from sqlalchemy import Boolean, Date, DateTime, Enum, Integer, Numeric, String, Text
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -38,6 +39,12 @@ class Raffle(Base, TimestampMixin):
     # Económico
     ticket_price: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False)
     seller_commission: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False, default=0)
+
+    # Comisión escalonada por tramos. Inmutable después de crear la rifa.
+    # Estructura: [{"from_count": 1, "to_count": 30, "amount_per_ticket": 3000}, ...]
+    # to_count=null en el último tramo indica "sin límite superior".
+    # Modelo de "tier calificador": el tramo alcanzado aplica a TODAS las boletas vendidas.
+    commission_tiers: Mapped[list | None] = mapped_column(JSONB, nullable=True)
 
     # Sorteo
     final_draw_date: Mapped[date] = mapped_column(Date, nullable=False)

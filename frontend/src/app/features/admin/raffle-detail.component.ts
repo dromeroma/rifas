@@ -32,7 +32,15 @@ import { TicketActionsModalComponent } from '../seller/ticket-actions-modal.comp
         <header class="page__head">
           <div>
             <h1>{{ r.name }}</h1>
-            <p class="muted">{{ '$' + fmt(r.ticket_price) }} por boleta · comisión {{ '$' + fmt(r.seller_commission) }} · {{ r.total_tickets }} boletas</p>
+            <p class="muted">
+              {{ '$' + fmt(r.ticket_price) }} por boleta ·
+              @if (r.commission_tiers && r.commission_tiers.length) {
+                comisión escalonada
+              } @else {
+                comisión {{ '$' + fmt(r.seller_commission) }}
+              }
+              · {{ r.total_tickets }} boletas
+            </p>
             @if (r.lottery_name) {
               <p class="muted">🎰 Juega con: <strong>{{ r.lottery_name }}</strong></p>
             }
@@ -78,6 +86,29 @@ import { TicketActionsModalComponent } from '../seller/ticket-actions-modal.comp
             <app-kpi label="Reservadas"  [value]="st.reserved"  icon="schedule"     tone="warning" />
             <app-kpi label="Disponibles" [value]="st.available" icon="inventory_2"  tone="info" />
           </section>
+        }
+
+        <!-- Comisión escalonada (si la rifa la usa) -->
+        @if (r.commission_tiers && r.commission_tiers.length) {
+          <app-card title="Comisión escalonada" subtitle="Inmutable · aplica al total de boletas vendidas por cada vendedor">
+            <div class="tiers-grid">
+              @for (t of r.commission_tiers; track t.from_count) {
+                <div class="tier-pill">
+                  <small class="muted">
+                    @if (t.to_count != null) {
+                      {{ t.from_count }} – {{ t.to_count }} boletas
+                    } @else {
+                      {{ t.from_count }}+ boletas
+                    }
+                  </small>
+                  <strong>{{ '$' + fmt(t.amount_per_ticket) }} <span class="muted">/ boleta</span></strong>
+                </div>
+              }
+            </div>
+            <p class="muted" style="margin-top: var(--s-2); font-size: 12px;">
+              💡 Tier calificador: si un vendedor alcanza un tramo, ese monto aplica a TODAS sus boletas vendidas (no marginal).
+            </p>
+          </app-card>
         }
 
         @if (selectedTicket()) {
@@ -278,6 +309,27 @@ import { TicketActionsModalComponent } from '../seller/ticket-actions-modal.comp
       gap: var(--s-3);
     }
     @media (max-width: 600px) { .kpis { grid-template-columns: 1fr; } }
+
+    .tiers-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: var(--s-3);
+    }
+    .tier-pill {
+      display: grid;
+      gap: 4px;
+      padding: var(--s-3);
+      background: var(--bg-base);
+      border: 1px solid var(--border);
+      border-radius: var(--r-md);
+      text-align: center;
+    }
+    .tier-pill strong {
+      color: var(--accent);
+      font-size: 16px;
+      font-variant-numeric: tabular-nums;
+    }
+    .tier-pill strong .muted { color: var(--text-muted); font-weight: 400; font-size: 12px; }
 
     .preview { display: grid; gap: var(--s-3); justify-items: start; }
     .preview__actions { display: flex; gap: 8px; }

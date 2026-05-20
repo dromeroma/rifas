@@ -7,6 +7,39 @@ from pydantic import BaseModel, Field, model_validator
 from app.models.raffle import RaffleStatus
 
 
+# -------- Commission Tier ----------
+
+class CommissionTier(BaseModel):
+    from_count: int = Field(ge=1, description="Cantidad mínima de boletas vendidas para alcanzar este tramo")
+    to_count: Optional[int] = Field(default=None, ge=1, description="Cantidad máxima. null = sin límite superior (último tramo)")
+    amount_per_ticket: Decimal = Field(ge=0, description="Pesos colombianos por boleta cuando el vendedor cae en este tramo")
+
+    @model_validator(mode="after")
+    def _validate_range(self):
+        if self.to_count is not None and self.to_count < self.from_count:
+            raise ValueError(f"to_count ({self.to_count}) no puede ser menor que from_count ({self.from_count})")
+        return self
+
+
+def validate_commission_tiers(tiers: List["CommissionTier"]) -> None:
+    """Valida que la lista de tramos sea coherente: ordenada, sin gaps, último tramo abierto opcionalmente."""
+    if not tiers:
+        return
+    ordered = sorted(tiers, key=lambda t: t.from_count)
+    if ordered[0].from_count != 1:
+        raise ValueError("el primer tramo debe comenzar en from_count=1")
+    for i, tier in enumerate(ordered):
+        if i == len(ordered) - 1:
+            continue  # último tramo: to_count puede ser null
+        if tier.to_count is None:
+            raise ValueError("solo el último tramo puede tener to_count=null")
+        next_from = ordered[i + 1].from_count
+        if next_from != tier.to_count + 1:
+            raise ValueError(
+                f"los tramos deben ser contiguos sin huecos: tramo termina en {tier.to_count}, siguiente empieza en {next_from}"
+            )
+
+
 # -------- Prize ----------
 
 class PrizeBase(BaseModel):
@@ -43,6 +76,7 @@ class RaffleCreate(BaseModel):
     number_digits: int = Field(ge=1, le=10, default=4)
     ticket_price: Decimal = Field(gt=0)
     seller_commission: Decimal = Field(ge=0, default=0)
+    commission_tiers: Optional[List[CommissionTier]] = Field(default=None)
     final_draw_date: date
     logo_url: Optional[str] = None
     primary_color: Optional[str] = None
@@ -61,6 +95,12 @@ class RaffleCreate(BaseModel):
             raise ValueError(
                 f"el rango ({total_numbers}) no coincide con total_tickets*numbers_per_ticket ({required})"
             )
+        return self
+
+    @model_validator(mode="after")
+    def _validate_tiers(self):
+        if self.commission_tiers:
+            validate_commission_tiers(self.commission_tiers)
         return self
 
 
@@ -88,6 +128,7 @@ class RaffleOut(BaseModel):
     number_digits: int
     ticket_price: Decimal
     seller_commission: Decimal
+    commission_tiers: Optional[List[CommissionTier]] = None
     final_draw_date: date
     status: RaffleStatus
     numbers_generated: bool

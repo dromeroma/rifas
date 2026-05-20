@@ -1,9 +1,9 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { forkJoin, of } from 'rxjs';
+import { forkJoin } from 'rxjs';
 
-import { Raffle, Ticket } from '@core/models/raffle.model';
+import { Raffle, SellerTierStatus, Ticket } from '@core/models/raffle.model';
 import { SellerAssignment } from '@core/models/stats.model';
 import { AdminService } from '@core/services/admin.service';
 import { AuthService } from '@core/services/auth.service';
@@ -67,8 +67,60 @@ import { TicketActionsModalComponent } from './ticket-actions-modal.component';
             <app-kpi label="Reservadas"  [value]="kpis().reserved"  icon="schedule"     tone="warning" />
             <app-kpi label="Pagadas"     [value]="kpis().paid"      icon="check_circle" tone="accent" />
             <app-kpi label="Disponibles" [value]="kpis().available" icon="inventory_2"  tone="info" />
-            <app-kpi label="Comisión estimada" [value]="'$' + fmt(kpis().commission)" icon="payments" tone="accent" hint="Sobre boletas ya pagadas" />
+            <app-kpi label="Comisión" [value]="'$' + fmt(kpis().commission)" icon="payments" tone="accent" hint="Sobre boletas ya pagadas" />
           </section>
+
+          <!-- Estado del tier de comisión escalonada -->
+          @if (tierStatus(); as ts) {
+            @if (ts.uses_tiers) {
+              <div class="tier-card">
+                <div class="tier-card__head">
+                  <span class="material-icons">military_tech</span>
+                  <div>
+                    <strong>
+                      @if (ts.current_tier) {
+                        Tramo actual: {{ '$' + fmt(ts.current_amount_per_ticket) }} por boleta
+                      } @else {
+                        Aún no estás en ningún tramo
+                      }
+                    </strong>
+                    <small class="muted">
+                      Llevas {{ ts.paid_count }} boleta(s) pagada(s) ·
+                      Comisión acumulada: <strong>{{ '$' + fmt(ts.earned_total) }}</strong>
+                    </small>
+                  </div>
+                </div>
+
+                @if (ts.next_tier && ts.tickets_to_next_tier != null && ts.tickets_to_next_tier > 0) {
+                  <div class="tier-card__next">
+                    <span class="material-icons">trending_up</span>
+                    <span>
+                      Te faltan <strong>{{ ts.tickets_to_next_tier }}</strong> boleta(s) para subir a
+                      <strong>{{ '$' + fmt(ts.next_tier.amount_per_ticket) }}</strong> por boleta.
+                      ¡Al cruzar el tramo, ese valor se aplica a <em>todas</em> tus boletas!
+                    </span>
+                  </div>
+                }
+
+                <div class="tier-card__ladder">
+                  @for (t of r.commission_tiers ?? []; track t.from_count) {
+                    <div class="ladder-step"
+                          [class.ladder-step--active]="ts.current_tier?.from_count === t.from_count"
+                          [class.ladder-step--done]="ts.paid_count > (t.to_count ?? 0) && t.to_count != null">
+                      <small>
+                        @if (t.to_count != null) {
+                          {{ t.from_count }}–{{ t.to_count }}
+                        } @else {
+                          {{ t.from_count }}+
+                        }
+                      </small>
+                      <strong>{{ '$' + fmt(t.amount_per_ticket) }}</strong>
+                    </div>
+                  }
+                </div>
+              </div>
+            }
+          }
 
           <app-card title="Mis boletas" [subtitle]="filteredTickets().length + ' resultado(s)'">
             <div slot="actions">
@@ -137,6 +189,54 @@ import { TicketActionsModalComponent } from './ticket-actions-modal.component';
       grid-template-columns: repeat(2, 1fr);
     }
     @media (min-width: 720px) { .kpis { grid-template-columns: repeat(5, 1fr); } }
+
+    .tier-card {
+      display: grid;
+      gap: var(--s-3);
+      background: var(--bg-surface);
+      border: 1px solid var(--accent);
+      border-radius: var(--r-lg);
+      padding: var(--s-4);
+    }
+    .tier-card__head { display: flex; align-items: center; gap: var(--s-3); }
+    .tier-card__head .material-icons { font-size: 32px; color: var(--accent); }
+    .tier-card__head strong { display: block; font-size: 15px; color: var(--text); }
+    .tier-card__head small { display: block; font-size: 12px; margin-top: 2px; }
+    .tier-card__head small strong { display: inline; color: var(--accent); font-size: 12px; }
+
+    .tier-card__next {
+      display: flex; align-items: center; gap: 8px;
+      padding: var(--s-3);
+      background: var(--accent-soft);
+      color: var(--accent);
+      border-radius: var(--r-md);
+      font-size: 13px;
+    }
+    .tier-card__next .material-icons { font-size: 20px; }
+
+    .tier-card__ladder {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+      gap: var(--s-2);
+    }
+    .ladder-step {
+      display: grid; gap: 2px;
+      padding: var(--s-2);
+      background: var(--bg-base);
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+    }
+    .ladder-step small { color: var(--text-muted); font-size: 11px; }
+    .ladder-step strong { color: var(--text); font-size: 13px; }
+    .ladder-step--active {
+      background: var(--accent); border-color: var(--accent);
+    }
+    .ladder-step--active small, .ladder-step--active strong { color: var(--accent-fg); }
+    .ladder-step--done {
+      opacity: 0.55;
+    }
 
     .select {
       background: var(--bg-input);
@@ -216,6 +316,7 @@ export class MySalesComponent implements OnInit {
   selectedRaffleId = signal<number | null>(null);
   selectedTicket = signal<Ticket | null>(null);
   modalOpen = signal(false);
+  tierStatus = signal<SellerTierStatus | null>(null);
 
   filter = '';
 
@@ -255,8 +356,11 @@ export class MySalesComponent implements OnInit {
     const reserved = tix.filter((t) => t.status === 'reserved' || t.status === 'pending_payment').length;
     const paid = tix.filter((t) => t.status === 'paid' || t.status === 'winning').length;
     const available = tix.filter((t) => t.status === 'available').length;
+    const ts = this.tierStatus();
     const raffle = this.selectedRaffle();
-    const commPerTicket = raffle ? Number(raffle.seller_commission) : 0;
+    const commPerTicket = ts?.uses_tiers
+      ? Number(ts.current_amount_per_ticket)
+      : (raffle ? Number(raffle.seller_commission) : 0);
     return { total, reserved, paid, available, commission: paid * commPerTicket };
   });
 
@@ -297,6 +401,15 @@ export class MySalesComponent implements OnInit {
     this.raffleSvc.tickets(r).subscribe({
       next: (tx) => { this.allTickets.set(tx as Ticket[]); this.loading.set(false); },
       error: () => this.loading.set(false),
+    });
+    this.loadTierStatus(r);
+  }
+
+  private loadTierStatus(raffleId: number) {
+    this.tierStatus.set(null);
+    this.admin.sellerTierStatus(raffleId).subscribe({
+      next: (ts) => this.tierStatus.set(ts),
+      error: () => this.tierStatus.set(null),
     });
   }
 

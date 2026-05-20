@@ -3,6 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 
 import { environment } from '@env/environment';
+import { SellerTierStatus } from '../models/raffle.model';
 import {
   Customer,
   RaffleStats,
@@ -17,6 +18,13 @@ export class AdminService {
 
   stats(raffleId: number): Observable<RaffleStats> {
     return this.http.get<RaffleStats>(`${this.api}/raffles/${raffleId}/stats`);
+  }
+
+  sellerTierStatus(raffleId: number, sellerId?: number): Observable<SellerTierStatus> {
+    const q = sellerId != null ? `?seller_id=${sellerId}` : '';
+    return this.http.get<SellerTierStatus>(
+      `${this.api}/raffles/${raffleId}/seller-tier-status${q}`,
+    );
   }
 
   listUsers(role?: 'seller' | 'admin' | 'super_admin'): Observable<SellerUser[]> {

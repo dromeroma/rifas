@@ -35,6 +35,11 @@ from app.models.commission import Commission
 from app.models.payment import Payment, PaymentMethod, PaymentStatus
 from app.models.raffle import Raffle
 from app.models.ticket import Ticket, TicketStatus
+from app.services.commission_service import (
+    count_paid_tickets_by_seller,
+    recalculate_commissions_for_seller,
+    resolve_commission_amount,
+)
 
 settings = get_settings()
 
@@ -155,18 +160,39 @@ async def confirm_payment(
     ticket.status = TicketStatus.PAID
     ticket.version += 1
 
+    # Flush para que la boleta cuente como PAID al calcular el tier.
+    await db.flush()
+
     commission: Commission | None = None
-    if ticket.seller_id and raffle.seller_commission:
-        commission = Commission(
-            seller_id=ticket.seller_id,
-            raffle_id=raffle.id,
-            ticket_id=ticket.id,
-            payment_id=payment.id,
-            amount=raffle.seller_commission,
-            status="pending",
-            paid=False,
+    if ticket.seller_id:
+        paid_count_after = await count_paid_tickets_by_seller(
+            db, seller_id=ticket.seller_id, raffle_id=raffle.id
         )
-        db.add(commission)
+        amount_per_ticket = resolve_commission_amount(raffle, paid_count_after)
+
+        if amount_per_ticket > 0:
+            commission = Commission(
+                seller_id=ticket.seller_id,
+                raffle_id=raffle.id,
+                ticket_id=ticket.id,
+                payment_id=payment.id,
+                amount=amount_per_ticket,
+                status="pending",
+                paid=False,
+            )
+            db.add(commission)
+            await db.flush()
+
+            # Si la rifa usa tiers, recalculamos TODAS las comisiones pendientes
+            # del vendedor para esta rifa, ya que cruzar un tramo eleva el monto
+            # de todas las boletas anteriores (modelo de tier calificador).
+            if raffle.commission_tiers:
+                await recalculate_commissions_for_seller(
+                    db,
+                    seller_id=ticket.seller_id,
+                    raffle=raffle,
+                    new_amount=amount_per_ticket,
+                )
 
     await db.flush()
     return payment, ticket, commission

@@ -18,6 +18,12 @@ interface PrizeForm {
   description: string;
 }
 
+interface TierForm {
+  from_count: number;
+  to_count: number | null;
+  amount_per_ticket: number;
+}
+
 @Component({
   selector: 'app-raffle-create-modal',
   standalone: true,
@@ -88,12 +94,81 @@ interface PrizeForm {
             }
           </div>
 
-          <div class="row">
-            <app-input label="Precio por boleta (COP) *" type="number" inputmode="numeric"
-                        [(ngModel)]="form.ticket_price" name="ticket_price" icon="payments" />
-            <app-input label="Comisión vendedor por boleta (COP)" type="number" inputmode="numeric"
-                        [(ngModel)]="form.seller_commission" name="seller_commission" icon="redeem" />
+          <app-input label="Precio por boleta (COP) *" type="number" inputmode="numeric"
+                      [(ngModel)]="form.ticket_price" name="ticket_price" icon="payments" />
+        </section>
+
+        <!-- ============ COMISIÓN VENDEDOR ============ -->
+        <section class="section">
+          <div class="section__head">
+            <h3>Comisión del vendedor</h3>
           </div>
+          <p class="muted hint">
+            <strong>Una vez creada la rifa, la comisión no se puede modificar.</strong>
+            Elige comisión plana (mismo monto por boleta) o escalonada por tramos.
+          </p>
+
+          <div class="seg">
+            <button type="button" class="seg__btn"
+                    [class.seg__btn--active]="!form.useTiers"
+                    (click)="setUseTiers(false)">Comisión plana</button>
+            <button type="button" class="seg__btn"
+                    [class.seg__btn--active]="form.useTiers"
+                    (click)="setUseTiers(true)">Escalonada por tramos</button>
+          </div>
+
+          @if (!form.useTiers) {
+            <app-input label="Comisión por boleta (COP)" type="number" inputmode="numeric"
+                        [(ngModel)]="form.seller_commission" name="seller_commission" icon="redeem"
+                        hint="Mismo monto por cada boleta vendida." />
+          } @else {
+            <p class="muted hint">
+              El tramo alcanzado por el total de boletas vendidas aplica a <strong>todas</strong> sus boletas
+              (modelo calificador). Ej: 36 boletas → entra al tramo 31–50 y cobra ese monto por las 36.
+            </p>
+
+            <div class="tiers">
+              @for (t of form.commission_tiers; track $index; let i = $index; let last = $last) {
+                <div class="tier-row">
+                  <div class="tier-row__range">
+                    <app-input label="Desde (boletas)" type="number" inputmode="numeric"
+                                [ngModel]="t.from_count" (ngModelChange)="updateTierFrom(i, $event)"
+                                [name]="'tier_from_' + i" icon="south" />
+                    @if (!last) {
+                      <app-input label="Hasta (boletas)" type="number" inputmode="numeric"
+                                  [ngModel]="t.to_count" (ngModelChange)="updateTierTo(i, $event)"
+                                  [name]="'tier_to_' + i" icon="north" />
+                    } @else {
+                      <div class="tier-row__open">
+                        <span class="material-icons">all_inclusive</span>
+                        <span>Sin límite superior</span>
+                      </div>
+                    }
+                  </div>
+                  <app-input label="Pesos por boleta (COP)" type="number" inputmode="numeric"
+                              [(ngModel)]="t.amount_per_ticket" [name]="'tier_amount_' + i" icon="payments" />
+                  @if (form.commission_tiers.length > 1) {
+                    <button type="button" class="del-btn" (click)="removeTier(i)" aria-label="Eliminar tramo">
+                      <span class="material-icons">close</span>
+                    </button>
+                  }
+                </div>
+              }
+            </div>
+
+            <app-button variant="secondary" size="sm" icon="add" (click)="addTier()">
+              Agregar tramo
+            </app-button>
+
+            <div class="tier-preview">
+              <strong>Ejemplos con los tramos actuales:</strong>
+              <ul>
+                @for (ex of tierExamples(); track ex.count) {
+                  <li>{{ ex.count }} boletas → {{ ex.label }}</li>
+                }
+              </ul>
+            </div>
+          }
         </section>
 
         <!-- ============ RESPONSABLE ============ -->
@@ -209,6 +284,65 @@ interface PrizeForm {
     .math-check--ok { background: var(--accent-soft); color: var(--accent); }
     .math-check--err { background: var(--warning-soft); color: var(--warning); }
 
+    .seg {
+      display: inline-flex;
+      background: var(--bg-base);
+      border: 1px solid var(--border);
+      border-radius: var(--r-md);
+      padding: 4px;
+      gap: 4px;
+      width: fit-content;
+    }
+    .seg__btn {
+      background: transparent;
+      border: 0;
+      padding: 6px 14px;
+      border-radius: var(--r-sm);
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+    }
+    .seg__btn--active { background: var(--accent); color: var(--accent-fg); }
+
+    .tiers { display: grid; gap: var(--s-3); }
+    .tier-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr auto;
+      gap: var(--s-3);
+      align-items: end;
+      background: var(--bg-base);
+      border: 1px solid var(--border);
+      border-radius: var(--r-md);
+      padding: var(--s-3);
+    }
+    .tier-row__range { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-3); }
+    .tier-row__open {
+      display: flex; align-items: center; gap: 6px;
+      color: var(--text-muted); font-size: 12px;
+      padding: 10px 12px;
+      background: var(--bg-input);
+      border-radius: var(--r-md);
+      height: 100%;
+    }
+    .tier-row__open .material-icons { font-size: 18px; }
+
+    @media (max-width: 540px) {
+      .tier-row { grid-template-columns: 1fr; }
+      .tier-row__range { grid-template-columns: 1fr 1fr; }
+    }
+
+    .tier-preview {
+      padding: var(--s-3);
+      background: var(--accent-soft);
+      color: var(--accent);
+      border-radius: var(--r-md);
+      font-size: 13px;
+    }
+    .tier-preview strong { display: block; margin-bottom: 4px; }
+    .tier-preview ul { margin: 0; padding-left: 18px; }
+    .tier-preview li { font-variant-numeric: tabular-nums; }
+
     .prize-card {
       background: var(--bg-base);
       border: 1px solid var(--border);
@@ -264,6 +398,8 @@ export class RaffleCreateModalComponent {
     number_digits: number;
     ticket_price: number;
     seller_commission: number;
+    useTiers: boolean;
+    commission_tiers: TierForm[];
     final_draw_date: string;
     primary_color: string;
     lottery_name: string;
@@ -302,6 +438,12 @@ export class RaffleCreateModalComponent {
       number_digits: 4,
       ticket_price: 20000,
       seller_commission: 3000,
+      useTiers: true,
+      commission_tiers: [
+        { from_count: 1,  to_count: 30,   amount_per_ticket: 3000 },
+        { from_count: 31, to_count: 50,   amount_per_ticket: 4000 },
+        { from_count: 51, to_count: null, amount_per_ticket: 5000 },
+      ],
       final_draw_date: inThreeMonths.toISOString().slice(0, 10),
       primary_color: '#1e8e54',
       lottery_name: '',
@@ -312,6 +454,68 @@ export class RaffleCreateModalComponent {
       prizes: [],
     };
   }
+
+  setUseTiers(v: boolean) {
+    this.form.useTiers = v;
+  }
+
+  addTier() {
+    const tiers = this.form.commission_tiers;
+    const last = tiers[tiers.length - 1];
+    if (last) {
+      // El último deja de ser abierto; el nuevo se vuelve el abierto
+      const lastFrom = Number(last.from_count) || 1;
+      const lastTo = last.to_count != null ? Number(last.to_count) : lastFrom + 19;
+      last.to_count = lastTo;
+      tiers.push({
+        from_count: lastTo + 1,
+        to_count: null,
+        amount_per_ticket: Number(last.amount_per_ticket) + 1000,
+      });
+    } else {
+      tiers.push({ from_count: 1, to_count: null, amount_per_ticket: 3000 });
+    }
+  }
+
+  removeTier(i: number) {
+    this.form.commission_tiers.splice(i, 1);
+    // Asegurar que el último tramo quede abierto (to_count = null)
+    const tiers = this.form.commission_tiers;
+    if (tiers.length) tiers[tiers.length - 1].to_count = null;
+  }
+
+  updateTierFrom(i: number, value: number) {
+    this.form.commission_tiers[i].from_count = Number(value) || 0;
+  }
+
+  updateTierTo(i: number, value: number) {
+    this.form.commission_tiers[i].to_count = value == null || value === ('' as any) ? null : Number(value);
+  }
+
+  readonly tierExamples = computed(() => {
+    if (!this.form.useTiers) return [];
+    const tiers = this.form.commission_tiers;
+    if (!tiers.length) return [];
+    const fmt = new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 });
+    const samples: number[] = [];
+    const ordered = [...tiers].sort((a, b) => a.from_count - b.from_count);
+    for (const t of ordered) {
+      samples.push(Number(t.from_count));
+      if (t.to_count != null) samples.push(Number(t.to_count));
+    }
+    const unique = [...new Set(samples)].filter(n => n > 0).slice(0, 6);
+    return unique.map(count => {
+      const tier = ordered.find(t =>
+        count >= t.from_count && (t.to_count == null || count <= t.to_count),
+      );
+      const per = tier ? Number(tier.amount_per_ticket) : 0;
+      const total = per * count;
+      return {
+        count,
+        label: `${count} × $${fmt.format(per)} = $${fmt.format(total)}`,
+      };
+    });
+  });
 
   addPrize() {
     const today = new Date();
@@ -364,6 +568,42 @@ export class RaffleCreateModalComponent {
       }
     }
 
+    // Validar tramos de comisión (si aplica)
+    if (this.form.useTiers) {
+      const tiers = [...this.form.commission_tiers].sort((a, b) => a.from_count - b.from_count);
+      if (!tiers.length) {
+        this.error.set('Define al menos un tramo de comisión, o elige comisión plana.');
+        return;
+      }
+      if (Number(tiers[0].from_count) !== 1) {
+        this.error.set('El primer tramo debe empezar en 1 boleta.');
+        return;
+      }
+      for (let i = 0; i < tiers.length; i++) {
+        const t = tiers[i];
+        const isLast = i === tiers.length - 1;
+        if (Number(t.amount_per_ticket) < 0) {
+          this.error.set(`El monto del tramo #${i + 1} no puede ser negativo.`);
+          return;
+        }
+        if (!isLast) {
+          if (t.to_count == null) {
+            this.error.set(`Solo el último tramo puede quedar abierto. Cierra el tramo #${i + 1}.`);
+            return;
+          }
+          if (Number(t.to_count) < Number(t.from_count)) {
+            this.error.set(`En el tramo #${i + 1}: "hasta" no puede ser menor que "desde".`);
+            return;
+          }
+          const next = tiers[i + 1];
+          if (Number(next.from_count) !== Number(t.to_count) + 1) {
+            this.error.set(`Los tramos deben ser consecutivos sin huecos (revisa tramos #${i + 1} y #${i + 2}).`);
+            return;
+          }
+        }
+      }
+    }
+
     this.confirmSvc.ask({
       title: '¿Crear la rifa?',
       message: `Vas a crear "${this.form.name}" con ${this.form.total_tickets} boletas y ${this.form.prizes.length} premio(s). Podrás editar datos básicos hasta que generes los números (acción irreversible).`,
@@ -383,7 +623,14 @@ export class RaffleCreateModalComponent {
         number_max: Number(this.form.number_max),
         number_digits: Number(this.form.number_digits),
         ticket_price: Number(this.form.ticket_price),
-        seller_commission: Number(this.form.seller_commission || 0),
+        seller_commission: this.form.useTiers ? 0 : Number(this.form.seller_commission || 0),
+        commission_tiers: this.form.useTiers
+          ? this.form.commission_tiers.map(t => ({
+              from_count: Number(t.from_count),
+              to_count: t.to_count == null ? null : Number(t.to_count),
+              amount_per_ticket: Number(t.amount_per_ticket),
+            }))
+          : undefined,
         final_draw_date: this.form.final_draw_date,
         primary_color: this.form.primary_color || undefined,
         lottery_name: this.form.lottery_name.trim() || undefined,

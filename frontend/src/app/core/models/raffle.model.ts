@@ -1,5 +1,23 @@
 export type RaffleStatus = 'draft' | 'active' | 'locked' | 'finished' | 'cancelled';
 
+export interface CommissionTier {
+  from_count: number;
+  to_count: number | null;
+  amount_per_ticket: number;
+}
+
+export interface SellerTierStatus {
+  raffle_id: number;
+  seller_id: number;
+  paid_count: number;
+  current_tier: CommissionTier | null;
+  next_tier: CommissionTier | null;
+  tickets_to_next_tier: number | null;
+  current_amount_per_ticket: number;
+  earned_total: number;
+  uses_tiers: boolean;
+}
+
 export interface Prize {
   id?: number;
   raffle_id?: number;
@@ -23,6 +41,7 @@ export interface Raffle {
   number_digits: number;
   ticket_price: number;
   seller_commission: number;
+  commission_tiers?: CommissionTier[] | null;
   final_draw_date: string;
   status: RaffleStatus;
   numbers_generated: boolean;

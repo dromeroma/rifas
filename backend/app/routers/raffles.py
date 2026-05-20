@@ -31,6 +31,11 @@ async def create_raffle(
     db: Annotated[AsyncSession, Depends(get_db)],
     actor: Annotated[User, Depends(require_roles(UserRole.SUPER_ADMIN))],
 ):
+    tiers_data = (
+        [t.model_dump(mode="json") for t in payload.commission_tiers]
+        if payload.commission_tiers
+        else None
+    )
     raffle = Raffle(
         name=payload.name,
         description=payload.description,
@@ -41,9 +46,15 @@ async def create_raffle(
         number_digits=payload.number_digits,
         ticket_price=payload.ticket_price,
         seller_commission=payload.seller_commission,
+        commission_tiers=tiers_data,
         final_draw_date=payload.final_draw_date,
         logo_url=payload.logo_url,
         primary_color=payload.primary_color,
+        lottery_name=payload.lottery_name,
+        responsible_name=payload.responsible_name,
+        responsible_phone=payload.responsible_phone,
+        responsible_email=payload.responsible_email,
+        terms=payload.terms,
     )
     db.add(raffle)
     await db.flush()
