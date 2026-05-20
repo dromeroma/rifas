@@ -190,7 +190,7 @@ async def update_prize(
     await log_action(
         db, actor_id=actor.id, action="prize.update",
         entity_type="prize", entity_id=prize.id, request=request,
-        metadata={k: (v.isoformat() if hasattr(v, "isoformat") else v) for k, v in data.items()},
+        metadata=payload.model_dump(exclude_unset=True, mode="json"),
     )
     await db.commit()
     await db.refresh(prize)
