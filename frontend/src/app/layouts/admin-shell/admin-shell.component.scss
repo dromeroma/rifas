@@ -195,7 +195,19 @@
 .sidebar__footer {
   padding: var(--s-3);
   border-top: 1px solid var(--border);
+  display: grid;
+  gap: 8px;
 }
+
+.version {
+  text-align: center;
+  color: var(--text-faint);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  user-select: none;
+  font-variant-numeric: tabular-nums;
+}
+.version__short { font-weight: 600; }
 .collapse-btn {
   width: 100%;
   background: var(--bg-hover);

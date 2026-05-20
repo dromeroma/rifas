@@ -4,6 +4,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { filter, map } from 'rxjs';
 
+import { environment } from '@env/environment';
 import { AuthService } from '@core/services/auth.service';
 import { BottomNavComponent } from '@shared/components/bottom-nav/bottom-nav.component';
 import { AvatarComponent, ThemeToggleComponent } from '@shared/ui';
@@ -34,6 +35,7 @@ export class AdminShellComponent implements OnInit {
   private readonly router = inject(Router);
 
   readonly user = this.auth.user;
+  readonly appVersion = environment.version;
   readonly collapsed = signal(false);
   readonly profileOpen = signal(false);
   readonly expandedMenus = signal<Set<string>>(new Set());

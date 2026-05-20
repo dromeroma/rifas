@@ -1,9 +1,10 @@
 {
   "name": "sistema-rifas",
-  "version": "0.1.0",
+  "version": "0.0.1",
   "private": true,
   "scripts": {
     "ng": "ng",
+    "prestart": "node scripts/inject-env.mjs",
     "start": "ng serve --host 0.0.0.0 --port 4200",
     "prebuild": "node scripts/inject-env.mjs",
     "build": "ng build",

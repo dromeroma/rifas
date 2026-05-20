@@ -53,6 +53,13 @@
     </nav>
 
     <div class="sidebar__footer">
+      <div class="version" [title]="'Versión ' + appVersion">
+        @if (collapsed()) {
+          <span class="version__short">v{{ appVersion }}</span>
+        } @else {
+          <span class="version__full">Versión {{ appVersion }}</span>
+        }
+      </div>
       <button class="collapse-btn" (click)="toggleSidebar()" [title]="collapsed() ? 'Expandir' : 'Colapsar'">
         <span class="material-icons">{{ collapsed() ? 'chevron_right' : 'chevron_left' }}</span>
       </button>
