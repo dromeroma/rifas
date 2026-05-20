@@ -2,9 +2,11 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
+import { Ticket } from '@core/models/raffle.model';
 import { Customer } from '@core/models/stats.model';
 import { AdminService } from '@core/services/admin.service';
 import { AuthService } from '@core/services/auth.service';
+import { OpsService } from '@core/services/ops.service';
 import { ToastService } from '@core/services/toast.service';
 import {
   AvatarComponent, ButtonComponent,
@@ -55,11 +57,12 @@ import {
                 <th class="th-doc">Documento</th>
                 <th class="th-phone">Teléfono</th>
                 <th class="th-city">Ciudad</th>
+                <th class="th-action"></th>
               </tr>
             </thead>
             <tbody>
               @for (c of pageRows(); track c.id) {
-                <tr>
+                <tr class="row-click" (click)="openTickets(c)">
                   <td class="td-id num">{{ c.id }}</td>
                   <td>
                     <div class="cell-name">
@@ -73,6 +76,9 @@ import {
                   <td class="td-doc">{{ c.document || '—' }}</td>
                   <td class="td-phone num">{{ c.phone }}</td>
                   <td class="td-city">{{ c.city || '—' }}</td>
+                  <td class="td-action">
+                    <span class="material-icons">chevron_right</span>
+                  </td>
                 </tr>
               }
             </tbody>
@@ -94,6 +100,36 @@ import {
         }
       }
     </div>
+
+    <!-- Modal: Boletas del cliente -->
+    <app-modal
+      [open]="ticketsOpen()"
+      [title]="'Boletas de ' + (currentCustomer()?.full_name ?? '')"
+      [subtitle]="currentCustomer()?.phone ?? ''"
+      size="lg"
+      (close)="closeTickets()"
+    >
+      @if (loadingTickets()) {
+        <p class="muted">Cargando boletas...</p>
+      } @else if (!customerTickets().length) {
+        <app-empty icon="confirmation_number" title="Sin boletas" description="Este cliente aún no tiene boletas asociadas." />
+      } @else {
+        <div class="t-list">
+          @for (t of customerTickets(); track t.id) {
+            <div class="t-row">
+              <div class="t-label">
+                <strong>{{ t.number_label }}</strong>
+                <small class="muted mono">{{ t.code }}</small>
+              </div>
+              <span class="t-status t-status--{{ t.status }}">{{ statusLabel(t.status) }}</span>
+            </div>
+          }
+        </div>
+      }
+      <ng-container slot="footer">
+        <app-button variant="secondary" (click)="closeTickets()">Cerrar</app-button>
+      </ng-container>
+    </app-modal>
 
     <!-- Modal Crear Cliente -->
     <app-modal
@@ -181,6 +217,36 @@ import {
       letter-spacing: 0.08em;
     }
     .table tr:hover td { background: var(--bg-hover); }
+    .row-click { cursor: pointer; }
+    .th-action, .td-action { width: 40px; text-align: right; color: var(--text-faint); }
+
+    /* Modal de boletas */
+    .t-list { display: grid; gap: 6px; }
+    .t-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 10px 12px;
+      background: var(--bg-base);
+      border: 1px solid var(--border);
+      border-radius: var(--r-md);
+    }
+    .t-label { display: grid; gap: 2px; }
+    .t-label strong { font-size: 14px; font-variant-numeric: tabular-nums; }
+    .t-label small { font-size: 11px; }
+    .mono { font-family: var(--font-mono); }
+    .t-status {
+      padding: 4px 10px;
+      border-radius: var(--r-full);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+    .t-status--available { background: var(--bg-hover); color: var(--text-muted); }
+    .t-status--reserved { background: var(--warning-soft); color: var(--warning); }
+    .t-status--pending_payment { background: var(--warning-soft); color: var(--warning); }
+    .t-status--paid { background: var(--accent-soft); color: var(--accent); }
+    .t-status--winning { background: rgba(245, 180, 0, 0.2); color: #b88500; }
+    .t-status--expired { background: var(--danger-soft); color: var(--danger); }
     .th-id, .td-id { width: 50px; }
     .num { font-variant-numeric: tabular-nums; }
     .cell-name {
@@ -234,7 +300,41 @@ import {
 export class CustomersComponent implements OnInit {
   private readonly admin = inject(AdminService);
   private readonly auth = inject(AuthService);
+  private readonly ops = inject(OpsService);
   private readonly toast = inject(ToastService);
+
+  ticketsOpen = signal(false);
+  loadingTickets = signal(false);
+  currentCustomer = signal<Customer | null>(null);
+  customerTickets = signal<Ticket[]>([]);
+
+  openTickets(c: Customer) {
+    this.currentCustomer.set(c);
+    this.ticketsOpen.set(true);
+    this.loadingTickets.set(true);
+    this.ops.customerTickets(c.id).subscribe({
+      next: (r) => {
+        this.customerTickets.set(r.tickets as any);
+        this.loadingTickets.set(false);
+      },
+      error: () => {
+        this.customerTickets.set([]);
+        this.loadingTickets.set(false);
+      },
+    });
+  }
+  closeTickets() { this.ticketsOpen.set(false); }
+
+  statusLabel(s: string): string {
+    return ({
+      available: 'Disponible',
+      reserved: 'Reservada',
+      pending_payment: 'Pendiente pago',
+      paid: 'Pagada',
+      expired: 'Expirada',
+      winning: '🏆 Ganadora',
+    } as Record<string, string>)[s] ?? s;
+  }
 
   loading = signal(true);
   saving = signal(false);

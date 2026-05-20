@@ -17,6 +17,7 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
 import {
   ButtonComponent, ChipComponent, InputComponent, ModalComponent,
 } from '@shared/ui';
+import { ReportPaymentModalComponent } from './report-payment-modal.component';
 
 @Component({
   selector: 'app-ticket-actions-modal',
@@ -25,6 +26,7 @@ import {
     CommonModule, FormsModule,
     ButtonComponent, ChipComponent, InputComponent, ModalComponent,
     CountdownComponent, TicketDesignComponent,
+    ReportPaymentModalComponent,
   ],
   template: `
     <app-modal
@@ -186,14 +188,32 @@ import {
 
         @if (ticket()?.status === 'reserved' || ticket()?.status === 'pending_payment') {
           <app-button variant="danger" icon="lock_open" [loading]="releasing()" (click)="release()">
-            {{ releasing() ? 'Liberando...' : 'Liberar boleta' }}
+            {{ releasing() ? 'Liberando...' : 'Liberar' }}
           </app-button>
-          <app-button variant="primary" icon="check_circle" [loading]="markingPaid()" (click)="markPaid()">
-            {{ markingPaid() ? 'Marcando...' : 'Marcar como pagada' }}
-          </app-button>
+
+          @if (ticket()?.status === 'reserved') {
+            <app-button variant="primary" icon="cloud_upload" (click)="openReportPayment()">
+              Reportar pago
+            </app-button>
+          }
+
+          @if (isAdmin()) {
+            <app-button variant="primary" icon="check_circle" [loading]="markingPaid()" (click)="markPaid()">
+              {{ markingPaid() ? 'Marcando...' : 'Marcar pagada (admin)' }}
+            </app-button>
+          }
         }
       </ng-container>
     </app-modal>
+
+    <!-- Modal de reportar pago con comprobante -->
+    <app-report-payment-modal
+      [open]="reportPaymentOpen()"
+      [ticket]="ticket()"
+      [defaultAmount]="ticketPrice()"
+      (close)="reportPaymentOpen.set(false)"
+      (submitted)="onPaymentSubmitted($event)"
+    />
   `,
   styles: [`
     .layout { display: grid; gap: var(--s-5); grid-template-columns: 1fr; }
@@ -300,6 +320,15 @@ export class TicketActionsModalComponent {
   releasing = signal(false);
   markingPaid = signal(false);
   error = signal<string | null>(null);
+
+  reportPaymentOpen = signal(false);
+
+  readonly isAdmin = computed(() => {
+    const r = this.auth.role();
+    return r === 'admin' || r === 'super_admin';
+  });
+
+  readonly ticketPrice = computed(() => Number(this.raffle().ticket_price) || 0);
 
   search = '';
   newCust = { full_name: '', phone: '', document: '' };
@@ -537,6 +566,13 @@ export class TicketActionsModalComponent {
   }
 
   onClose() { this.close.emit(); }
+
+  openReportPayment() { this.reportPaymentOpen.set(true); }
+
+  onPaymentSubmitted(updatedTicket: Ticket) {
+    this.reportPaymentOpen.set(false);
+    this.changed.emit(updatedTicket);
+  }
 
   // ===== Helpers =====
   initials(name: string): string {

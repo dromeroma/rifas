@@ -25,13 +25,38 @@ class PaymentOut(BaseModel):
     amount: Decimal
     reference: Optional[str]
     proof_url: Optional[str]
+    notes: Optional[str]
     status: PaymentStatus
     confirmed_by: Optional[int]
     confirmed_at: Optional[datetime]
     rejection_reason: Optional[str]
+    created_at: datetime
 
     class Config:
         from_attributes = True
+
+
+class PaymentListItem(BaseModel):
+    """Item enriquecido con datos del ticket, cliente y vendedor para la lista del admin."""
+    id: int
+    ticket_id: int
+    ticket_label: str
+    ticket_code: str
+    raffle_name: str
+    customer_id: int
+    customer_name: str
+    customer_phone: str
+    seller_id: Optional[int]
+    seller_name: Optional[str]
+    method: PaymentMethod
+    amount: Decimal
+    reference: Optional[str]
+    proof_url: Optional[str]
+    notes: Optional[str]
+    status: PaymentStatus
+    rejection_reason: Optional[str]
+    created_at: datetime
+    confirmed_at: Optional[datetime]
 
 
 class PaymentRejection(BaseModel):

@@ -11,7 +11,10 @@ from app.core.exceptions import (
     ReservationLockedError,
     TicketUnavailableError,
 )
-from app.routers import assignments, auth, customers, raffles, stats, tickets, users, verify
+from app.routers import (
+    admin, assignments, audit, auth, customers, payments, raffles,
+    stats, tickets, users, verify,
+)
 
 settings = get_settings()
 
@@ -63,4 +66,7 @@ app.include_router(stats.router)
 app.include_router(users.router)
 app.include_router(customers.router)
 app.include_router(assignments.router)
+app.include_router(payments.router)
+app.include_router(audit.router)
+app.include_router(admin.router)
 app.include_router(verify.router)

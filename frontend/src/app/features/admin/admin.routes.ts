@@ -13,8 +13,8 @@ export const ADMIN_ROUTES: Routes = [
       { path: 'sellers', loadComponent: () => import('./sellers.component').then((m) => m.SellersComponent) },
       { path: 'customers', loadComponent: () => import('./customers.component').then((m) => m.CustomersComponent) },
       { path: 'assignments', loadComponent: () => import('./assignments.component').then((m) => m.AssignmentsComponent) },
-      { path: 'payments', loadComponent: () => import('./payments-placeholder.component').then((m) => m.PaymentsPlaceholderComponent) },
-      { path: 'audit', loadComponent: () => import('./audit-placeholder.component').then((m) => m.AuditPlaceholderComponent) },
+      { path: 'payments', loadComponent: () => import('./payments.component').then((m) => m.PaymentsComponent) },
+      { path: 'audit', loadComponent: () => import('./audit.component').then((m) => m.AuditComponent) },
     ],
   },
 ];

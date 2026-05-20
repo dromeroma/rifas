@@ -7,6 +7,7 @@ import { Raffle, Ticket, TicketStatus } from '@core/models/raffle.model';
 import { RaffleStats } from '@core/models/stats.model';
 import { AdminService } from '@core/services/admin.service';
 import { ConfirmService } from '@core/services/confirm.service';
+import { DrawWinnerResult, OpsService } from '@core/services/ops.service';
 import { RaffleService } from '@core/services/raffle.service';
 import { ToastService } from '@core/services/toast.service';
 import { CountdownComponent } from '@shared/components/countdown/countdown.component';
@@ -38,6 +39,14 @@ import { TicketActionsModalComponent } from '../seller/ticket-actions-modal.comp
           </div>
           <div class="page__actions">
             <app-button variant="secondary" icon="edit" (click)="openEditModal(r)">Editar</app-button>
+            <app-button variant="secondary" icon="cleaning_services" [loading]="expiring()" (click)="expireOverdue()">
+              Liberar vencidas
+            </app-button>
+            @if (r.numbers_generated) {
+              <app-button variant="primary" icon="emoji_events" (click)="openDrawModal(r)">
+                Registrar ganador
+              </app-button>
+            }
             @if (!r.numbers_generated) {
               <app-button variant="primary" icon="bolt" (click)="generate(r.id)" [loading]="generating()">
                 {{ generating() ? 'Generando 10.000...' : 'Generar números' }}
@@ -114,6 +123,55 @@ import { TicketActionsModalComponent } from '../seller/ticket-actions-modal.comp
         </app-card>
       </div>
 
+      <!-- ============ REGISTRAR GANADOR ============ -->
+      <app-modal
+        [open]="drawOpen()"
+        title="Registrar ganador del sorteo"
+        subtitle="Ingresa el número que salió en la lotería para uno de los premios."
+        size="md"
+        (close)="closeDrawModal()"
+      >
+        <form class="edit-form">
+          <label class="textarea-field">
+            <span>Premio</span>
+            <select [(ngModel)]="draw.prize_id" name="prize_id">
+              @for (p of pendingPrizes(); track p.id) {
+                <option [value]="p.id">{{ p.position }}. {{ p.name }} — {{ p.draw_date }}</option>
+              }
+            </select>
+          </label>
+
+          <app-input
+            label="Número ganador"
+            [(ngModel)]="draw.winning_number"
+            name="winning_number"
+            icon="emoji_events"
+            inputmode="numeric"
+            hint="Ej: 0421. Se completa con ceros a la izquierda automáticamente."
+          />
+
+          @if (drawResult(); as dr) {
+            <div class="draw-result" [class.draw-result--no-paid]="!dr.is_paid">
+              <strong>Boleta {{ dr.ticket_label }}</strong>
+              @if (dr.customer_name) {
+                <small>{{ dr.customer_name }}<br /><span class="muted">{{ dr.customer_phone }}</span></small>
+              } @else {
+                <small class="muted">Sin cliente asignado</small>
+              }
+              @if (!dr.is_paid) {
+                <small class="warn">⚠ Esta boleta NO está pagada. Verifica con el cliente.</small>
+              }
+            </div>
+          }
+        </form>
+        <ng-container slot="footer">
+          <app-button variant="secondary" (click)="closeDrawModal()">Cerrar</app-button>
+          <app-button variant="primary" icon="check" [loading]="drawing()" (click)="doDraw()">
+            {{ drawing() ? 'Registrando...' : 'Registrar ganador' }}
+          </app-button>
+        </ng-container>
+      </app-modal>
+
       <!-- ============ EDITAR RIFA ============ -->
       <app-modal
         [open]="editOpen()"
@@ -171,6 +229,33 @@ import { TicketActionsModalComponent } from '../seller/ticket-actions-modal.comp
       resize: vertical;
     }
     .textarea-field textarea:focus { outline: 0; border-color: var(--accent); }
+
+    .textarea-field select {
+      padding: 10px 12px;
+      background: var(--bg-input);
+      color: var(--text);
+      border: 1px solid transparent;
+      border-radius: var(--r-md);
+      font-size: 14px;
+    }
+    .textarea-field select:focus { outline: 0; border-color: var(--accent); }
+
+    /* Draw result */
+    .draw-result {
+      display: grid; gap: 4px;
+      padding: var(--s-3);
+      background: var(--accent-soft);
+      border: 1px solid var(--accent);
+      border-radius: var(--r-md);
+    }
+    .draw-result strong { color: var(--accent); font-size: 18px; }
+    .draw-result small { font-size: 12px; }
+    .draw-result .warn { color: var(--warning); font-weight: 600; margin-top: 6px; }
+    .draw-result--no-paid {
+      background: var(--warning-soft);
+      border-color: var(--warning);
+    }
+    .draw-result--no-paid strong { color: var(--warning); }
     .muted { color: var(--text-muted); font-size: 13px; margin-top: 2px; }
 
     .hero {
@@ -319,6 +404,7 @@ export class RaffleDetailComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly raffleSvc = inject(RaffleService);
   private readonly admin = inject(AdminService);
+  private readonly ops = inject(OpsService);
   private readonly toast = inject(ToastService);
   private readonly confirmSvc = inject(ConfirmService);
 
@@ -328,6 +414,15 @@ export class RaffleDetailComponent implements OnInit {
   selectedTicket = signal<Ticket | null>(null);
   modalOpen = signal(false);
   generating = signal(false);
+
+  // Liberar vencidas
+  expiring = signal(false);
+
+  // Registrar ganador
+  drawOpen = signal(false);
+  drawing = signal(false);
+  draw = { prize_id: 0, winning_number: '' };
+  drawResult = signal<DrawWinnerResult | null>(null);
 
   // Editar rifa
   editOpen = signal(false);
@@ -412,6 +507,90 @@ export class RaffleDetailComponent implements OnInit {
     // Refrescar stats
     const r = this.raffle();
     if (r) this.admin.stats(r.id).subscribe((s) => this.stats.set(s));
+  }
+
+  pendingPrizes() {
+    const r = this.raffle();
+    if (!r) return [];
+    return r.prizes.filter((p) => !p.winning_number);
+  }
+
+  expireOverdue() {
+    this.confirmSvc.ask({
+      title: 'Liberar reservas vencidas',
+      message: 'Liberará automáticamente todas las reservas con más de 24 horas sin pagar. Las boletas volverán a estar disponibles.',
+      tone: 'warning',
+      icon: 'cleaning_services',
+      confirmLabel: 'Sí, liberar',
+      cancelLabel: 'Cancelar',
+    }).subscribe((yes) => {
+      if (!yes) return;
+      this.expiring.set(true);
+      this.ops.expireReservations().subscribe({
+        next: (r) => {
+          this.expiring.set(false);
+          this.toast.success(
+            r.released > 0 ? `${r.released} reservas liberadas` : 'Nada que liberar',
+            r.released > 0 ? 'Las boletas vencidas ya están disponibles de nuevo.' : 'No había reservas vencidas.',
+          );
+          const id = this.raffle()?.id;
+          if (id) this.load(id);
+        },
+        error: (e) => {
+          this.expiring.set(false);
+          this.toast.error('Error', e?.error?.detail ?? 'No se pudo liberar.');
+        },
+      });
+    });
+  }
+
+  openDrawModal(r: Raffle) {
+    const first = r.prizes.find((p) => !p.winning_number);
+    this.draw = { prize_id: first?.id ?? 0, winning_number: '' };
+    this.drawResult.set(null);
+    this.drawOpen.set(true);
+  }
+  closeDrawModal() {
+    this.drawOpen.set(false);
+    this.drawResult.set(null);
+  }
+
+  doDraw() {
+    const r = this.raffle();
+    if (!r) return;
+    if (!this.draw.prize_id || !this.draw.winning_number) {
+      this.toast.error('Datos faltantes', 'Selecciona premio y escribe el número ganador.');
+      return;
+    }
+    const prizeName = r.prizes.find((p) => p.id === Number(this.draw.prize_id))?.name ?? '';
+    this.confirmSvc.ask({
+      title: `Registrar ganador de "${prizeName}"`,
+      message: `Vas a registrar el número ${this.draw.winning_number.padStart(r.number_digits, '0')} como ganador. Esta acción no se puede revertir.`,
+      tone: 'warning',
+      icon: 'emoji_events',
+      confirmLabel: 'Sí, registrar',
+      cancelLabel: 'Cancelar',
+    }).subscribe((yes) => {
+      if (!yes) return;
+      this.drawing.set(true);
+      this.ops.drawWinner(r.id, +this.draw.prize_id, this.draw.winning_number).subscribe({
+        next: (result) => {
+          this.drawing.set(false);
+          this.drawResult.set(result);
+          this.toast.success(
+            `🏆 Ganador registrado: Boleta ${result.ticket_label}`,
+            result.customer_name
+              ? `${result.customer_name} · ${result.customer_phone}`
+              : 'Boleta sin cliente asignado',
+          );
+          this.load(r.id);
+        },
+        error: (e) => {
+          this.drawing.set(false);
+          this.toast.error('No se pudo registrar', e?.error?.detail ?? 'Intenta de nuevo.');
+        },
+      });
+    });
   }
 
   openEditModal(r: Raffle) {
