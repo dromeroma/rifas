@@ -1,10 +1,11 @@
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Component, OnInit, inject, signal } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { FormsModule } from '@angular/forms';
+import { ActivatedRoute, Router } from '@angular/router';
 
 import { environment } from '@env/environment';
-import { CardComponent, ChipComponent, ThemeToggleComponent } from '@shared/ui';
+import { ButtonComponent, CardComponent, ChipComponent, InputComponent, ThemeToggleComponent } from '@shared/ui';
 
 interface VerifyResponse {
   valid: boolean;
@@ -31,7 +32,10 @@ interface VerifyResponse {
 @Component({
   selector: 'app-verify',
   standalone: true,
-  imports: [CommonModule, CardComponent, ChipComponent, ThemeToggleComponent],
+  imports: [
+    CommonModule, FormsModule,
+    ButtonComponent, CardComponent, ChipComponent, InputComponent, ThemeToggleComponent,
+  ],
   template: `
     <main class="verify">
       <header class="verify__top">
@@ -41,7 +45,35 @@ interface VerifyResponse {
 
       <div class="verify__container">
 
-        @if (loading()) {
+        @if (showForm()) {
+          <app-card title="Verificar boleta" subtitle="Ingresa el código que aparece en tu boleta">
+            <form class="form" (ngSubmit)="submitForm()">
+              <app-input
+                label="Código de boleta"
+                placeholder="Ej: 0WL-7JE-2TF"
+                icon="qr_code_2"
+                [(ngModel)]="codeInput"
+                name="code"
+                autocomplete="off"
+                hint="El código completo está en tu boleta (debajo del QR)."
+              />
+              @if (formError()) {
+                <div class="alert">
+                  <span class="material-icons">error_outline</span>
+                  {{ formError() }}
+                </div>
+              }
+              <app-button type="submit" variant="primary" size="lg" [full]="true">
+                Verificar boleta
+              </app-button>
+            </form>
+            <small class="footer-note muted">
+              También puedes escanear el QR de tu boleta para verificarla automáticamente.
+            </small>
+          </app-card>
+        }
+
+        @if (!showForm() && loading()) {
           <div class="state">
             <div class="spinner"></div>
             <p>Verificando boleta...</p>
@@ -49,18 +81,21 @@ interface VerifyResponse {
           </div>
         }
 
-        @if (!loading() && error()) {
+        @if (!showForm() && !loading() && error()) {
           <app-card>
             <div class="state state--err">
               <span class="material-icons big">cancel</span>
               <h2>Boleta no encontrada</h2>
               <p class="muted">{{ error() }}</p>
               <small class="muted">Código consultado: <strong>{{ code() }}</strong></small>
+              <app-button variant="secondary" icon="search" (click)="backToForm()">
+                Probar con otro código
+              </app-button>
             </div>
           </app-card>
         }
 
-        @if (!loading() && !error() && data(); as d) {
+        @if (!showForm() && !loading() && !error() && data(); as d) {
           <!-- ============ STATUS HERO ============ -->
           <div class="hero" [class.hero--paid]="d.ticket.is_paid" [class.hero--winner]="d.ticket.is_winner">
             <span class="material-icons hero__icon">
@@ -287,41 +322,84 @@ interface VerifyResponse {
       font-size: 12px;
       padding: var(--s-4) 0;
     }
+
+    .form { display: grid; gap: var(--s-3); }
+    .alert {
+      display: flex; align-items: center; gap: 8px;
+      padding: var(--s-3);
+      background: var(--danger-soft); color: var(--danger);
+      border-radius: var(--r-md);
+      font-size: 13px;
+    }
   `],
 })
 export class VerifyComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly http = inject(HttpClient);
 
-  loading = signal(true);
+  loading = signal(false);
   error = signal<string | null>(null);
   data = signal<VerifyResponse | null>(null);
   code = signal<string>('');
+  showForm = signal<boolean>(true);
+  formError = signal<string | null>(null);
+  codeInput = '';
 
   ngOnInit(): void {
-    const code = this.route.snapshot.paramMap.get('code') ?? '';
-    this.code.set(code);
-
+    const code = this.route.snapshot.paramMap.get('code')?.trim() ?? '';
     if (!code) {
-      this.error.set('Código no proporcionado en la URL.');
-      this.loading.set(false);
+      this.showForm.set(true);
       return;
     }
+    this.verify(code);
+  }
 
-    this.http.get<VerifyResponse>(`${environment.apiUrl}/verify/${encodeURIComponent(code)}`).subscribe({
-      next: (d) => {
-        this.data.set(d);
-        this.loading.set(false);
-      },
-      error: (e) => {
-        const detail =
-          e?.error?.detail ??
-          (e?.status === 0
-            ? 'No se pudo contactar al servidor. Verifica tu conexión.'
-            : `Error ${e?.status ?? '?'} al consultar la boleta.`);
-        this.error.set(detail);
-        this.loading.set(false);
-      },
-    });
+  private verify(code: string) {
+    this.showForm.set(false);
+    this.loading.set(true);
+    this.error.set(null);
+    this.code.set(code);
+    this.data.set(null);
+
+    this.http
+      .get<VerifyResponse>(`${environment.apiUrl}/verify/${encodeURIComponent(code)}`)
+      .subscribe({
+        next: (d) => {
+          this.data.set(d);
+          this.loading.set(false);
+        },
+        error: (e) => {
+          const detail =
+            e?.error?.detail ??
+            (e?.status === 0
+              ? 'No se pudo contactar al servidor. Verifica tu conexión.'
+              : `Error ${e?.status ?? '?'} al consultar la boleta.`);
+          this.error.set(detail);
+          this.loading.set(false);
+        },
+      });
+  }
+
+  submitForm() {
+    const raw = (this.codeInput || '').trim();
+    if (!raw) {
+      this.formError.set('Escribe el código de tu boleta.');
+      return;
+    }
+    this.formError.set(null);
+    // Normaliza: a mayúsculas y quita espacios. Mantiene guiones del formato XXX-XXX-XXX.
+    const code = raw.toUpperCase().replace(/\s+/g, '');
+    this.router.navigate(['/verify', code]);
+    this.verify(code);
+  }
+
+  backToForm() {
+    this.codeInput = '';
+    this.formError.set(null);
+    this.error.set(null);
+    this.data.set(null);
+    this.showForm.set(true);
+    this.router.navigate(['/verify']);
   }
 }

@@ -13,8 +13,17 @@ export const routes: Routes = [
   },
 
   {
+    path: 'verify',
+    loadComponent: () => import('./features/customer/verify.component').then((m) => m.VerifyComponent),
+  },
+  {
     path: 'verify/:code',
     loadComponent: () => import('./features/customer/verify.component').then((m) => m.VerifyComponent),
+  },
+  {
+    path: 'rifa/:id',
+    loadComponent: () =>
+      import('./features/customer/public-raffle.component').then((m) => m.PublicRaffleComponent),
   },
 
   {
