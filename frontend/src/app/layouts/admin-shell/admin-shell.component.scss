@@ -226,6 +226,22 @@
   min-width: 0;
   padding-bottom: var(--h-bottom-nav); /* deja espacio para bottom-nav */
 }
+
+/* Banner global de suscripción (encima del topbar) */
+.subscription-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: 10px var(--s-4);
+  background: var(--info);
+  color: var(--accent-fg);
+  font-size: 13px;
+}
+.subscription-banner .material-icons { font-size: 22px; flex-shrink: 0; }
+.subscription-banner strong { display: block; font-size: 13px; }
+.subscription-banner small { display: block; opacity: 0.9; margin-top: 1px; font-size: 12px; }
+.subscription-banner--warn { background: var(--warning); color: #1f1500; }
+.subscription-banner--danger { background: var(--danger); color: var(--accent-fg); }
 .content {
   padding: var(--s-4);
   max-width: 1200px;

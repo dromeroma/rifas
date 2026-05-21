@@ -49,6 +49,28 @@ async def create_raffle(
     else:
         target_tenant_id = scope.tenant_id  # admin del tenant propio
 
+    # Cupo: la cuenta no puede exceder su max_raffles.
+    from app.models.tenant import Tenant as _Tenant
+    target_tenant = (
+        await db.execute(select(_Tenant).where(_Tenant.id == target_tenant_id))
+    ).scalar_one_or_none()
+    if not target_tenant:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "cuenta no encontrada")
+    from sqlalchemy import func as _func
+    raffles_used = (
+        await db.execute(
+            select(_func.count(Raffle.id)).where(Raffle.tenant_id == target_tenant_id)
+        )
+    ).scalar_one()
+    if int(raffles_used or 0) >= target_tenant.max_raffles:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            (
+                f"la cuenta '{target_tenant.name}' ya alcanzó su cupo de "
+                f"{target_tenant.max_raffles} rifa(s). Contacta a Boletera para ampliarlo."
+            ),
+        )
+
     tiers_data = (
         [t.model_dump(mode="json") for t in payload.commission_tiers]
         if payload.commission_tiers

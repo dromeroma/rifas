@@ -68,6 +68,16 @@
 
   <!-- ============ MAIN ============ -->
   <div class="main">
+    @if (subscriptionBanner(); as banner) {
+      <div class="subscription-banner" [class.subscription-banner--warn]="banner.tone === 'warn'"
+                                       [class.subscription-banner--danger]="banner.tone === 'danger'">
+        <span class="material-icons">{{ banner.icon }}</span>
+        <div>
+          <strong>{{ banner.title }}</strong>
+          <small>{{ banner.message }}</small>
+        </div>
+      </div>
+    }
     <header class="topbar">
       <div class="topbar__left">
         <a routerLink="/admin" class="topbar__brand">

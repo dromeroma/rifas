@@ -40,9 +40,62 @@ export class AdminShellComponent implements OnInit {
   readonly profileOpen = signal(false);
   readonly expandedMenus = signal<Set<string>>(new Set());
 
+  /** Banner global de suscripción para tenants en grace_period o por vencer. */
+  readonly subscriptionBanner = computed<{
+    tone: 'info' | 'warn' | 'danger';
+    icon: string;
+    title: string;
+    message: string;
+  } | null>(() => {
+    const u = this.user();
+    const t = u?.tenant;
+    if (!t) return null;
+    const status = t.subscription_status;
+    const endDate = t.end_date;
+
+    if (status === 'grace_period') {
+      return {
+        tone: 'warn',
+        icon: 'warning_amber',
+        title: 'Tu suscripción venció.',
+        message: `Solo lectura por 7 días. Renueva antes de la fecha de gracia. Vencimiento: ${endDate}.`,
+      };
+    }
+    if (status === 'expired') {
+      return {
+        tone: 'danger',
+        icon: 'error',
+        title: 'Suscripción vencida.',
+        message: `Contacta a Boletera para renovar (venció el ${endDate}).`,
+      };
+    }
+    if (status === 'suspended') {
+      return {
+        tone: 'danger',
+        icon: 'block',
+        title: 'Cuenta suspendida.',
+        message: 'Contacta a Boletera para reactivarla.',
+      };
+    }
+    // Active pero por vencer en <= 7 días
+    if (status === 'active') {
+      const days = Math.round((new Date(endDate).getTime() - Date.now()) / 86_400_000);
+      if (days >= 0 && days <= 7) {
+        return {
+          tone: 'warn',
+          icon: 'schedule',
+          title: `Tu suscripción vence en ${days} día(s).`,
+          message: 'Renueva con Boletera para evitar pérdida de acceso.',
+        };
+      }
+    }
+    return null;
+  });
+
   readonly nav: NavItem[] = [
     { path: '/admin',             icon: 'space_dashboard', label: 'Dashboard',    roles: ['super_admin', 'admin'] },
     { path: '/seller',            icon: 'point_of_sale',   label: 'Mis ventas',   roles: ['seller'] },
+    { path: '/admin/tenants',     icon: 'business',        label: 'Cuentas',      roles: ['super_admin'], matchPrefix: true },
     { path: '/admin/raffles',     icon: 'casino',          label: 'Rifas',        roles: ['super_admin', 'admin'], matchPrefix: true },
     { path: '/seller/customers',  icon: 'group',           label: 'Mis clientes', roles: ['seller'] },
     { path: '/admin/customers',   icon: 'group',           label: 'Clientes',     roles: ['super_admin', 'admin'] },
