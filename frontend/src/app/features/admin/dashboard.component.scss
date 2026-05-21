@@ -1,5 +1,80 @@
 .dash { display: grid; gap: var(--s-4); }
 
+/* ============ CUPO DE RIFAS DEL TENANT ============ */
+.quota {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--accent);
+  border-radius: var(--r-lg);
+  padding: var(--s-4) var(--s-5);
+  display: grid;
+  gap: var(--s-3);
+  transition: border-color var(--t-fast);
+}
+.quota--full {
+  border-left-color: var(--warning);
+  background: var(--warning-soft);
+}
+.quota__head { display: flex; align-items: flex-start; gap: var(--s-3); flex-wrap: wrap; }
+.quota__head .muted {
+  display: block;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+.quota h2 {
+  font-size: 32px;
+  margin: 4px 0 6px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.quota__sep {
+  font-weight: 400;
+  color: var(--text-muted);
+  font-size: 20px;
+  margin: 0 4px;
+}
+.quota__pct {
+  font-size: 16px;
+  color: var(--accent);
+  font-weight: 600;
+  margin-left: 8px;
+  letter-spacing: 0;
+}
+.quota--full .quota__pct { color: var(--warning); }
+.quota__msg {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.quota__msg strong { color: var(--text); font-weight: 700; }
+.quota__msg--warn { color: var(--warning); font-weight: 600; }
+.quota__msg .material-icons { font-size: 16px; }
+
+.quota__bar {
+  height: 10px;
+  background: var(--bg-base);
+  border-radius: var(--r-full);
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+.quota__fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 70%, var(--info)));
+  border-radius: var(--r-full);
+  transition: width var(--t-base) cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.quota--full .quota__fill {
+  background: linear-gradient(90deg, var(--warning), color-mix(in srgb, var(--warning) 70%, var(--danger)));
+}
+
 /* Skeleton */
 .skeleton-row { display: grid; gap: var(--s-4); }
 .sk {

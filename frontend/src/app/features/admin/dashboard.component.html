@@ -1,4 +1,33 @@
 <div class="dash">
+  <!-- Cupo de rifas del tenant: visible siempre que el usuario sea admin -->
+  @if (quota(); as q) {
+    <section class="quota" [class.quota--full]="q.isReached">
+      <header class="quota__head">
+        <div>
+          <small class="muted">Cupo de rifas · {{ q.tenantName }}</small>
+          <h2>
+            {{ q.used }} <span class="quota__sep">de</span> {{ q.max }}
+            <small class="quota__pct">({{ fmtPct(q.pct) }}%)</small>
+          </h2>
+          @if (q.isReached) {
+            <small class="quota__msg quota__msg--warn">
+              <span class="material-icons">info</span>
+              Cupo alcanzado. Contacta a Boletera para ampliarlo.
+            </small>
+          } @else {
+            <small class="quota__msg">
+              Te quedan <strong>{{ q.remaining }}</strong> rifa(s) por crear.
+            </small>
+          }
+        </div>
+      </header>
+      <div class="quota__bar" role="progressbar"
+           [attr.aria-valuenow]="q.pct" aria-valuemin="0" aria-valuemax="100">
+        <div class="quota__fill" [style.width.%]="q.pct"></div>
+      </div>
+    </section>
+  }
+
   @if (loading()) {
     <div class="skeleton-row">
       <div class="sk sk-hero"></div>

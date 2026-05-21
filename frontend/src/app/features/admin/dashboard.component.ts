@@ -6,6 +6,7 @@ import { forkJoin, of } from 'rxjs';
 import { Raffle } from '@core/models/raffle.model';
 import { RaffleStats } from '@core/models/stats.model';
 import { AdminService } from '@core/services/admin.service';
+import { AuthService } from '@core/services/auth.service';
 import { RaffleService } from '@core/services/raffle.service';
 import { CountdownComponent } from '@shared/components/countdown/countdown.component';
 import {
@@ -30,12 +31,31 @@ export class AdminDashboardComponent implements OnInit {
   private readonly raffleSvc = inject(RaffleService);
   private readonly adminSvc = inject(AdminService);
   private readonly router = inject(Router);
+  private readonly auth = inject(AuthService);
 
   readonly loading = signal(true);
   readonly items = signal<RaffleWithStats[]>([]);
   readonly selectedIdx = signal(0);
 
   readonly selected = computed<RaffleWithStats | null>(() => this.items()[this.selectedIdx()] ?? null);
+
+  /** Información de cupo de rifas: usadas, máximas, restantes y porcentaje. */
+  readonly quota = computed(() => {
+    const t = this.auth.user()?.tenant;
+    if (!t) return null;  // super_admin u otro contexto sin tenant
+    const used = this.items().length;
+    const max = t.max_raffles;
+    const remaining = Math.max(max - used, 0);
+    const pct = max > 0 ? Math.min((used / max) * 100, 100) : 0;
+    return {
+      used,
+      max,
+      remaining,
+      pct: Number(pct.toFixed(2)),
+      tenantName: t.name,
+      isReached: used >= max,
+    };
+  });
 
   ngOnInit(): void {
     this.raffleSvc.list().subscribe({
@@ -74,5 +94,12 @@ export class AdminDashboardComponent implements OnInit {
 
   fmtMoney(v: number): string {
     return new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 }).format(v);
+  }
+
+  fmtPct(v: number): string {
+    return new Intl.NumberFormat('es-CO', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    }).format(v);
   }
 }
