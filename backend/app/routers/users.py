@@ -1,14 +1,16 @@
 from typing import Annotated, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
-from sqlalchemy import select
+from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.deps import require_roles
 from app.core.security import hash_password
+from app.models.commission import Commission
+from app.models.ticket import Ticket, TicketStatus
 from app.models.user import User, UserRole
-from app.schemas.user import UserCreate, UserOut, UserUpdate
+from app.schemas.user import SellerSummary, UserCreate, UserOut, UserUpdate
 from app.services.audit_service import log_action
 
 router = APIRouter(prefix="/users", tags=["users"])
@@ -27,6 +29,76 @@ async def list_users(
     if active is not None:
         q = q.where(User.is_active == active)
     return (await db.execute(q)).scalars().all()
+
+
+@router.get("/sellers/summary", response_model=List[SellerSummary])
+async def sellers_summary(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    _actor: Annotated[User, Depends(require_roles(UserRole.SUPER_ADMIN, UserRole.ADMIN))],
+    raffle_id: Optional[int] = Query(default=None, description="Si se pasa, filtra stats a esa rifa"),
+):
+    """Lista de vendedores con métricas reales agregadas:
+      - paid_tickets: boletas pagadas (PAID + WINNING) del vendedor
+      - commission_total: suma de Commission.amount del vendedor
+      - commission_paid: suma de Commission.amount donde paid=True
+      - commission_pending: suma de Commission.amount donde paid=False
+      - default_commission: valor por defecto configurado al crear el usuario
+    """
+    sellers = (
+        await db.execute(select(User).where(User.role == UserRole.SELLER).order_by(User.id.desc()))
+    ).scalars().all()
+    if not sellers:
+        return []
+
+    ticket_q = (
+        select(
+            Ticket.seller_id,
+            func.count(Ticket.id).label("paid"),
+        )
+        .where(Ticket.status.in_([TicketStatus.PAID, TicketStatus.WINNING]))
+        .group_by(Ticket.seller_id)
+    )
+    com_q = (
+        select(
+            Commission.seller_id,
+            func.coalesce(func.sum(Commission.amount), 0).label("total"),
+            func.coalesce(
+                func.sum(
+                    case((Commission.paid.is_(True), Commission.amount), else_=0)
+                ),
+                0,
+            ).label("paid_total"),
+        )
+        .group_by(Commission.seller_id)
+    )
+    if raffle_id is not None:
+        ticket_q = ticket_q.where(Ticket.raffle_id == raffle_id)
+        com_q = com_q.where(Commission.raffle_id == raffle_id)
+
+    paid_by_seller = {row.seller_id: int(row.paid) for row in (await db.execute(ticket_q)).all()}
+    com_by_seller = {
+        row.seller_id: (float(row.total or 0), float(row.paid_total or 0))
+        for row in (await db.execute(com_q)).all()
+    }
+
+    out: List[SellerSummary] = []
+    for s in sellers:
+        total, paid_total = com_by_seller.get(s.id, (0.0, 0.0))
+        out.append(
+            SellerSummary(
+                id=s.id,
+                email=s.email,
+                full_name=s.full_name,
+                phone=s.phone,
+                is_active=s.is_active,
+                default_commission=s.default_commission,
+                paid_tickets=paid_by_seller.get(s.id, 0),
+                commission_total=total,
+                commission_paid=paid_total,
+                commission_pending=max(total - paid_total, 0),
+            )
+        )
+    return out
 
 
 @router.post("", response_model=UserOut, status_code=status.HTTP_201_CREATED)

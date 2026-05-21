@@ -36,6 +36,20 @@ class UserOut(BaseModel):
         from_attributes = True
 
 
+class SellerSummary(BaseModel):
+    """Vendedor + métricas agregadas reales (no la config default_commission)."""
+    id: int
+    email: EmailStr
+    full_name: str
+    phone: Optional[str] = None
+    is_active: bool
+    default_commission: Optional[Decimal] = None
+    paid_tickets: int
+    commission_total: Decimal
+    commission_paid: Decimal
+    commission_pending: Decimal
+
+
 class SellerAssignmentCreate(BaseModel):
     raffle_id: int
     seller_id: int

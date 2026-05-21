@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
-import { SellerUser } from '@core/models/stats.model';
+import { SellerSummary } from '@core/models/stats.model';
 import { AdminService } from '@core/services/admin.service';
 import { ToastService } from '@core/services/toast.service';
 import {
@@ -47,11 +47,30 @@ import {
                 <strong>{{ s.full_name }}</strong>
                 <small class="muted">{{ s.email }}{{ s.phone ? ' · ' + s.phone : '' }}</small>
               </div>
+              <div class="seller__stats">
+                <div class="stat">
+                  <small class="stat__label">Boletas pagadas</small>
+                  <strong>{{ s.paid_tickets }}</strong>
+                </div>
+                <div class="stat">
+                  <small class="stat__label">Comisión generada</small>
+                  <strong class="stat__money">{{ '$' + fmt(s.commission_total) }}</strong>
+                </div>
+                @if (s.commission_pending > 0) {
+                  <small class="stat__pending">
+                    Pendiente: {{ '$' + fmt(s.commission_pending) }}
+                  </small>
+                }
+              </div>
               <div class="seller__meta">
                 <app-chip [tone]="s.is_active ? 'accent' : 'danger'">
                   {{ s.is_active ? 'Activo' : 'Inactivo' }}
                 </app-chip>
-                <small class="muted">Com. {{ '$' + fmt(s.default_commission || 0) }}</small>
+                @if (s.default_commission) {
+                  <small class="muted">
+                    Default: {{ '$' + fmt(s.default_commission) }} / boleta
+                  </small>
+                }
               </div>
             </article>
           }
@@ -137,24 +156,51 @@ import {
       border-radius: var(--r-md);
       padding: var(--s-3);
       display: grid;
-      grid-template-columns: auto 1fr auto;
+      grid-template-columns: auto 1.5fr 1fr auto;
       align-items: center;
       gap: var(--s-3);
     }
     .seller__info { display: grid; gap: 2px; min-width: 0; }
     .seller__info strong { font-size: 14px; color: var(--text); }
+
+    .seller__stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--s-2);
+      padding: 0 var(--s-3);
+      border-left: 1px solid var(--border);
+      border-right: 1px solid var(--border);
+    }
+    .stat { display: grid; gap: 2px; }
+    .stat__label { font-size: 11px; letter-spacing: 0.04em; color: var(--text-muted); text-transform: uppercase; }
+    .stat strong { font-size: 16px; color: var(--text); font-variant-numeric: tabular-nums; }
+    .stat__money { color: var(--accent); }
+    .stat__pending {
+      grid-column: 1 / -1;
+      font-size: 11px;
+      color: var(--warning);
+      margin-top: 2px;
+    }
+
     .seller__meta { display: grid; gap: 4px; text-align: right; }
 
-    @media (max-width: 480px) {
+    @media (max-width: 720px) {
       .seller {
         grid-template-columns: auto 1fr;
         grid-template-areas:
           'avatar info'
+          'stats  stats'
           'meta   meta';
       }
       .seller > app-avatar { grid-area: avatar; }
       .seller__info { grid-area: info; }
-      .seller__meta { grid-area: meta; text-align: left; flex-direction: row; display: flex; gap: var(--s-2); align-items: center; }
+      .seller__stats {
+        grid-area: stats;
+        border: 1px solid var(--border);
+        border-radius: var(--r-md);
+        padding: var(--s-2);
+      }
+      .seller__meta { grid-area: meta; text-align: left; flex-direction: row; display: flex; gap: var(--s-2); align-items: center; flex-wrap: wrap; }
     }
   `],
 })
@@ -166,7 +212,7 @@ export class SellersComponent implements OnInit {
   modalOpen = signal(false);
   saving = signal(false);
   error = signal<string | null>(null);
-  sellers = signal<SellerUser[]>([]);
+  sellers = signal<SellerSummary[]>([]);
 
   form: { full_name: string; email: string; phone?: string; password: string; default_commission?: number } = {
     full_name: '', email: '', phone: '', password: '', default_commission: undefined,
@@ -183,7 +229,7 @@ export class SellersComponent implements OnInit {
 
   refresh() {
     this.loading.set(true);
-    this.admin.listUsers('seller').subscribe({
+    this.admin.sellersSummary().subscribe({
       next: (s) => { this.sellers.set(s); this.loading.set(false); },
       error: () => this.loading.set(false),
     });

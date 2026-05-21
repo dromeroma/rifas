@@ -8,6 +8,7 @@ import {
   Customer,
   RaffleStats,
   SellerAssignment,
+  SellerSummary,
   SellerUser,
 } from '../models/stats.model';
 
@@ -30,6 +31,12 @@ export class AdminService {
   listUsers(role?: 'seller' | 'admin' | 'super_admin'): Observable<SellerUser[]> {
     const q = role ? `?role=${role}` : '';
     return this.http.get<SellerUser[]>(`${this.api}/users${q}`);
+  }
+
+  /** Vendedores con métricas reales (boletas pagadas, comisión generada, etc.). */
+  sellersSummary(raffleId?: number): Observable<SellerSummary[]> {
+    const q = raffleId != null ? `?raffle_id=${raffleId}` : '';
+    return this.http.get<SellerSummary[]>(`${this.api}/users/sellers/summary${q}`);
   }
 
   createUser(payload: Partial<SellerUser> & { password: string; role: SellerUser['role'] }): Observable<SellerUser> {

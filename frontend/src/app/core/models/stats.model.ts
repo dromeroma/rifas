@@ -38,6 +38,19 @@ export interface SellerUser {
   default_commission?: number | null;
 }
 
+export interface SellerSummary {
+  id: number;
+  email: string;
+  full_name: string;
+  phone?: string | null;
+  is_active: boolean;
+  default_commission?: number | null;
+  paid_tickets: number;
+  commission_total: number;
+  commission_paid: number;
+  commission_pending: number;
+}
+
 export interface Customer {
   id: number;
   full_name: string;
