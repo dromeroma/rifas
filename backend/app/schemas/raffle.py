@@ -76,6 +76,11 @@ class PrizeOut(PrizeBase):
 # -------- Raffle ----------
 
 class RaffleCreate(BaseModel):
+    # Solo aplica cuando el creador es super_admin (debe indicar a qué tenant
+    # va la rifa). Para usuarios admin de un tenant se ignora y se usa el tenant
+    # del usuario autenticado.
+    tenant_id: Optional[int] = None
+
     name: str = Field(min_length=3, max_length=200)
     description: Optional[str] = None
     total_tickets: int = Field(ge=1, default=500)

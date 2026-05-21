@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.database import get_db
-from app.core.deps import get_current_user
+from app.core.deps import TenantScope, assert_tenant_owns, get_current_user, get_tenant_scope
 from app.models.prize import Prize
 from app.models.raffle import Raffle
 from app.models.ticket import Ticket, TicketStatus
@@ -28,6 +28,7 @@ async def raffle_stats(
     raffle_id: int,
     db: Annotated[AsyncSession, Depends(get_db)],
     _user: Annotated[User, Depends(get_current_user)],
+    scope: Annotated[TenantScope, Depends(get_tenant_scope)],
 ):
     raffle = (
         await db.execute(
@@ -36,6 +37,7 @@ async def raffle_stats(
     ).scalar_one_or_none()
     if not raffle:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "rifa no encontrada")
+    assert_tenant_owns(scope, raffle.tenant_id)
 
     # Conteo por estado
     rows = (
@@ -104,6 +106,7 @@ async def seller_tier_status(
     raffle_id: int,
     db: Annotated[AsyncSession, Depends(get_db)],
     user: Annotated[User, Depends(get_current_user)],
+    scope: Annotated[TenantScope, Depends(get_tenant_scope)],
     seller_id: int | None = None,
 ):
     """Estado actual de comisión escalonada del vendedor en la rifa.
@@ -113,6 +116,7 @@ async def seller_tier_status(
     raffle = (await db.execute(select(Raffle).where(Raffle.id == raffle_id))).scalar_one_or_none()
     if not raffle:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "rifa no encontrada")
+    assert_tenant_owns(scope, raffle.tenant_id)
 
     target_seller_id: int
     if user.role == UserRole.SELLER:

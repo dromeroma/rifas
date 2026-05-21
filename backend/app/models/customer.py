@@ -7,6 +7,7 @@ from app.core.database import Base
 from app.models.base_mixins import TimestampMixin
 
 if TYPE_CHECKING:
+    from app.models.tenant import Tenant
     from app.models.ticket import Ticket
 
 
@@ -14,6 +15,13 @@ class Customer(Base, TimestampMixin):
     __tablename__ = "customers"
 
     id: Mapped[int] = mapped_column(primary_key=True)
+
+    # Tenant al que pertenece este cliente. NOT NULL después del backfill.
+    tenant_id: Mapped[int] = mapped_column(
+        ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False, index=True,
+    )
+    tenant: Mapped["Tenant"] = relationship(back_populates="customers")
+
     full_name: Mapped[str] = mapped_column(String(150), nullable=False)
     document: Mapped[str | None] = mapped_column(String(30), index=True, nullable=True)
     phone: Mapped[str] = mapped_column(String(30), index=True, nullable=False)

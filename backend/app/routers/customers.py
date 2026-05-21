@@ -5,7 +5,7 @@ from sqlalchemy import or_, select, exists
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.deps import require_roles
+from app.core.deps import TenantScope, assert_tenant_owns, get_tenant_scope, require_roles
 from app.models.customer import Customer
 from app.models.ticket import Ticket
 from app.models.user import User, UserRole
@@ -19,6 +19,7 @@ router = APIRouter(prefix="/customers", tags=["customers"])
 async def list_customers(
     db: Annotated[AsyncSession, Depends(get_db)],
     actor: Annotated[User, Depends(require_roles(UserRole.SELLER, UserRole.ADMIN, UserRole.SUPER_ADMIN))],
+    scope: Annotated[TenantScope, Depends(get_tenant_scope)],
     q: str | None = Query(default=None, description="búsqueda por nombre, documento o teléfono"),
     mine: bool = Query(
         default=False,
@@ -26,6 +27,8 @@ async def list_customers(
     ),
 ):
     query = select(Customer).order_by(Customer.id.desc())
+    if scope.tenant_id is not None:
+        query = query.where(Customer.tenant_id == scope.tenant_id)
 
     # Un vendedor con mine=true ve "sus clientes": tanto los que él registró
     # (created_by_user_id == su id) como aquellos a los que les ha reservado
@@ -57,8 +60,18 @@ async def create_customer(
     request: Request,
     db: Annotated[AsyncSession, Depends(get_db)],
     actor: Annotated[User, Depends(require_roles(UserRole.SELLER, UserRole.ADMIN, UserRole.SUPER_ADMIN))],
+    scope: Annotated[TenantScope, Depends(get_tenant_scope)],
 ):
-    customer = Customer(**payload.model_dump(), created_by_user_id=actor.id)
+    if scope.tenant_id is None:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            "super_admin no puede crear clientes directamente; inicia sesión como admin de una cuenta.",
+        )
+    customer = Customer(
+        **payload.model_dump(),
+        tenant_id=scope.tenant_id,
+        created_by_user_id=actor.id,
+    )
     db.add(customer)
     await db.flush()
     await log_action(
@@ -76,8 +89,10 @@ async def get_customer(
     customer_id: int,
     db: Annotated[AsyncSession, Depends(get_db)],
     _actor: Annotated[User, Depends(require_roles(UserRole.SELLER, UserRole.ADMIN, UserRole.SUPER_ADMIN))],
+    scope: Annotated[TenantScope, Depends(get_tenant_scope)],
 ):
     c = (await db.execute(select(Customer).where(Customer.id == customer_id))).scalar_one_or_none()
     if not c:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "cliente no encontrado")
+    assert_tenant_owns(scope, c.tenant_id)
     return c

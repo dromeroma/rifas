@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.database import get_db
-from app.core.deps import get_current_user, require_roles
+from app.core.deps import TenantScope, assert_tenant_owns, get_current_user, get_tenant_scope, require_roles
 from app.models.raffle import Raffle
 from app.models.reservation import Reservation
 from app.models.ticket import Ticket, TicketStatus
@@ -58,12 +58,34 @@ async def _load_ticket_out(db: AsyncSession, ticket_id: int) -> TicketOut | None
     return dto
 
 
+async def _verify_raffle_tenancy(db: AsyncSession, raffle_id: int, scope: TenantScope) -> Raffle:
+    raffle = (await db.execute(select(Raffle).where(Raffle.id == raffle_id))).scalar_one_or_none()
+    if not raffle:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "rifa no encontrada")
+    assert_tenant_owns(scope, raffle.tenant_id)
+    return raffle
+
+
+async def _verify_ticket_tenancy(db: AsyncSession, ticket_id: int, scope: TenantScope) -> Ticket:
+    res = await db.execute(
+        select(Ticket).join(Raffle, Raffle.id == Ticket.raffle_id).where(Ticket.id == ticket_id)
+    )
+    ticket = res.scalar_one_or_none()
+    if not ticket:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "boleta no encontrada")
+    raffle = (await db.execute(select(Raffle).where(Raffle.id == ticket.raffle_id))).scalar_one()
+    assert_tenant_owns(scope, raffle.tenant_id)
+    return ticket
+
+
 @router.get("/raffles/{raffle_id}/tickets", response_model=List[TicketSummary])
 async def list_tickets(
     raffle_id: int,
     db: Annotated[AsyncSession, Depends(get_db)],
     _user: Annotated[User, Depends(get_current_user)],
+    scope: Annotated[TenantScope, Depends(get_tenant_scope)],
 ):
+    await _verify_raffle_tenancy(db, raffle_id, scope)
     res = await db.execute(
         select(Ticket).where(Ticket.raffle_id == raffle_id).order_by(Ticket.number_label)
     )
@@ -75,7 +97,9 @@ async def get_ticket(
     ticket_id: int,
     db: Annotated[AsyncSession, Depends(get_db)],
     _user: Annotated[User, Depends(get_current_user)],
+    scope: Annotated[TenantScope, Depends(get_tenant_scope)],
 ):
+    await _verify_ticket_tenancy(db, ticket_id, scope)
     dto = await _load_ticket_out(db, ticket_id)
     if not dto:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "boleta no encontrada")
@@ -89,7 +113,9 @@ async def reserve(
     request: Request,
     db: Annotated[AsyncSession, Depends(get_db)],
     actor: Annotated[User, Depends(require_roles(UserRole.SELLER, UserRole.ADMIN, UserRole.SUPER_ADMIN))],
+    scope: Annotated[TenantScope, Depends(get_tenant_scope)],
 ):
+    await _verify_ticket_tenancy(db, ticket_id, scope)
     reservation = await reserve_ticket(
         db, ticket_id=ticket_id, seller_id=actor.id, customer_id=payload.customer_id
     )
@@ -108,11 +134,10 @@ async def release_ticket(
     request: Request,
     db: Annotated[AsyncSession, Depends(get_db)],
     actor: Annotated[User, Depends(require_roles(UserRole.SELLER, UserRole.ADMIN, UserRole.SUPER_ADMIN))],
+    scope: Annotated[TenantScope, Depends(get_tenant_scope)],
 ):
     """Libera una reserva. El vendedor solo puede liberar las suyas; admin puede liberar cualquiera."""
-    ticket = (await db.execute(select(Ticket).where(Ticket.id == ticket_id))).scalar_one_or_none()
-    if not ticket:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "boleta no encontrada")
+    ticket = await _verify_ticket_tenancy(db, ticket_id, scope)
 
     if ticket.status not in (TicketStatus.RESERVED, TicketStatus.PENDING_PAYMENT):
         raise HTTPException(
@@ -142,11 +167,10 @@ async def mark_paid(
     request: Request,
     db: Annotated[AsyncSession, Depends(get_db)],
     actor: Annotated[User, Depends(require_roles(UserRole.SELLER, UserRole.ADMIN, UserRole.SUPER_ADMIN))],
+    scope: Annotated[TenantScope, Depends(get_tenant_scope)],
 ):
     """Marca la boleta como pagada. El vendedor solo puede marcar las suyas."""
-    ticket = (await db.execute(select(Ticket).where(Ticket.id == ticket_id))).scalar_one_or_none()
-    if not ticket:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "boleta no encontrada")
+    ticket = await _verify_ticket_tenancy(db, ticket_id, scope)
 
     if actor.role == UserRole.SELLER and ticket.seller_id != actor.id:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "no puedes marcar pagada una boleta que no es tuya")
@@ -174,7 +198,9 @@ async def get_pdf(
     ticket_id: int,
     db: Annotated[AsyncSession, Depends(get_db)],
     _user: Annotated[User, Depends(get_current_user)],
+    scope: Annotated[TenantScope, Depends(get_tenant_scope)],
 ):
+    await _verify_ticket_tenancy(db, ticket_id, scope)
     res = await db.execute(
         select(Ticket)
         .options(selectinload(Ticket.numbers))
@@ -217,8 +243,10 @@ async def get_image(
     ticket_id: int,
     db: Annotated[AsyncSession, Depends(get_db)],
     _user: Annotated[User, Depends(get_current_user)],
+    scope: Annotated[TenantScope, Depends(get_tenant_scope)],
 ):
     """Genera un PNG de la boleta — ideal para compartir por WhatsApp."""
+    await _verify_ticket_tenancy(db, ticket_id, scope)
     res = await db.execute(
         select(Ticket)
         .options(selectinload(Ticket.numbers), selectinload(Ticket.customer))

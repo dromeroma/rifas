@@ -2,7 +2,7 @@ import enum
 from datetime import date, datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, Date, DateTime, Enum, Integer, Numeric, String, Text
+from sqlalchemy import Boolean, Date, DateTime, Enum, ForeignKey, Integer, Numeric, String, Text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -11,6 +11,7 @@ from app.models.base_mixins import TimestampMixin
 
 if TYPE_CHECKING:
     from app.models.prize import Prize
+    from app.models.tenant import Tenant
     from app.models.ticket import Ticket
 
 
@@ -26,6 +27,13 @@ class Raffle(Base, TimestampMixin):
     __tablename__ = "raffles"
 
     id: Mapped[int] = mapped_column(primary_key=True)
+
+    # Tenant al que pertenece esta rifa. NOT NULL después del backfill.
+    tenant_id: Mapped[int] = mapped_column(
+        ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False, index=True,
+    )
+    tenant: Mapped["Tenant"] = relationship(back_populates="raffles")
+
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
 

@@ -5,7 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.deps import get_current_user
+from app.core.deps import TenantScope, get_current_user, get_tenant_scope
 from app.core.security import (
     create_access_token,
     create_refresh_token,
@@ -13,7 +13,7 @@ from app.core.security import (
     verify_password,
 )
 from app.models.user import User
-from app.schemas.auth import LoginRequest, RefreshRequest, TokenPair, UserOut
+from app.schemas.auth import LoginRequest, RefreshRequest, TenantInfo, TokenPair, UserOut
 from app.services.audit_service import log_action
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -38,7 +38,9 @@ async def login(
         await db.commit()
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "credenciales inválidas")
 
-    access = create_access_token(user.id, {"role": user.role.value})
+    access = create_access_token(
+        user.id, {"role": user.role.value, "tid": user.tenant_id},
+    )
     refresh = create_refresh_token(user.id)
 
     await log_action(
@@ -64,11 +66,35 @@ async def refresh(payload: RefreshRequest, db: Annotated[AsyncSession, Depends(g
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "usuario inválido")
 
     return TokenPair(
-        access_token=create_access_token(user.id, {"role": user.role.value}),
+        access_token=create_access_token(
+            user.id, {"role": user.role.value, "tid": user.tenant_id},
+        ),
         refresh_token=create_refresh_token(user.id),
     )
 
 
 @router.get("/me", response_model=UserOut)
-async def me(user: Annotated[User, Depends(get_current_user)]):
-    return user
+async def me(
+    user: Annotated[User, Depends(get_current_user)],
+    scope: Annotated[TenantScope, Depends(get_tenant_scope)],
+):
+    tenant_info = None
+    if scope.tenant is not None and scope.subscription_status is not None:
+        tenant_info = TenantInfo(
+            id=scope.tenant.id,
+            name=scope.tenant.name,
+            slug=scope.tenant.slug,
+            end_date=scope.tenant.end_date,
+            max_raffles=scope.tenant.max_raffles,
+            subscription_status=scope.subscription_status,
+        )
+
+    return UserOut(
+        id=user.id,
+        email=user.email,
+        full_name=user.full_name,
+        role=user.role,
+        is_active=user.is_active,
+        tenant_id=user.tenant_id,
+        tenant=tenant_info,
+    )

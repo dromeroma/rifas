@@ -7,6 +7,7 @@ from app.models.prize import Prize  # noqa: F401
 from app.models.raffle import Raffle, RaffleStatus  # noqa: F401
 from app.models.reservation import Reservation  # noqa: F401
 from app.models.seller_assignment import SellerAssignment  # noqa: F401
+from app.models.tenant import Tenant  # noqa: F401
 from app.models.ticket import Ticket, TicketStatus  # noqa: F401
 from app.models.ticket_number import TicketNumber  # noqa: F401
 from app.models.user import User, UserRole  # noqa: F401

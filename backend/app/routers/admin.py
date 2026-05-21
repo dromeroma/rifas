@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.database import get_db
-from app.core.deps import require_roles
+from app.core.deps import TenantScope, assert_tenant_owns, get_tenant_scope, require_roles
 from app.models.customer import Customer
 from app.models.prize import Prize
 from app.models.raffle import Raffle
@@ -70,7 +70,8 @@ async def draw_winner(
     payload: DrawWinnerRequest,
     request: Request,
     db: Annotated[AsyncSession, Depends(get_db)],
-    actor: Annotated[User, Depends(require_roles(UserRole.SUPER_ADMIN))],
+    actor: Annotated[User, Depends(require_roles(UserRole.ADMIN, UserRole.SUPER_ADMIN))],
+    scope: Annotated[TenantScope, Depends(get_tenant_scope)],
 ):
     """
     Registra el número ganador de un premio.
@@ -80,6 +81,7 @@ async def draw_winner(
     raffle = (await db.execute(select(Raffle).where(Raffle.id == raffle_id))).scalar_one_or_none()
     if not raffle:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "rifa no encontrada")
+    assert_tenant_owns(scope, raffle.tenant_id)
 
     winning = payload.winning_number.zfill(raffle.number_digits)
 
@@ -168,10 +170,12 @@ async def customer_tickets(
     customer_id: int,
     db: Annotated[AsyncSession, Depends(get_db)],
     _actor: Annotated[User, Depends(require_roles(UserRole.SELLER, UserRole.ADMIN, UserRole.SUPER_ADMIN))],
+    scope: Annotated[TenantScope, Depends(get_tenant_scope)],
 ):
     customer = (await db.execute(select(Customer).where(Customer.id == customer_id))).scalar_one_or_none()
     if not customer:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "cliente no encontrado")
+    assert_tenant_owns(scope, customer.tenant_id)
 
     tickets = (
         await db.execute(

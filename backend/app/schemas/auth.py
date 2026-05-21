@@ -1,3 +1,6 @@
+from datetime import date
+from typing import Optional
+
 from pydantic import BaseModel, EmailStr, Field
 
 from app.models.user import UserRole
@@ -18,12 +21,23 @@ class RefreshRequest(BaseModel):
     refresh_token: str
 
 
+class TenantInfo(BaseModel):
+    id: int
+    name: str
+    slug: str
+    end_date: date
+    max_raffles: int
+    subscription_status: str  # active | grace_period | expired
+
+
 class UserOut(BaseModel):
     id: int
     email: EmailStr
     full_name: str
     role: UserRole
     is_active: bool
+    tenant_id: Optional[int] = None
+    tenant: Optional[TenantInfo] = None
 
     class Config:
         from_attributes = True

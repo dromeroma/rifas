@@ -1,7 +1,7 @@
 import enum
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, Enum, Numeric, String
+from sqlalchemy import Boolean, Enum, ForeignKey, Numeric, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -10,6 +10,7 @@ from app.models.base_mixins import TimestampMixin
 if TYPE_CHECKING:
     from app.models.commission import Commission
     from app.models.seller_assignment import SellerAssignment
+    from app.models.tenant import Tenant
 
 
 class UserRole(str, enum.Enum):
@@ -31,6 +32,12 @@ class User(Base, TimestampMixin):
 
     # Para vendedores: comisión por defecto por boleta vendida (COP).
     default_commission: Mapped[float | None] = mapped_column(Numeric(12, 2), nullable=True)
+
+    # Tenant al que pertenece. NULL solo para super_admin global (dueño Boletera).
+    tenant_id: Mapped[int | None] = mapped_column(
+        ForeignKey("tenants.id", ondelete="RESTRICT"), nullable=True, index=True,
+    )
+    tenant: Mapped["Tenant | None"] = relationship(back_populates="users")
 
     assignments: Mapped[list["SellerAssignment"]] = relationship(
         back_populates="seller", cascade="all, delete-orphan"

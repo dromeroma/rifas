@@ -7,7 +7,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.deps import require_roles
+from app.core.deps import TenantScope, get_tenant_scope, require_roles
 from app.models.audit_log import AuditLog
 from app.models.user import User, UserRole
 
@@ -45,15 +45,22 @@ class AuditPage(BaseModel):
 async def list_audit(
     db: Annotated[AsyncSession, Depends(get_db)],
     _actor: Annotated[User, Depends(require_roles(UserRole.SUPER_ADMIN, UserRole.ADMIN))],
+    scope: Annotated[TenantScope, Depends(get_tenant_scope)],
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
     action: Optional[str] = Query(default=None, description="Filtra por acción exacta o prefijo (ej: payment.)"),
     actor_id: Optional[int] = None,
     entity_type: Optional[str] = None,
 ):
-    # Query base
+    # Query base. Si el actor pertenece a un tenant, restringimos los logs a
+    # los de usuarios de ese mismo tenant.
     q = select(AuditLog)
     qc = select(func.count(AuditLog.id))
+
+    if scope.tenant_id is not None:
+        tenant_user_ids = select(User.id).where(User.tenant_id == scope.tenant_id)
+        q = q.where(AuditLog.actor_id.in_(tenant_user_ids))
+        qc = qc.where(AuditLog.actor_id.in_(tenant_user_ids))
 
     if action:
         if action.endswith("."):

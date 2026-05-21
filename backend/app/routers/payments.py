@@ -10,7 +10,7 @@ from sqlalchemy.orm import selectinload
 
 from app.core.config import get_settings
 from app.core.database import get_db
-from app.core.deps import get_current_user, require_roles
+from app.core.deps import TenantScope, assert_tenant_owns, get_current_user, get_tenant_scope, require_roles
 from app.models.customer import Customer
 from app.models.payment import Payment, PaymentMethod, PaymentStatus
 from app.models.raffle import Raffle
@@ -42,6 +42,7 @@ async def submit_payment_endpoint(
     request: Request,
     db: Annotated[AsyncSession, Depends(get_db)],
     actor: Annotated[User, Depends(require_roles(UserRole.SELLER, UserRole.ADMIN, UserRole.SUPER_ADMIN))],
+    scope: Annotated[TenantScope, Depends(get_tenant_scope)],
     method: Annotated[PaymentMethod, Form()],
     amount: Annotated[Decimal, Form()],
     reference: Annotated[Optional[str], Form()] = None,
@@ -53,6 +54,10 @@ async def submit_payment_endpoint(
     ticket = (await db.execute(select(Ticket).where(Ticket.id == ticket_id))).scalar_one_or_none()
     if not ticket:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "boleta no encontrada")
+
+    # Validar tenancy de la boleta
+    raffle_of_ticket = (await db.execute(select(Raffle).where(Raffle.id == ticket.raffle_id))).scalar_one()
+    assert_tenant_owns(scope, raffle_of_ticket.tenant_id)
 
     if actor.role == UserRole.SELLER and ticket.seller_id != actor.id:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "no puedes reportar pago de una boleta que no es tuya")
@@ -109,10 +114,18 @@ async def submit_payment_endpoint(
 async def list_payments(
     db: Annotated[AsyncSession, Depends(get_db)],
     actor: Annotated[User, Depends(require_roles(UserRole.SELLER, UserRole.ADMIN, UserRole.SUPER_ADMIN))],
+    scope: Annotated[TenantScope, Depends(get_tenant_scope)],
     status_filter: Optional[PaymentStatus] = None,
 ):
     """Lista pagos. Admin ve todo; vendedor ve solo los pagos de sus boletas."""
-    q = select(Payment).order_by(Payment.id.desc())
+    q = (
+        select(Payment)
+        .join(Ticket, Ticket.id == Payment.ticket_id)
+        .join(Raffle, Raffle.id == Ticket.raffle_id)
+        .order_by(Payment.id.desc())
+    )
+    if scope.tenant_id is not None:
+        q = q.where(Raffle.tenant_id == scope.tenant_id)
     if status_filter:
         q = q.where(Payment.status == status_filter)
     if actor.role == UserRole.SELLER:
@@ -181,13 +194,25 @@ async def list_payments(
     return out
 
 
+async def _verify_payment_tenancy(db: AsyncSession, payment_id: int, scope: TenantScope) -> Payment:
+    p = (await db.execute(select(Payment).where(Payment.id == payment_id))).scalar_one_or_none()
+    if not p:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "pago no encontrado")
+    t = (await db.execute(select(Ticket).where(Ticket.id == p.ticket_id))).scalar_one()
+    r = (await db.execute(select(Raffle).where(Raffle.id == t.raffle_id))).scalar_one()
+    assert_tenant_owns(scope, r.tenant_id)
+    return p
+
+
 @router.post("/{payment_id}/confirm", response_model=PaymentOut)
 async def confirm_payment_endpoint(
     payment_id: int,
     request: Request,
     db: Annotated[AsyncSession, Depends(get_db)],
     actor: Annotated[User, Depends(require_roles(UserRole.ADMIN, UserRole.SUPER_ADMIN))],
+    scope: Annotated[TenantScope, Depends(get_tenant_scope)],
 ):
+    await _verify_payment_tenancy(db, payment_id, scope)
     payment, ticket, commission = await confirm_payment(
         db, payment_id=payment_id, confirmed_by_user_id=actor.id
     )
@@ -271,7 +296,9 @@ async def reject_payment_endpoint(
     request: Request,
     db: Annotated[AsyncSession, Depends(get_db)],
     actor: Annotated[User, Depends(require_roles(UserRole.ADMIN, UserRole.SUPER_ADMIN))],
+    scope: Annotated[TenantScope, Depends(get_tenant_scope)],
 ):
+    await _verify_payment_tenancy(db, payment_id, scope)
     payment, ticket = await reject_payment(
         db, payment_id=payment_id, rejected_by_user_id=actor.id, reason=payload.reason,
     )
@@ -290,11 +317,13 @@ async def get_proof(
     payment_id: int,
     db: Annotated[AsyncSession, Depends(get_db)],
     actor: Annotated[User, Depends(get_current_user)],
+    scope: Annotated[TenantScope, Depends(get_tenant_scope)],
 ):
     """Sirve el archivo del comprobante. Vendedor solo ve los suyos."""
     payment = (await db.execute(select(Payment).where(Payment.id == payment_id))).scalar_one_or_none()
     if not payment:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "pago no encontrado")
+    await _verify_payment_tenancy(db, payment_id, scope)
     if not payment.proof_url:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "este pago no tiene comprobante adjunto")
 

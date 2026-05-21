@@ -5,7 +5,7 @@ from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.deps import require_roles
+from app.core.deps import TenantScope, assert_tenant_owns, get_tenant_scope, require_roles
 from app.core.security import hash_password
 from app.models.commission import Commission
 from app.models.ticket import Ticket, TicketStatus
@@ -20,10 +20,14 @@ router = APIRouter(prefix="/users", tags=["users"])
 async def list_users(
     db: Annotated[AsyncSession, Depends(get_db)],
     _actor: Annotated[User, Depends(require_roles(UserRole.SUPER_ADMIN, UserRole.ADMIN))],
+    scope: Annotated[TenantScope, Depends(get_tenant_scope)],
     role: Optional[UserRole] = Query(default=None),
     active: Optional[bool] = Query(default=None),
 ):
     q = select(User).order_by(User.id.desc())
+    if scope.tenant_id is not None:
+        # Tenant admin solo ve usuarios de su propio tenant.
+        q = q.where(User.tenant_id == scope.tenant_id)
     if role is not None:
         q = q.where(User.role == role)
     if active is not None:
@@ -35,6 +39,7 @@ async def list_users(
 async def sellers_summary(
     db: Annotated[AsyncSession, Depends(get_db)],
     _actor: Annotated[User, Depends(require_roles(UserRole.SUPER_ADMIN, UserRole.ADMIN))],
+    scope: Annotated[TenantScope, Depends(get_tenant_scope)],
     raffle_id: Optional[int] = Query(default=None, description="Si se pasa, filtra stats a esa rifa"),
 ):
     """Lista de vendedores con métricas reales agregadas:
@@ -44,9 +49,10 @@ async def sellers_summary(
       - commission_pending: suma de Commission.amount donde paid=False
       - default_commission: valor por defecto configurado al crear el usuario
     """
-    sellers = (
-        await db.execute(select(User).where(User.role == UserRole.SELLER).order_by(User.id.desc()))
-    ).scalars().all()
+    sellers_q = select(User).where(User.role == UserRole.SELLER).order_by(User.id.desc())
+    if scope.tenant_id is not None:
+        sellers_q = sellers_q.where(User.tenant_id == scope.tenant_id)
+    sellers = (await db.execute(sellers_q)).scalars().all()
     if not sellers:
         return []
 
@@ -106,11 +112,32 @@ async def create_user(
     payload: UserCreate,
     request: Request,
     db: Annotated[AsyncSession, Depends(get_db)],
-    actor: Annotated[User, Depends(require_roles(UserRole.SUPER_ADMIN))],
+    actor: Annotated[User, Depends(require_roles(UserRole.SUPER_ADMIN, UserRole.ADMIN))],
+    scope: Annotated[TenantScope, Depends(get_tenant_scope)],
 ):
     existing = (await db.execute(select(User).where(User.email == payload.email))).scalar_one_or_none()
     if existing:
         raise HTTPException(status.HTTP_409_CONFLICT, "ya existe un usuario con ese email")
+
+    # Tenant del nuevo usuario:
+    # - admin de un tenant: solo puede crear usuarios de su propio tenant
+    # - super_admin: para crear super_admins usa tenant_id=None, pero por ahora
+    #   solo se pueden crear sellers/admins desde este endpoint y siempre
+    #   requieren tenant_id (usa el endpoint /admin/tenants para crear
+    #   el admin inicial de una cuenta junto con el tenant).
+    if scope.tenant_id is None:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            "los usuarios deben crearse desde el contexto de una cuenta. "
+            "Para crear una nueva cuenta y su admin, usa POST /admin/tenants.",
+        )
+    new_tenant_id = scope.tenant_id
+
+    # admin de un tenant no puede crear super_admins
+    if payload.role == UserRole.SUPER_ADMIN:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN, "no autorizado para crear super_admin",
+        )
 
     user = User(
         email=payload.email,
@@ -120,6 +147,7 @@ async def create_user(
         phone=payload.phone,
         default_commission=payload.default_commission,
         is_active=True,
+        tenant_id=new_tenant_id,
     )
     db.add(user)
     await db.flush()
@@ -139,11 +167,13 @@ async def update_user(
     payload: UserUpdate,
     request: Request,
     db: Annotated[AsyncSession, Depends(get_db)],
-    actor: Annotated[User, Depends(require_roles(UserRole.SUPER_ADMIN))],
+    actor: Annotated[User, Depends(require_roles(UserRole.SUPER_ADMIN, UserRole.ADMIN))],
+    scope: Annotated[TenantScope, Depends(get_tenant_scope)],
 ):
     user = (await db.execute(select(User).where(User.id == user_id))).scalar_one_or_none()
     if not user:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "usuario no encontrado")
+    assert_tenant_owns(scope, user.tenant_id)
 
     data = payload.model_dump(exclude_unset=True)
     if (pw := data.pop("password", None)):

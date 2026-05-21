@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.database import get_db
-from app.core.deps import require_roles
+from app.core.deps import TenantScope, assert_tenant_owns, get_tenant_scope, require_roles
 from app.core.exceptions import ImmutableRaffleError
 from app.models.prize import Prize
 from app.models.raffle import Raffle
@@ -19,8 +19,14 @@ router = APIRouter(prefix="/raffles", tags=["raffles"])
 
 
 @router.get("", response_model=List[RaffleOut])
-async def list_raffles(db: Annotated[AsyncSession, Depends(get_db)]):
-    res = await db.execute(select(Raffle).options(selectinload(Raffle.prizes)).order_by(Raffle.id.desc()))
+async def list_raffles(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    scope: Annotated[TenantScope, Depends(get_tenant_scope)],
+):
+    q = select(Raffle).options(selectinload(Raffle.prizes)).order_by(Raffle.id.desc())
+    if scope.tenant_id is not None:
+        q = q.where(Raffle.tenant_id == scope.tenant_id)
+    res = await db.execute(q)
     return res.scalars().all()
 
 
@@ -29,14 +35,27 @@ async def create_raffle(
     payload: RaffleCreate,
     request: Request,
     db: Annotated[AsyncSession, Depends(get_db)],
-    actor: Annotated[User, Depends(require_roles(UserRole.SUPER_ADMIN))],
+    actor: Annotated[User, Depends(require_roles(UserRole.ADMIN, UserRole.SUPER_ADMIN))],
+    scope: Annotated[TenantScope, Depends(get_tenant_scope)],
 ):
+    # Resolver a qué tenant pertenece la nueva rifa.
+    if scope.is_super_admin:
+        if payload.tenant_id is None:
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST,
+                "super_admin debe indicar tenant_id para crear una rifa.",
+            )
+        target_tenant_id = payload.tenant_id
+    else:
+        target_tenant_id = scope.tenant_id  # admin del tenant propio
+
     tiers_data = (
         [t.model_dump(mode="json") for t in payload.commission_tiers]
         if payload.commission_tiers
         else None
     )
     raffle = Raffle(
+        tenant_id=target_tenant_id,
         name=payload.name,
         description=payload.description,
         total_tickets=payload.total_tickets,
@@ -74,13 +93,18 @@ async def create_raffle(
 
 
 @router.get("/{raffle_id}", response_model=RaffleOut)
-async def get_raffle(raffle_id: int, db: Annotated[AsyncSession, Depends(get_db)]):
+async def get_raffle(
+    raffle_id: int,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    scope: Annotated[TenantScope, Depends(get_tenant_scope)],
+):
     res = await db.execute(
         select(Raffle).options(selectinload(Raffle.prizes)).where(Raffle.id == raffle_id)
     )
     raffle = res.scalar_one_or_none()
     if not raffle:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "rifa no encontrada")
+    assert_tenant_owns(scope, raffle.tenant_id)
     return raffle
 
 
@@ -90,11 +114,13 @@ async def update_raffle(
     payload: RaffleUpdate,
     request: Request,
     db: Annotated[AsyncSession, Depends(get_db)],
-    actor: Annotated[User, Depends(require_roles(UserRole.SUPER_ADMIN))],
+    actor: Annotated[User, Depends(require_roles(UserRole.ADMIN, UserRole.SUPER_ADMIN))],
+    scope: Annotated[TenantScope, Depends(get_tenant_scope)],
 ):
     raffle = (await db.execute(select(Raffle).where(Raffle.id == raffle_id))).scalar_one_or_none()
     if not raffle:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "rifa no encontrada")
+    assert_tenant_owns(scope, raffle.tenant_id)
 
     # Tras generar números, sólo permitimos cambiar campos cosméticos.
     if raffle.numbers_generated:
@@ -121,8 +147,15 @@ async def generate_numbers(
     raffle_id: int,
     request: Request,
     db: Annotated[AsyncSession, Depends(get_db)],
-    actor: Annotated[User, Depends(require_roles(UserRole.SUPER_ADMIN))],
+    actor: Annotated[User, Depends(require_roles(UserRole.ADMIN, UserRole.SUPER_ADMIN))],
+    scope: Annotated[TenantScope, Depends(get_tenant_scope)],
 ):
+    # Verifica tenancy antes de generar
+    existing = (await db.execute(select(Raffle).where(Raffle.id == raffle_id))).scalar_one_or_none()
+    if not existing:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "rifa no encontrada")
+    assert_tenant_owns(scope, existing.tenant_id)
+
     raffle = await generate_raffle_numbers(db, raffle_id)
     await log_action(
         db, actor_id=actor.id, action="raffle.generate_numbers",
@@ -142,10 +175,12 @@ async def add_prize(
     request: Request,
     db: Annotated[AsyncSession, Depends(get_db)],
     actor: Annotated[User, Depends(require_roles(UserRole.ADMIN, UserRole.SUPER_ADMIN))],
+    scope: Annotated[TenantScope, Depends(get_tenant_scope)],
 ):
     raffle = (await db.execute(select(Raffle).where(Raffle.id == raffle_id))).scalar_one_or_none()
     if not raffle:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "rifa no encontrada")
+    assert_tenant_owns(scope, raffle.tenant_id)
     prize = Prize(raffle_id=raffle.id, **payload.model_dump())
     db.add(prize)
     await log_action(
@@ -166,7 +201,13 @@ async def update_prize(
     request: Request,
     db: Annotated[AsyncSession, Depends(get_db)],
     actor: Annotated[User, Depends(require_roles(UserRole.ADMIN, UserRole.SUPER_ADMIN))],
+    scope: Annotated[TenantScope, Depends(get_tenant_scope)],
 ):
+    raffle = (await db.execute(select(Raffle).where(Raffle.id == raffle_id))).scalar_one_or_none()
+    if not raffle:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "rifa no encontrada")
+    assert_tenant_owns(scope, raffle.tenant_id)
+
     prize = (
         await db.execute(select(Prize).where(Prize.id == prize_id, Prize.raffle_id == raffle_id))
     ).scalar_one_or_none()
@@ -204,7 +245,13 @@ async def delete_prize(
     request: Request,
     db: Annotated[AsyncSession, Depends(get_db)],
     actor: Annotated[User, Depends(require_roles(UserRole.ADMIN, UserRole.SUPER_ADMIN))],
+    scope: Annotated[TenantScope, Depends(get_tenant_scope)],
 ):
+    raffle = (await db.execute(select(Raffle).where(Raffle.id == raffle_id))).scalar_one_or_none()
+    if not raffle:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "rifa no encontrada")
+    assert_tenant_owns(scope, raffle.tenant_id)
+
     prize = (
         await db.execute(select(Prize).where(Prize.id == prize_id, Prize.raffle_id == raffle_id))
     ).scalar_one_or_none()
