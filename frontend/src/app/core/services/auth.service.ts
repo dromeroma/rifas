@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { Observable, catchError, of, shareReplay, switchMap, tap } from 'rxjs';
+import { Observable, catchError, of, shareReplay, switchMap, tap, timeout } from 'rxjs';
 
 import { environment } from '@env/environment';
 import { TokenPair, User } from '../models/user.model';
@@ -62,6 +62,9 @@ export class AuthService {
 
     if (!this.loadInFlight$) {
       this.loadInFlight$ = this.http.get<User>(`${environment.apiUrl}/auth/me`).pipe(
+        // Render Free duerme y demora ~30s en despertar; 25s es el tope
+        // razonable para no dejar la app colgada indefinidamente.
+        timeout(25_000),
         tap((u) => this.user.set(u)),
         catchError(() => {
           this.clearSession();
