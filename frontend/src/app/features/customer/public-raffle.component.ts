@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 
 import { environment } from '@env/environment';
 import {
@@ -50,13 +50,13 @@ interface PublicRaffleData {
   selector: 'app-public-raffle',
   standalone: true,
   imports: [
-    CommonModule,
+    CommonModule, RouterLink,
     CardComponent, ChipComponent, ProgressRingComponent, ThemeToggleComponent,
   ],
   template: `
     <main class="page">
       <header class="page__top">
-        <span class="brand">🎟️ Sistema Rifas</span>
+        <a routerLink="/" class="brand" aria-label="Inicio">🎟️ <strong>Boletera</strong></a>
         <app-theme-toggle />
       </header>
 
@@ -252,7 +252,12 @@ interface PublicRaffleData {
       max-width: 540px;
       margin: 0 auto;
     }
-    .brand { font-weight: 700; font-size: 15px; color: var(--text); }
+    .brand {
+      font-weight: 500; font-size: 15px; color: var(--text);
+      text-decoration: none; display: inline-flex; align-items: center; gap: 6px;
+    }
+    .brand strong { font-weight: 700; }
+    .brand:hover { color: var(--accent); }
 
     .container {
       max-width: 540px;

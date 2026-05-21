@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 import { environment } from '@env/environment';
 import { ButtonComponent, CardComponent, ChipComponent, InputComponent, ThemeToggleComponent } from '@shared/ui';
@@ -33,13 +33,13 @@ interface VerifyResponse {
   selector: 'app-verify',
   standalone: true,
   imports: [
-    CommonModule, FormsModule,
+    CommonModule, FormsModule, RouterLink,
     ButtonComponent, CardComponent, ChipComponent, InputComponent, ThemeToggleComponent,
   ],
   template: `
     <main class="verify">
       <header class="verify__top">
-        <span class="brand">🎟️ Sistema Rifas</span>
+        <a routerLink="/" class="brand" aria-label="Inicio">🎟️ <strong>Boletera</strong></a>
         <app-theme-toggle />
       </header>
 
@@ -208,7 +208,12 @@ interface VerifyResponse {
       margin: 0 auto;
       width: 100%;
     }
-    .brand { font-weight: 700; font-size: 15px; color: var(--text); }
+    .brand {
+      font-weight: 500; font-size: 15px; color: var(--text);
+      text-decoration: none; display: inline-flex; align-items: center; gap: 6px;
+    }
+    .brand strong { font-weight: 700; }
+    .brand:hover { color: var(--accent); }
 
     .verify__container {
       width: 100%;

@@ -72,7 +72,7 @@ export class AppComponent implements OnInit {
         // tras un deploy nuevo), recargar la página para forzar fetch del
         // nuevo index.html y sus chunks.
         if (event instanceof NavigationError && !this.router.navigated) {
-          window.location.replace('/login');
+          window.location.replace('/');
         }
       }
     });

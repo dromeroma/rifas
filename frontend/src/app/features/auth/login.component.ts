@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 
 import { AuthService } from '@core/services/auth.service';
 import { ButtonComponent, InputComponent, ThemeToggleComponent } from '@shared/ui';
@@ -9,18 +9,21 @@ import { ButtonComponent, InputComponent, ThemeToggleComponent } from '@shared/u
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, FormsModule, ButtonComponent, InputComponent, ThemeToggleComponent],
+  imports: [CommonModule, FormsModule, RouterLink, ButtonComponent, InputComponent, ThemeToggleComponent],
   template: `
     <main class="login">
       <div class="login__top">
-        <span class="brand">🎟️ Sistema Rifas</span>
+        <a routerLink="/" class="brand" aria-label="Volver al inicio">
+          🎟️ <strong>Boletera</strong>
+        </a>
         <app-theme-toggle />
       </div>
 
       <section class="login__card">
         <div class="login__hero">
           <h1>Bienvenido</h1>
-          <p class="muted">Ingresa con tus credenciales para administrar tus rifas.</p>
+          <p class="tagline">Tu rifa, profesional desde el primer ticket.</p>
+          <p class="muted">Ingresa con tus credenciales para administrar tus rifas, vendedores y comisiones.</p>
         </div>
 
         <form (ngSubmit)="submit()" class="form">
@@ -80,7 +83,25 @@ import { ButtonComponent, InputComponent, ThemeToggleComponent } from '@shared/u
       justify-content: space-between;
       position: relative; z-index: 1;
     }
-    .brand { font-weight: 700; color: var(--text); font-size: 16px; }
+    .brand {
+      font-weight: 500;
+      color: var(--text);
+      font-size: 16px;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .brand strong { font-weight: 700; }
+    .brand:hover { color: var(--accent); }
+
+    .tagline {
+      font-size: 14px;
+      color: var(--accent);
+      font-weight: 600;
+      margin: 4px 0 8px;
+      letter-spacing: -0.01em;
+    }
 
     .login__card {
       position: relative; z-index: 1;

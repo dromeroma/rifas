@@ -58,7 +58,7 @@ class Settings(BaseSettings):
     resend_enabled: bool = False
     resend_api_key: str = ""
     resend_from_email: str = "onboarding@resend.dev"
-    resend_from_name: str = "Sistema de Rifas"
+    resend_from_name: str = "Boletera"
     admin_notify_email: str = ""
 
     @cached_property

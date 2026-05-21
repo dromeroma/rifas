@@ -28,9 +28,13 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Sistema de Rifas API",
+    title="Boletera API",
     version="0.1.0",
-    description="API profesional para gestión de rifas con trazabilidad y antifraude.",
+    description=(
+        "API de Boletera — la plataforma que vuelve cualquier rifa en un negocio "
+        "profesional. Boletas únicas, comisiones automáticas, verificación pública "
+        "y trazabilidad total."
+    ),
     lifespan=lifespan,
     docs_url="/docs",
     redoc_url="/redoc",

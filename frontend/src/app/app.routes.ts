@@ -4,7 +4,12 @@ import { guestGuard } from './core/guards/guest.guard';
 import { roleGuard } from './core/guards/role.guard';
 
 export const routes: Routes = [
-  { path: '', pathMatch: 'full', redirectTo: 'login' },
+  {
+    path: '',
+    pathMatch: 'full',
+    loadComponent: () =>
+      import('./features/landing/landing.component').then((m) => m.LandingComponent),
+  },
 
   {
     path: 'login',
@@ -38,5 +43,5 @@ export const routes: Routes = [
     loadChildren: () => import('./features/seller/seller.routes').then((m) => m.SELLER_ROUTES),
   },
 
-  { path: '**', redirectTo: 'login' },
+  { path: '**', redirectTo: '' },
 ];

@@ -254,7 +254,7 @@ def _admin_pending_payment_html(
     </div>
 
     <div class="footer">
-      Esta es una notificación automática del Sistema de Rifas.
+      Esta es una notificación automática enviada por Boletera.
     </div>
   </div>
 </body>
