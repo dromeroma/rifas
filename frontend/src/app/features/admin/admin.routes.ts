@@ -7,7 +7,7 @@ export const ADMIN_ROUTES: Routes = [
     path: '',
     component: AdminShellComponent,
     children: [
-      { path: '', loadComponent: () => import('./dashboard.component').then((m) => m.AdminDashboardComponent) },
+      { path: '', loadComponent: () => import('./dashboard-host.component').then((m) => m.DashboardHostComponent) },
       { path: 'raffles', loadComponent: () => import('./raffles-list.component').then((m) => m.RafflesListComponent) },
       { path: 'raffles/:id', loadComponent: () => import('./raffle-detail.component').then((m) => m.RaffleDetailComponent) },
       { path: 'sellers', loadComponent: () => import('./sellers.component').then((m) => m.SellersComponent) },

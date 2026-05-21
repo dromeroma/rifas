@@ -95,14 +95,16 @@ export class AdminShellComponent implements OnInit {
   readonly nav: NavItem[] = [
     { path: '/admin',             icon: 'space_dashboard', label: 'Dashboard',    roles: ['super_admin', 'admin'] },
     { path: '/seller',            icon: 'point_of_sale',   label: 'Mis ventas',   roles: ['seller'] },
+    // Super admin: solo gestión de cuentas + auditoría. No opera sobre data de tenants.
     { path: '/admin/tenants',     icon: 'business',        label: 'Cuentas',      roles: ['super_admin'], matchPrefix: true },
-    { path: '/admin/raffles',     icon: 'casino',          label: 'Rifas',        roles: ['super_admin', 'admin'], matchPrefix: true },
+    // Admin del tenant: gestiona sus rifas, clientes, vendedores y pagos.
+    { path: '/admin/raffles',     icon: 'casino',          label: 'Rifas',        roles: ['admin'], matchPrefix: true },
     { path: '/seller/customers',  icon: 'group',           label: 'Mis clientes', roles: ['seller'] },
-    { path: '/admin/customers',   icon: 'group',           label: 'Clientes',     roles: ['super_admin', 'admin'] },
-    { path: '/admin/assignments', icon: 'assignment_ind',  label: 'Asignaciones', roles: ['super_admin', 'admin'] },
-    { path: '/admin/sellers',     icon: 'badge',           label: 'Vendedores',   roles: ['super_admin', 'admin'] },
-    { path: '/admin/payments',    icon: 'payments',        label: 'Pagos',        roles: ['super_admin', 'admin'] },
-    { path: '/admin/audit',       icon: 'history',         label: 'Auditoría',    roles: ['super_admin'] },
+    { path: '/admin/customers',   icon: 'group',           label: 'Clientes',     roles: ['admin'] },
+    { path: '/admin/assignments', icon: 'assignment_ind',  label: 'Asignaciones', roles: ['admin'] },
+    { path: '/admin/sellers',     icon: 'badge',           label: 'Vendedores',   roles: ['admin'] },
+    { path: '/admin/payments',    icon: 'payments',        label: 'Pagos',        roles: ['admin'] },
+    { path: '/admin/audit',       icon: 'history',         label: 'Auditoría',    roles: ['super_admin', 'admin'] },
   ];
 
   readonly visibleNav = computed<NavItem[]>(() => {

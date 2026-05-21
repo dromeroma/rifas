@@ -70,7 +70,7 @@ async def draw_winner(
     payload: DrawWinnerRequest,
     request: Request,
     db: Annotated[AsyncSession, Depends(get_db)],
-    actor: Annotated[User, Depends(require_roles(UserRole.ADMIN, UserRole.SUPER_ADMIN))],
+    actor: Annotated[User, Depends(require_roles(UserRole.ADMIN))],
     scope: Annotated[TenantScope, Depends(get_tenant_scope)],
 ):
     """

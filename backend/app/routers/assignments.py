@@ -48,7 +48,7 @@ async def create_assignment(
     payload: SellerAssignmentCreate,
     request: Request,
     db: Annotated[AsyncSession, Depends(get_db)],
-    actor: Annotated[User, Depends(require_roles(UserRole.ADMIN, UserRole.SUPER_ADMIN))],
+    actor: Annotated[User, Depends(require_roles(UserRole.ADMIN))],
     scope: Annotated[TenantScope, Depends(get_tenant_scope)],
 ):
     raffle = (await db.execute(select(Raffle).where(Raffle.id == payload.raffle_id))).scalar_one_or_none()

@@ -35,19 +35,17 @@ async def create_raffle(
     payload: RaffleCreate,
     request: Request,
     db: Annotated[AsyncSession, Depends(get_db)],
-    actor: Annotated[User, Depends(require_roles(UserRole.ADMIN, UserRole.SUPER_ADMIN))],
+    actor: Annotated[User, Depends(require_roles(UserRole.ADMIN))],
     scope: Annotated[TenantScope, Depends(get_tenant_scope)],
 ):
-    # Resolver a qué tenant pertenece la nueva rifa.
-    if scope.is_super_admin:
-        if payload.tenant_id is None:
-            raise HTTPException(
-                status.HTTP_400_BAD_REQUEST,
-                "super_admin debe indicar tenant_id para crear una rifa.",
-            )
-        target_tenant_id = payload.tenant_id
-    else:
-        target_tenant_id = scope.tenant_id  # admin del tenant propio
+    # Super admin no crea rifas: solo administra cuentas. Las rifas las crea
+    # el admin del tenant correspondiente.
+    target_tenant_id = scope.tenant_id  # admin del tenant propio
+    if target_tenant_id is None:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            "el super_admin no crea rifas; inicia sesión como admin de una cuenta.",
+        )
 
     # Cupo: la cuenta no puede exceder su max_raffles.
     from app.models.tenant import Tenant as _Tenant
@@ -136,7 +134,7 @@ async def update_raffle(
     payload: RaffleUpdate,
     request: Request,
     db: Annotated[AsyncSession, Depends(get_db)],
-    actor: Annotated[User, Depends(require_roles(UserRole.ADMIN, UserRole.SUPER_ADMIN))],
+    actor: Annotated[User, Depends(require_roles(UserRole.ADMIN))],
     scope: Annotated[TenantScope, Depends(get_tenant_scope)],
 ):
     raffle = (await db.execute(select(Raffle).where(Raffle.id == raffle_id))).scalar_one_or_none()
@@ -169,7 +167,7 @@ async def generate_numbers(
     raffle_id: int,
     request: Request,
     db: Annotated[AsyncSession, Depends(get_db)],
-    actor: Annotated[User, Depends(require_roles(UserRole.ADMIN, UserRole.SUPER_ADMIN))],
+    actor: Annotated[User, Depends(require_roles(UserRole.ADMIN))],
     scope: Annotated[TenantScope, Depends(get_tenant_scope)],
 ):
     # Verifica tenancy antes de generar
@@ -196,7 +194,7 @@ async def add_prize(
     payload: PrizeCreate,
     request: Request,
     db: Annotated[AsyncSession, Depends(get_db)],
-    actor: Annotated[User, Depends(require_roles(UserRole.ADMIN, UserRole.SUPER_ADMIN))],
+    actor: Annotated[User, Depends(require_roles(UserRole.ADMIN))],
     scope: Annotated[TenantScope, Depends(get_tenant_scope)],
 ):
     raffle = (await db.execute(select(Raffle).where(Raffle.id == raffle_id))).scalar_one_or_none()
@@ -222,7 +220,7 @@ async def update_prize(
     payload: PrizeUpdate,
     request: Request,
     db: Annotated[AsyncSession, Depends(get_db)],
-    actor: Annotated[User, Depends(require_roles(UserRole.ADMIN, UserRole.SUPER_ADMIN))],
+    actor: Annotated[User, Depends(require_roles(UserRole.ADMIN))],
     scope: Annotated[TenantScope, Depends(get_tenant_scope)],
 ):
     raffle = (await db.execute(select(Raffle).where(Raffle.id == raffle_id))).scalar_one_or_none()
@@ -266,7 +264,7 @@ async def delete_prize(
     prize_id: int,
     request: Request,
     db: Annotated[AsyncSession, Depends(get_db)],
-    actor: Annotated[User, Depends(require_roles(UserRole.ADMIN, UserRole.SUPER_ADMIN))],
+    actor: Annotated[User, Depends(require_roles(UserRole.ADMIN))],
     scope: Annotated[TenantScope, Depends(get_tenant_scope)],
 ):
     raffle = (await db.execute(select(Raffle).where(Raffle.id == raffle_id))).scalar_one_or_none()

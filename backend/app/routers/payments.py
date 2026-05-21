@@ -209,7 +209,7 @@ async def confirm_payment_endpoint(
     payment_id: int,
     request: Request,
     db: Annotated[AsyncSession, Depends(get_db)],
-    actor: Annotated[User, Depends(require_roles(UserRole.ADMIN, UserRole.SUPER_ADMIN))],
+    actor: Annotated[User, Depends(require_roles(UserRole.ADMIN))],
     scope: Annotated[TenantScope, Depends(get_tenant_scope)],
 ):
     await _verify_payment_tenancy(db, payment_id, scope)
@@ -295,7 +295,7 @@ async def reject_payment_endpoint(
     payload: PaymentRejection,
     request: Request,
     db: Annotated[AsyncSession, Depends(get_db)],
-    actor: Annotated[User, Depends(require_roles(UserRole.ADMIN, UserRole.SUPER_ADMIN))],
+    actor: Annotated[User, Depends(require_roles(UserRole.ADMIN))],
     scope: Annotated[TenantScope, Depends(get_tenant_scope)],
 ):
     await _verify_payment_tenancy(db, payment_id, scope)
