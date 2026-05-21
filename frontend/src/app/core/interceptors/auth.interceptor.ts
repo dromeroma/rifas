@@ -1,11 +1,13 @@
 import { HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
+import { Router } from '@angular/router';
 import { catchError, throwError } from 'rxjs';
 
 import { AuthService } from '../services/auth.service';
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const auth = inject(AuthService);
+  const router = inject(Router);
   const token = auth.accessToken;
   const authed = token
     ? req.clone({ setHeaders: { Authorization: `Bearer ${token}` } })
@@ -23,6 +25,15 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
           auth.clearSession();
         } else {
           auth.logout();
+        }
+      } else if (err.status === 402) {
+        // Suscripción vencida o en periodo de gracia: el backend devuelve
+        // 402 con un detail que indica el código. Redirigimos a la pantalla
+        // dedicada para el caso definitivo.
+        const detail = err?.error?.detail;
+        const code = typeof detail === 'object' ? detail?.code : null;
+        if (code === 'subscription_expired') {
+          router.navigate(['/subscription-expired']);
         }
       }
       return throwError(() => err);

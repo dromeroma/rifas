@@ -30,6 +30,14 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./features/customer/public-raffle.component').then((m) => m.PublicRaffleComponent),
   },
+  {
+    path: 'subscription-expired',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/subscription/subscription-expired.component').then(
+        (m) => m.SubscriptionExpiredComponent,
+      ),
+  },
 
   {
     path: 'admin',

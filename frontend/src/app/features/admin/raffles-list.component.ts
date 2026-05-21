@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 
 import { Raffle } from '@core/models/raffle.model';
@@ -23,9 +23,20 @@ import { RaffleCreateModalComponent } from './raffle-create-modal.component';
           <p class="muted">{{ raffles().length }} rifa(s) creada(s).</p>
         </div>
         @if (canCreate()) {
-          <app-button variant="primary" icon="add" (click)="openCreate()">
-            Nueva rifa
-          </app-button>
+          <div class="head__cta">
+            <app-button variant="primary" icon="add"
+                        [disabled]="quotaReached()"
+                        [title]="quotaReached() ? quotaMessage() : 'Crear una rifa nueva'"
+                        (click)="openCreate()">
+              Nueva rifa
+            </app-button>
+            @if (quotaReached()) {
+              <small class="quota-hint">
+                <span class="material-icons">info</span>
+                {{ quotaMessage() }}
+              </small>
+            }
+          </div>
         }
       </header>
 
@@ -102,6 +113,12 @@ import { RaffleCreateModalComponent } from './raffle-create-modal.component';
     }
     .ok { color: var(--accent); font-size: 18px; }
     .warn { color: var(--warning); font-size: 18px; }
+    .head__cta { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
+    .quota-hint {
+      display: inline-flex; align-items: center; gap: 4px;
+      color: var(--warning); font-size: 11px; max-width: 280px; text-align: right;
+    }
+    .quota-hint .material-icons { font-size: 14px; }
   `],
 })
 export class RafflesListComponent implements OnInit {
@@ -113,7 +130,24 @@ export class RafflesListComponent implements OnInit {
   loading = signal(true);
   createOpen = signal(false);
 
-  canCreate = () => this.auth.role() === 'super_admin';
+  /** super_admin (sin tenant) y admin de tenant pueden crear rifas. */
+  canCreate = computed(() => {
+    const role = this.auth.role();
+    return role === 'super_admin' || role === 'admin';
+  });
+
+  /** True si el tenant del usuario alcanzó su cupo de rifas. */
+  quotaReached = computed(() => {
+    const t = this.auth.user()?.tenant;
+    if (!t) return false; // super_admin sin tenant: no aplica cupo
+    return t.max_raffles > 0 && this.raffles().length >= t.max_raffles;
+  });
+
+  quotaMessage = computed(() => {
+    const t = this.auth.user()?.tenant;
+    if (!t) return '';
+    return `Cupo alcanzado: ${this.raffles().length}/${t.max_raffles} rifas. Contacta a Boletera para ampliarlo.`;
+  });
 
   ngOnInit(): void {
     this.refresh();
