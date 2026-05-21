@@ -151,7 +151,7 @@ async def mark_paid(
     if actor.role == UserRole.SELLER and ticket.seller_id != actor.id:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "no puedes marcar pagada una boleta que no es tuya")
 
-    await mark_ticket_paid(db, ticket_id=ticket_id)
+    await mark_ticket_paid(db, ticket_id=ticket_id, actor_id=actor.id)
     await log_action(
         db, actor_id=actor.id, action="ticket.mark_paid",
         entity_type="ticket", entity_id=ticket_id, request=request,

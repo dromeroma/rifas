@@ -16,10 +16,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.core.exceptions import ReservationLockedError, TicketUnavailableError
+from app.models.payment import Payment, PaymentMethod, PaymentStatus
 from app.models.prize import Prize
 from app.models.raffle import Raffle
 from app.models.reservation import Reservation
 from app.models.ticket import Ticket, TicketStatus
+from app.services.commission_service import create_commission_for_paid_ticket
 
 settings = get_settings()
 
@@ -132,8 +134,17 @@ async def release_by_ticket(
     return True
 
 
-async def mark_ticket_paid(db: AsyncSession, *, ticket_id: int) -> Ticket:
-    """Marca una boleta como pagada y cierra su reserva con motivo 'paid'."""
+async def mark_ticket_paid(
+    db: AsyncSession, *, ticket_id: int, actor_id: int | None = None,
+) -> Ticket:
+    """Marca una boleta como pagada (sin comprobante) y:
+      1) Crea un Payment "fantasma" con status=CONFIRMED y method=CASH para
+         dejar trazabilidad y permitir la FK obligatoria de Commission.
+      2) Genera la Commission del vendedor según los tiers configurados.
+      3) Cierra la reserva activa con motivo 'paid'.
+
+    El Payment.amount = ticket_price de la rifa.
+    """
     ticket = (
         await db.execute(select(Ticket).where(Ticket.id == ticket_id).with_for_update())
     ).scalar_one_or_none()
@@ -148,10 +159,41 @@ async def mark_ticket_paid(db: AsyncSession, *, ticket_id: int) -> Ticket:
     if ticket.customer_id is None:
         raise TicketUnavailableError("la boleta no tiene cliente asociado")
 
+    raffle = (
+        await db.execute(select(Raffle).where(Raffle.id == ticket.raffle_id))
+    ).scalar_one()
+
+    now = datetime.now(timezone.utc)
+
+    # 1) Crear Payment fantasma (CASH, sin comprobante) para mantener
+    #    consistencia: toda boleta PAID tiene un Payment CONFIRMED y una
+    #    Commission asociada.
+    payment = Payment(
+        ticket_id=ticket.id,
+        customer_id=ticket.customer_id,
+        seller_id=ticket.seller_id,
+        method=PaymentMethod.CASH,
+        amount=raffle.ticket_price,
+        reference=None,
+        notes="Marcada pagada directamente (sin comprobante).",
+        proof_url=None,
+        status=PaymentStatus.CONFIRMED,
+        confirmed_by=actor_id,
+        confirmed_at=now,
+    )
+    db.add(payment)
+
+    # 2) Cambiar status del ticket
     ticket.status = TicketStatus.PAID
     ticket.version += 1
+    await db.flush()  # asegura payment.id y status PAID para count del tier
 
-    # Cerrar la reserva activa con motivo "paid"
+    # 3) Generar Commission según tier
+    await create_commission_for_paid_ticket(
+        db, ticket=ticket, raffle=raffle, payment_id=payment.id,
+    )
+
+    # 4) Cerrar reserva activa con motivo "paid"
     res = (
         await db.execute(
             select(Reservation).where(
@@ -162,7 +204,7 @@ async def mark_ticket_paid(db: AsyncSession, *, ticket_id: int) -> Ticket:
     ).scalar_one_or_none()
     if res:
         res.is_active = False
-        res.released_at = datetime.now(timezone.utc)
+        res.released_at = now
         res.release_reason = "paid"
 
     await db.flush()

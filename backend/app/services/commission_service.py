@@ -86,3 +86,66 @@ def resolve_commission_amount(
     if tiered is not None:
         return tiered
     return Decimal(str(raffle.seller_commission or 0))
+
+
+async def create_commission_for_paid_ticket(
+    db: AsyncSession,
+    *,
+    ticket: Ticket,
+    raffle: Raffle,
+    payment_id: int,
+) -> Commission | None:
+    """Crea (idempotentemente) la Commission para una boleta recién marcada PAID.
+
+    - Si la boleta no tiene seller_id, no genera comisión.
+    - Si ya existe una Commission para este ticket+seller, no la duplica.
+    - Si la rifa usa tiers, recalcula también las comisiones previas del
+      vendedor en la rifa (modelo de tier calificador).
+
+    Asume que ticket.status YA está PAID y el cambio fue flushed; usa esa
+    cuenta para resolver el tramo.
+    """
+    if not ticket.seller_id:
+        return None
+
+    # Idempotencia: si ya hay una commission para este ticket, no la dupliques.
+    existing = (
+        await db.execute(
+            select(Commission).where(
+                Commission.ticket_id == ticket.id,
+                Commission.seller_id == ticket.seller_id,
+            )
+        )
+    ).scalar_one_or_none()
+    if existing:
+        return existing
+
+    paid_count_after = await count_paid_tickets_by_seller(
+        db, seller_id=ticket.seller_id, raffle_id=raffle.id
+    )
+    amount_per_ticket = resolve_commission_amount(raffle, paid_count_after)
+    if amount_per_ticket <= 0:
+        return None
+
+    commission = Commission(
+        seller_id=ticket.seller_id,
+        raffle_id=raffle.id,
+        ticket_id=ticket.id,
+        payment_id=payment_id,
+        amount=amount_per_ticket,
+        status="pending",
+        paid=False,
+    )
+    db.add(commission)
+    await db.flush()
+
+    # Tier calificador: si cruzó un tramo, equipara los anteriores pendientes.
+    if raffle.commission_tiers:
+        await recalculate_commissions_for_seller(
+            db,
+            seller_id=ticket.seller_id,
+            raffle=raffle,
+            new_amount=amount_per_ticket,
+        )
+
+    return commission
