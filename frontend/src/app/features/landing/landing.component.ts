@@ -414,33 +414,37 @@ import { ButtonComponent, ThemeToggleComponent } from '@shared/ui';
        MOTION DESIGN
        =================================================== */
 
-    /* --- Blobs decorativos detrás del hero --- */
+    /* --- Blobs decorativos detrás del hero ---
+       overflow visible a propósito: el blur 120px no se debe cortar contra
+       un rectángulo (eso es lo que generaba el "recuadro" visible). Como
+       .landing ya tiene overflow-x: hidden, no hay scroll horizontal, y
+       el bleed vertical hacia features se funde naturalmente porque
+       ambas secciones comparten el mismo fondo. */
     .hero { position: relative; }
     .hero__bg {
       position: absolute;
-      inset: -10% -10% -20% -10%;
-      overflow: hidden;
+      inset: 0;
       pointer-events: none;
       z-index: 0;
     }
     .hero__content, .hero__art { position: relative; z-index: 1; }
     .blob {
       position: absolute;
-      width: 480px; height: 480px;
+      width: 420px; height: 420px;
       border-radius: 50%;
-      filter: blur(120px);
-      opacity: 0.4;
+      filter: blur(110px);
+      opacity: 0.32;
       will-change: transform;
     }
     .blob--1 {
       background: var(--accent);
-      top: -180px; right: -120px;
+      top: -120px; right: -80px;
       animation: blob-drift-1 18s ease-in-out infinite;
     }
     .blob--2 {
       background: var(--info);
-      bottom: -240px; left: -160px;
-      opacity: 0.22;
+      bottom: -160px; left: -120px;
+      opacity: 0.18;
       animation: blob-drift-2 22s ease-in-out infinite;
     }
     @keyframes blob-drift-1 {
