@@ -610,11 +610,16 @@ export class LandingComponent implements AfterViewInit, OnDestroy {
   readonly demoNumbers = ['0421', '1837', '2604', '3719', '4250', '5183', '6042', '7271', '8540', '9617'];
 
   ctaLabel(): string {
-    return this.auth.accessToken ? 'Ir al panel' : 'Iniciar sesión';
+    // El texto cambia, pero el destino siempre es /login. Si el usuario
+    // YA tiene sesión válida, el guestGuard de /login lo rebota a su
+    // landing por rol. Si la sesión está caducada/inválida, el guard la
+    // limpia y muestra el formulario. Esto evita un baile de redirects
+    // cuando hay un token viejo en localStorage.
+    return this.auth.isAuthenticated() ? 'Ir al panel' : 'Iniciar sesión';
   }
 
   goToLogin() {
-    this.router.navigate([this.auth.accessToken ? this.auth.landingPath() : '/login']);
+    this.router.navigate(['/login']);
   }
 
   ngAfterViewInit(): void {
