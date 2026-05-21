@@ -33,9 +33,10 @@ class Ticket(Base, TimestampMixin):
     id: Mapped[int] = mapped_column(primary_key=True)
     raffle_id: Mapped[int] = mapped_column(ForeignKey("raffles.id", ondelete="CASCADE"), index=True)
 
-    # Identificadores
+    # Identificadores (inmutables: un trigger en Postgres impide UPDATE de
+    # code/number_label/raffle_id; ver migración 2025xx_lock_ticket_identity).
     number_label: Mapped[str] = mapped_column(String(10), nullable=False)  # "001", "002"...
-    code: Mapped[str] = mapped_column(String(40), nullable=False, index=True)  # ej: 7Z3-4K9-PLM (único en la rifa)
+    code: Mapped[str] = mapped_column(String(40), nullable=False, unique=True)  # ej: 7Z3-4K9-PLM (único global)
     qr_payload: Mapped[str] = mapped_column(String(255), nullable=False)  # token firmado para QR
 
     # Estado
