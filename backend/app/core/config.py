@@ -66,6 +66,14 @@ class Settings(BaseSettings):
     # son aceptados sin JWT.
     cron_secret: str = ""
 
+    # Supabase Storage (opcional). Si SUPABASE_SERVICE_KEY está seteado, los
+    # comprobantes de pago se suben a Supabase Storage en lugar de disco
+    # local. Render free borra el disco en cada deploy, así que es
+    # obligatorio en producción real.
+    supabase_url: str = ""
+    supabase_service_key: str = ""
+    supabase_storage_bucket: str = "payment-proofs"
+
     @cached_property
     def cors_origins(self) -> List[str]:
         return [o.strip() for o in self.cors_origins_raw.split(",") if o.strip()]

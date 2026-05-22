@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Annotated, List, Optional
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, Response, UploadFile, status
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -31,6 +31,11 @@ from app.services.payment_service import (
     submit_payment,
 )
 from app.services.qr_service import build_verify_url
+from app.services.storage_service import (
+    is_supabase_proof_url,
+    local_proof_path,
+    signed_url_for_proof,
+)
 
 settings = get_settings()
 router = APIRouter(prefix="/payments", tags=["payments"])
@@ -330,8 +335,19 @@ async def get_proof(
     if actor.role == UserRole.SELLER and payment.seller_id != actor.id:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "no autorizado")
 
-    path = Path(settings.upload_dir) / payment.proof_url
-    if not path.is_file():
+    # Supabase Storage: redirige a URL firmada temporal (1h).
+    if is_supabase_proof_url(payment.proof_url):
+        signed = signed_url_for_proof(payment.proof_url, expires_in=3600)
+        if not signed:
+            raise HTTPException(
+                status.HTTP_500_INTERNAL_SERVER_ERROR,
+                "no se pudo generar URL firmada del comprobante",
+            )
+        return RedirectResponse(url=signed, status_code=status.HTTP_307_TEMPORARY_REDIRECT)
+
+    # Archivo local (legacy)
+    path = local_proof_path(payment.proof_url)
+    if not path or not path.is_file():
         raise HTTPException(status.HTTP_404_NOT_FOUND, "archivo de comprobante no encontrado en disco")
 
     ext = path.suffix.lower()

@@ -14,12 +14,8 @@ Flujo:
 
 from __future__ import annotations
 
-import hashlib
-import os
-import secrets
 from datetime import datetime, timezone
 from decimal import Decimal
-from pathlib import Path
 from typing import BinaryIO
 
 from sqlalchemy import select
@@ -39,33 +35,7 @@ from app.services.commission_service import create_commission_for_paid_ticket
 
 settings = get_settings()
 
-ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".pdf"}
-
-
-def _save_proof_file(file: BinaryIO, original_filename: str) -> str:
-    """Guarda el archivo con nombre aleatorio dentro de UPLOAD_DIR/payments/.
-    Devuelve el filename guardado (sin path) para almacenar en BD."""
-    ext = os.path.splitext(original_filename)[1].lower()
-    if ext not in ALLOWED_EXTENSIONS:
-        raise DomainError(f"extensión no permitida: {ext}")
-
-    upload_dir = Path(settings.upload_dir) / "payments"
-    upload_dir.mkdir(parents=True, exist_ok=True)
-
-    # Token aleatorio + hash de contenido (suficiente para evitar colisiones)
-    rnd = secrets.token_hex(12)
-    filename = f"{rnd}{ext}"
-    target = upload_dir / filename
-
-    with open(target, "wb") as out:
-        # Streaming para archivos grandes
-        while True:
-            chunk = file.read(64 * 1024)
-            if not chunk:
-                break
-            out.write(chunk)
-
-    return filename
+from app.services.storage_service import upload_proof as _upload_proof_to_storage
 
 
 async def submit_payment(
@@ -97,8 +67,10 @@ async def submit_payment(
 
     proof_url: str | None = None
     if proof_file is not None and proof_filename:
-        saved = _save_proof_file(proof_file, proof_filename)
-        proof_url = f"payments/{saved}"
+        try:
+            proof_url = _upload_proof_to_storage(proof_file, proof_filename)
+        except ValueError as e:
+            raise DomainError(str(e))
 
     payment = Payment(
         ticket_id=ticket.id,
