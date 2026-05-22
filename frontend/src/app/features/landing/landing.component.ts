@@ -7,12 +7,17 @@ import { Router, RouterLink } from '@angular/router';
 import { environment } from '@env/environment';
 import { AuthService } from '@core/services/auth.service';
 import { WhatsAppButtonComponent } from '@shared/components/whatsapp-button/whatsapp-button.component';
+import { WorldCup2026Component } from '@shared/components/world-cup-2026/world-cup-2026.component';
 import { ButtonComponent, ThemeToggleComponent } from '@shared/ui';
 
 @Component({
   selector: 'app-landing',
   standalone: true,
-  imports: [CommonModule, RouterLink, ButtonComponent, ThemeToggleComponent, WhatsAppButtonComponent],
+  imports: [
+    CommonModule, RouterLink,
+    ButtonComponent, ThemeToggleComponent, WhatsAppButtonComponent,
+    WorldCup2026Component,
+  ],
   template: `
     <main class="landing">
       <header class="nav">
@@ -43,8 +48,15 @@ import { ButtonComponent, ThemeToggleComponent } from '@shared/ui';
           <div class="blob blob--2"></div>
         </div>
 
+        <!-- Decoración Mundial 2026 (balones, trofeo, confetti) -->
+        <app-world-cup-2026 mode="hero" [confetti]="true" />
+
         <div class="hero__content">
-          <span class="hero__badge fx-hero fx-hero--1">Hecho en Colombia · v0.1</span>
+          <span class="hero__badge hero__badge--mundial fx-hero fx-hero--1">
+            <span class="hero__badge-ball" aria-hidden="true">⚽</span>
+            Mundial 2026 · Vive la pasión
+            <span class="hero__badge-flame" aria-hidden="true">🔥</span>
+          </span>
           <h1 class="fx-hero fx-hero--2">
             Tu rifa, <span class="accent">profesional</span> desde el primer ticket.
           </h1>
@@ -164,6 +176,20 @@ import { ButtonComponent, ThemeToggleComponent } from '@shared/ui';
             </div>
           </li>
         </ol>
+      </section>
+
+      <!-- ============ MUNDIAL 2026 BANNER ============ -->
+      <section class="mundial-banner fx-reveal fx-reveal--zoom" aria-labelledby="mundial-banner-title">
+        <app-world-cup-2026 mode="banner" />
+        <div class="mundial-banner__inner">
+          <span class="mundial-banner__eyebrow">⚽ Mundial 2026</span>
+          <h2 id="mundial-banner-title">El año del fútbol también es el año de tus rifas.</h2>
+          <p>
+            Mientras el mundo vibra con el Mundial, organiza tus rifas con la misma
+            emoción y profesionalismo. Boletera está listo para acompañarte en cada
+            sorteo, cada gol… cada boleta.
+          </p>
+        </div>
       </section>
 
       <!-- ============ PARA QUIÉN ES ============ -->
@@ -527,6 +553,85 @@ import { ButtonComponent, ThemeToggleComponent } from '@shared/ui';
       font-weight: 600;
       letter-spacing: 0.02em;
       margin-bottom: var(--s-3);
+    }
+    .hero__badge--mundial {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      background: linear-gradient(90deg,
+        color-mix(in srgb, #22c55e 18%, var(--accent-soft)),
+        color-mix(in srgb, #f59e0b 22%, var(--accent-soft)),
+        color-mix(in srgb, #ef4444 18%, var(--accent-soft)));
+      color: var(--text);
+      border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+      font-weight: 700;
+      font-size: 12.5px;
+      box-shadow: 0 4px 14px -6px color-mix(in srgb, var(--accent) 50%, transparent);
+    }
+    .hero__badge-ball {
+      display: inline-block;
+      animation: badge-ball-spin 3.5s linear infinite;
+      font-size: 14px;
+    }
+    .hero__badge-flame { font-size: 13px; }
+    @keyframes badge-ball-spin {
+      from { transform: rotate(0deg); }
+      to   { transform: rotate(360deg); }
+    }
+
+    /* ============ MUNDIAL 2026 BANNER ============ */
+    .mundial-banner {
+      position: relative;
+      max-width: 1100px;
+      margin: var(--s-7) auto;
+      padding: var(--s-6) var(--s-5);
+      border-radius: var(--r-lg);
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 0% 0%,   color-mix(in srgb, #22c55e 25%, transparent), transparent 55%),
+        radial-gradient(circle at 100% 100%, color-mix(in srgb, #ef4444 22%, transparent), transparent 55%),
+        radial-gradient(circle at 100% 0%,   color-mix(in srgb, #f59e0b 25%, transparent), transparent 55%),
+        var(--bg-surface);
+      border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--border));
+      box-shadow: 0 30px 70px -40px rgba(0,0,0,0.35);
+    }
+    .mundial-banner__inner {
+      position: relative;
+      max-width: 720px;
+      display: grid;
+      gap: 10px;
+      z-index: 1;
+    }
+    .mundial-banner__eyebrow {
+      display: inline-block;
+      width: fit-content;
+      padding: 4px 12px;
+      background: rgba(255,255,255,0.16);
+      border: 1px solid rgba(255,255,255,0.25);
+      backdrop-filter: blur(6px);
+      border-radius: var(--r-full);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text);
+    }
+    .mundial-banner h2 {
+      margin: 0;
+      font-size: clamp(20px, 3vw, 28px);
+      line-height: 1.2;
+      letter-spacing: -0.01em;
+      color: var(--text);
+    }
+    .mundial-banner p {
+      margin: 0;
+      color: var(--text-muted);
+      max-width: 580px;
+      font-size: 15px;
+    }
+    @media (max-width: 720px) {
+      .mundial-banner { padding: var(--s-5) var(--s-4); }
     }
     .hero h1 {
       font-size: clamp(32px, 6vw, 52px);
