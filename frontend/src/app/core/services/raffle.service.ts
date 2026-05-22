@@ -75,6 +75,20 @@ export class RaffleService {
     });
   }
 
+  reservePackage(payload: { raffle_id: number; package_size: number; customer_id: number }): Observable<{
+    reserved: number;
+    raffle_id: number;
+    customer_id: number;
+    ticket_ids: number[];
+    labels: string[];
+    numbers: string[];
+  }> {
+    return this.http.post<any>(
+      `${environment.apiUrl}/tickets/reserve-package`,
+      payload,
+    );
+  }
+
   release(ticketId: number): Observable<Ticket> {
     return this.http.post<Ticket>(`${environment.apiUrl}/tickets/${ticketId}/release`, {});
   }

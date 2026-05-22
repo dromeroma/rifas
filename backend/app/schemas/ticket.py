@@ -67,3 +67,18 @@ class TicketSummary(BaseModel):
 
 class ReserveRequest(BaseModel):
     customer_id: Optional[int] = None
+
+
+class ReservePackageRequest(BaseModel):
+    raffle_id: int
+    package_size: int
+    customer_id: int
+
+
+class ReservePackageResult(BaseModel):
+    reserved: int
+    raffle_id: int
+    customer_id: int
+    ticket_ids: list[int]
+    labels: list[str]
+    numbers: list[str]

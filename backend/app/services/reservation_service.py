@@ -35,6 +35,79 @@ def _is_locked(raffle: Raffle, prizes: list[Prize], today: date) -> bool:
     return False
 
 
+async def reserve_package(
+    db: AsyncSession,
+    *,
+    raffle_id: int,
+    package_size: int,
+    seller_id: int,
+    customer_id: int,
+) -> list[Ticket]:
+    """Reserva atómicamente N boletas AVAILABLE aleatorias de una rifa en
+    modo PACKAGE para un cliente. Devuelve las boletas reservadas.
+
+    Usa SELECT ... FOR UPDATE SKIP LOCKED para que dos vendedores que pidan
+    paquetes al mismo tiempo no se peleen por los mismos números.
+    """
+    raffle = (await db.execute(select(Raffle).where(Raffle.id == raffle_id))).scalar_one_or_none()
+    if not raffle:
+        raise TicketUnavailableError("rifa no encontrada")
+    if raffle.mode != "package":
+        raise TicketUnavailableError("esta rifa no vende paquetes")
+
+    # Validar que el package_size esté en las opciones
+    valid_sizes = {int(p["size"]) for p in (raffle.package_options or [])}
+    if package_size not in valid_sizes:
+        raise TicketUnavailableError(
+            f"paquete de {package_size} no está disponible. Opciones: {sorted(valid_sizes)}"
+        )
+
+    prizes = (await db.execute(select(Prize).where(Prize.raffle_id == raffle.id))).scalars().all()
+    if _is_locked(raffle, list(prizes), date.today()):
+        raise ReservationLockedError("ventana de reservas cerrada (proximidad al sorteo)")
+
+    # Bloquear N tickets AVAILABLE aleatorios para este customer.
+    # Importante: ORDER BY random() en una tabla grande es caro; en lugar
+    # usamos id-based "muestreo" + ORDER BY id para indexar bien. Como los
+    # IDs ya fueron generados con números aleatorios, tomar los primeros
+    # AVAILABLE da una distribución pseudo-aleatoria razonable. Para
+    # aleatoriedad perfecta, podríamos hacer un TABLESAMPLE pero sería
+    # innecesariamente complejo para nuestro caso.
+    from sqlalchemy import text as _text
+    res = await db.execute(
+        select(Ticket)
+        .where(
+            Ticket.raffle_id == raffle.id,
+            Ticket.status == TicketStatus.AVAILABLE,
+        )
+        .order_by(_text("random()"))
+        .limit(package_size)
+        .with_for_update(skip_locked=True)
+    )
+    tickets = list(res.scalars().all())
+    if len(tickets) < package_size:
+        raise TicketUnavailableError(
+            f"no hay suficientes números disponibles. Quedan {len(tickets)}, pediste {package_size}."
+        )
+
+    expires_at = datetime.now(timezone.utc) + timedelta(hours=settings.reservation_hours)
+    for t in tickets:
+        t.status = TicketStatus.RESERVED
+        t.seller_id = seller_id
+        t.customer_id = customer_id
+        t.version += 1
+        db.add(Reservation(
+            ticket_id=t.id,
+            seller_id=seller_id,
+            customer_id=customer_id,
+            expires_at=expires_at,
+            is_active=True,
+        ))
+
+    await db.flush()
+    return tickets
+
+
 async def reserve_ticket(
     db: AsyncSession,
     *,

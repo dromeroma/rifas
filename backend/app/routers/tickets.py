@@ -11,7 +11,9 @@ from app.models.raffle import Raffle
 from app.models.reservation import Reservation
 from app.models.ticket import Ticket, TicketStatus
 from app.models.user import User, UserRole
-from app.schemas.ticket import ReserveRequest, TicketOut, TicketSummary
+from app.schemas.ticket import (
+    ReservePackageRequest, ReservePackageResult, ReserveRequest, TicketOut, TicketSummary,
+)
 from app.services.audit_service import log_action
 from app.services.image_service import build_ticket_image
 from app.services.pdf_service import build_ticket_pdf
@@ -19,6 +21,7 @@ from app.services.qr_service import build_verify_url, generate_qr_png
 from app.services.reservation_service import (
     mark_ticket_paid,
     release_by_ticket,
+    reserve_package,
     reserve_ticket,
 )
 
@@ -104,6 +107,70 @@ async def get_ticket(
     if not dto:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "boleta no encontrada")
     return dto
+
+
+@router.post("/tickets/reserve-package", response_model=ReservePackageResult, status_code=status.HTTP_201_CREATED)
+async def reserve_package_endpoint(
+    payload: ReservePackageRequest,
+    request: Request,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    actor: Annotated[User, Depends(require_roles(UserRole.SELLER, UserRole.ADMIN, UserRole.SUPER_ADMIN))],
+    scope: Annotated[TenantScope, Depends(get_tenant_scope)],
+):
+    """Reserva atómicamente N números aleatorios disponibles para un cliente
+    en una rifa de modo PACKAGE. Sirve para el flujo de venta de paquetes
+    estilo 'rifa de moto' (Facebook): el vendedor escoge un tamaño de
+    paquete válido y el sistema asigna los números."""
+    from app.models.ticket_number import TicketNumber
+
+    # Verificar tenancy
+    await _verify_raffle_tenancy(db, payload.raffle_id, scope)
+
+    tickets = await reserve_package(
+        db,
+        raffle_id=payload.raffle_id,
+        package_size=payload.package_size,
+        seller_id=actor.id,
+        customer_id=payload.customer_id,
+    )
+
+    await log_action(
+        db, actor_id=actor.id, action="package.reserve",
+        entity_type="raffle", entity_id=payload.raffle_id, request=request,
+        metadata={
+            "package_size": payload.package_size,
+            "customer_id": payload.customer_id,
+            "ticket_ids": [t.id for t in tickets],
+        },
+    )
+    await db.commit()
+
+    # Cargar los números asignados a cada ticket para devolverlos al frontend
+    ticket_ids = [t.id for t in tickets]
+    nums_rows = (
+        await db.execute(
+            select(TicketNumber)
+            .where(TicketNumber.ticket_id.in_(ticket_ids))
+            .order_by(TicketNumber.ticket_id, TicketNumber.position)
+        )
+    ).scalars().all()
+    nums_by_ticket: dict[int, list[str]] = {}
+    for n in nums_rows:
+        nums_by_ticket.setdefault(n.ticket_id, []).append(n.number)
+
+    labels = [t.number_label for t in tickets]
+    numbers_flat: list[str] = []
+    for tid in ticket_ids:
+        numbers_flat.extend(nums_by_ticket.get(tid, []))
+
+    return ReservePackageResult(
+        reserved=len(tickets),
+        raffle_id=payload.raffle_id,
+        customer_id=payload.customer_id,
+        ticket_ids=ticket_ids,
+        labels=labels,
+        numbers=numbers_flat,
+    )
 
 
 @router.post("/tickets/{ticket_id}/reserve", response_model=TicketOut)

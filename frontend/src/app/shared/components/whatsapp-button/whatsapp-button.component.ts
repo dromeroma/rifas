@@ -120,9 +120,6 @@ import { environment } from '@env/environment';
       }
     }
   `],
-  host: {
-    '[class.with-label]': 'showLabel()',
-  },
 })
 export class WhatsAppButtonComponent {
   /** Mensaje pre-llenado en WhatsApp. */

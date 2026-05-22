@@ -11,6 +11,7 @@ import { RaffleService } from '@core/services/raffle.service';
 import {
   CardComponent, EmptyComponent, KpiComponent,
 } from '@shared/ui';
+import { PackageSaleModalComponent } from './package-sale-modal.component';
 import { TicketActionsModalComponent } from './ticket-actions-modal.component';
 
 @Component({
@@ -19,7 +20,7 @@ import { TicketActionsModalComponent } from './ticket-actions-modal.component';
   imports: [
     CommonModule, FormsModule,
     CardComponent, EmptyComponent, KpiComponent,
-    TicketActionsModalComponent,
+    TicketActionsModalComponent, PackageSaleModalComponent,
   ],
   template: `
     <div class="page">
@@ -61,6 +62,36 @@ import { TicketActionsModalComponent } from './ticket-actions-modal.component';
         }
 
         @if (selectedRaffle(); as r) {
+
+          <!-- Modo PREMIUM: panel de venta por paquetes -->
+          @if (r.mode === 'package') {
+            <section class="pkg-panel">
+              <header class="pkg-panel__head">
+                <div>
+                  <small class="pkg-panel__label">RIFA PREMIUM</small>
+                  <h2>Vende paquetes de números</h2>
+                  <p class="muted">
+                    Esta rifa se vende en paquetes. Elige el tamaño, busca o crea
+                    el cliente, y el sistema asigna los números aleatoriamente.
+                  </p>
+                </div>
+                <button class="pkg-panel__cta" type="button" (click)="openPackageModal()">
+                  <span class="material-icons">add_shopping_cart</span>
+                  Vender un paquete
+                </button>
+              </header>
+              <div class="pkg-options">
+                @for (p of r.package_options ?? []; track p.size) {
+                  <button type="button" class="pkg-opt" (click)="openPackageModal()">
+                    <strong>{{ p.size }}</strong>
+                    <small class="muted">números</small>
+                    <div class="pkg-opt__price">{{ '$' + fmt(p.price) }}</div>
+                  </button>
+                }
+              </div>
+            </section>
+          }
+
           <!-- KPIs -->
           <section class="kpis">
             <app-kpi label="Asignadas"   [value]="kpis().total"     icon="confirmation_number" />
@@ -163,6 +194,14 @@ import { TicketActionsModalComponent } from './ticket-actions-modal.component';
               (changed)="onTicketChanged($event)"
             />
           }
+
+          <!-- Modal de venta de paquete (modo Premium) -->
+          <app-package-sale-modal
+            [open]="packageModalOpen()"
+            [raffle]="r"
+            (close)="closePackageModal()"
+            (sold)="onPackageSold()"
+          />
         }
       }
     </div>
@@ -189,6 +228,56 @@ import { TicketActionsModalComponent } from './ticket-actions-modal.component';
       grid-template-columns: repeat(2, 1fr);
     }
     @media (min-width: 720px) { .kpis { grid-template-columns: repeat(5, 1fr); } }
+
+    /* ============ Paquetes (modo Premium) ============ */
+    .pkg-panel {
+      background: linear-gradient(135deg, var(--accent-soft), var(--bg-surface));
+      border: 1px solid var(--accent);
+      border-radius: var(--r-lg);
+      padding: var(--s-4);
+      display: grid; gap: var(--s-3);
+    }
+    .pkg-panel__head {
+      display: flex; justify-content: space-between; align-items: center;
+      gap: var(--s-3); flex-wrap: wrap;
+    }
+    .pkg-panel__label {
+      font-size: 11px; letter-spacing: 0.1em; color: var(--accent);
+      font-weight: 800; text-transform: uppercase;
+    }
+    .pkg-panel h2 { margin: 4px 0; font-size: 20px; letter-spacing: -0.01em; }
+    .pkg-panel p { margin: 0; font-size: 13px; }
+    .pkg-panel__cta {
+      background: var(--accent); color: var(--accent-fg);
+      border: 0; padding: 10px 18px;
+      border-radius: var(--r-md);
+      font-weight: 700; font-size: 14px;
+      cursor: pointer;
+      display: inline-flex; align-items: center; gap: 6px;
+      transition: background 0.15s ease, transform 0.15s ease;
+    }
+    .pkg-panel__cta:hover { background: var(--accent-hover); transform: translateY(-1px); }
+    .pkg-panel__cta .material-icons { font-size: 18px; }
+
+    .pkg-options {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+      gap: var(--s-2);
+    }
+    .pkg-opt {
+      background: var(--bg-base); border: 1.5px solid var(--border);
+      border-radius: var(--r-md);
+      padding: var(--s-2);
+      display: grid; gap: 2px;
+      cursor: pointer; text-align: center;
+      transition: border-color 0.15s ease, transform 0.15s ease;
+    }
+    .pkg-opt:hover { border-color: var(--accent); transform: translateY(-2px); }
+    .pkg-opt strong {
+      font-size: 22px; color: var(--accent); font-weight: 800;
+      font-variant-numeric: tabular-nums;
+    }
+    .pkg-opt__price { font-weight: 700; font-size: 13px; font-variant-numeric: tabular-nums; }
 
     .tier-card {
       display: grid;
@@ -317,6 +406,7 @@ export class MySalesComponent implements OnInit {
   selectedTicket = signal<Ticket | null>(null);
   modalOpen = signal(false);
   tierStatus = signal<SellerTierStatus | null>(null);
+  packageModalOpen = signal(false);
 
   filter = '';
 
@@ -430,6 +520,13 @@ export class MySalesComponent implements OnInit {
   }
 
   closeModal() { this.modalOpen.set(false); }
+
+  openPackageModal() { this.packageModalOpen.set(true); }
+  closePackageModal() { this.packageModalOpen.set(false); }
+  onPackageSold() {
+    // Recarga tickets para reflejar las nuevas reservas
+    this.loadTicketsForCurrentRaffle();
+  }
 
   onTicketChanged(updated: Ticket) {
     // Actualizar el ticket en la grilla local sin recargar todo

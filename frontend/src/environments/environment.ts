@@ -1,7 +1,7 @@
 export const environment = {
   production: false,
   apiUrl: "http://localhost:8000",
-  version: "0.5.0",
+  version: "0.5.1",
   // Número de WhatsApp en formato internacional sin espacios ni +.
   // Cambia este valor cuando lo tengas confirmado.
   whatsappNumber: "573135487605",

@@ -25,10 +25,18 @@ interface PublicNextDraw {
   days_remaining: number;
 }
 
+interface PackageOption {
+  size: number;
+  price: number;
+}
+
 interface PublicRaffleData {
   id: number;
   name: string;
   description: string | null;
+  mode?: 'classic' | 'package' | 'express';
+  package_options?: PackageOption[] | null;
+  min_package_size?: number | null;
   lottery_name: string | null;
   primary_color: string | null;
   logo_url: string | null;
@@ -110,6 +118,32 @@ interface PublicRaffleData {
                   <small class="muted">Sorteo: <strong>{{ mp.draw_date }}</strong></small>
                 </div>
               </div>
+            </app-card>
+          }
+
+          <!-- Paquetes (solo en modo Premium) -->
+          @if (d.mode === 'package' && d.package_options && d.package_options.length) {
+            <app-card title="Compra tus números"
+                       subtitle="Elige el paquete y te asignamos los números aleatoriamente.">
+              <div class="pkg-grid">
+                @for (p of d.package_options; track p.size) {
+                  <a [href]="whatsappForPackage(d, p)" target="_blank" rel="noopener noreferrer"
+                     class="pkg-card">
+                    <strong class="pkg-card__size">{{ p.size }}</strong>
+                    <small class="muted">números</small>
+                    <div class="pkg-card__price">{{ '$' + fmt(p.price) }}</div>
+                    <div class="pkg-card__cta">
+                      <span class="material-icons">chat</span>
+                      Comprar por WhatsApp
+                    </div>
+                  </a>
+                }
+              </div>
+              @if (d.min_package_size) {
+                <small class="muted pkg-min">
+                  Compra mínima: {{ d.min_package_size }} números.
+                </small>
+              }
             </app-card>
           }
 
@@ -305,6 +339,64 @@ interface PublicRaffleData {
     .label { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 600; color: var(--text-muted); display: block; }
     .muted { color: var(--text-muted); font-size: 13px; }
 
+    /* Paquetes (modo Premium) */
+    .pkg-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: var(--s-3);
+    }
+    .pkg-card {
+      display: grid;
+      gap: 4px;
+      padding: var(--s-4) var(--s-3);
+      background: var(--bg-base);
+      border: 1.5px solid var(--border);
+      border-radius: var(--r-lg);
+      text-align: center;
+      text-decoration: none;
+      color: var(--text);
+      transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .pkg-card:hover {
+      transform: translateY(-3px);
+      border-color: var(--accent);
+      box-shadow: 0 10px 24px -10px color-mix(in srgb, var(--accent) 35%, transparent);
+    }
+    .pkg-card__size {
+      font-size: 36px;
+      color: var(--accent);
+      font-weight: 800;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+    }
+    .pkg-card__price {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text);
+      margin-top: 4px;
+      font-variant-numeric: tabular-nums;
+    }
+    .pkg-card__cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      margin-top: 8px;
+      padding: 6px 10px;
+      background: linear-gradient(135deg, #25d366, #128c7e);
+      color: #fff;
+      border-radius: var(--r-full);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+    .pkg-card__cta .material-icons { font-size: 14px; }
+    .pkg-min {
+      display: block;
+      margin-top: var(--s-2);
+      font-size: 12px;
+      text-align: center;
+    }
+
     /* Premio mayor */
     .major { display: flex; gap: var(--s-3); align-items: center; }
     .major__icon {
@@ -429,6 +521,17 @@ export class PublicRaffleComponent implements OnInit {
         this.loading.set(false);
       },
     });
+  }
+
+  /** Genera el deep link de WhatsApp del organizador con el contexto del paquete. */
+  whatsappForPackage(d: PublicRaffleData, p: PackageOption): string {
+    // Si la rifa tiene responsable_phone definido, lo usamos. Si no, caemos al
+    // número global de Boletera (para que el cliente al menos pueda contactar).
+    const raw = (d.responsible_phone || environment.whatsappNumber || '').replace(/\D/g, '');
+    // Aseguramos código país (Colombia 57) si el número tiene 10 dígitos
+    const phone = raw.length === 10 ? `57${raw}` : raw;
+    const msg = `Hola, quiero comprar el paquete de ${p.size} números ($${this.fmt(p.price)}) para la rifa "${d.name}". ¿Cómo procedemos con el pago?`;
+    return `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
   }
 
   fmt(v: number): string {
