@@ -1,4 +1,7 @@
 <div class="dash">
+  <!-- Onboarding para admins nuevos -->
+  <app-onboarding-card [raffles]="raffles()" [sellersCount]="sellersCount()" />
+
   <!-- Cupo de rifas del tenant: visible siempre que el usuario sea admin -->
   @if (quota(); as q) {
     <section class="quota" [class.quota--full]="q.isReached">

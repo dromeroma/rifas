@@ -70,6 +70,10 @@ interface VerifyResponse {
             <small class="footer-note muted">
               También puedes escanear el QR de tu boleta para verificarla automáticamente.
             </small>
+            <small class="footer-note muted">
+              ¿Quieres ver TODAS tus boletas? Entra a
+              <a routerLink="/mi-boleta">/mi-boleta</a> con tu teléfono.
+            </small>
           </app-card>
         }
 

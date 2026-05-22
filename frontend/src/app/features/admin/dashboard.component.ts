@@ -13,6 +13,7 @@ import {
   ButtonComponent, CardComponent, ChipComponent,
   EmptyComponent, KpiComponent, ProgressRingComponent,
 } from '@shared/ui';
+import { OnboardingCardComponent } from './onboarding-card.component';
 
 interface RaffleWithStats { raffle: Raffle; stats: RaffleStats | null; }
 
@@ -23,6 +24,7 @@ interface RaffleWithStats { raffle: Raffle; stats: RaffleStats | null; }
     CommonModule, RouterLink, CountdownComponent,
     ButtonComponent, CardComponent, ChipComponent,
     EmptyComponent, KpiComponent, ProgressRingComponent,
+    OnboardingCardComponent,
   ],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.scss',
@@ -36,6 +38,9 @@ export class AdminDashboardComponent implements OnInit {
   readonly loading = signal(true);
   readonly items = signal<RaffleWithStats[]>([]);
   readonly selectedIdx = signal(0);
+  readonly sellersCount = signal(0);
+
+  readonly raffles = computed(() => this.items().map((i) => i.raffle));
 
   readonly selected = computed<RaffleWithStats | null>(() => this.items()[this.selectedIdx()] ?? null);
 
@@ -58,6 +63,12 @@ export class AdminDashboardComponent implements OnInit {
   });
 
   ngOnInit(): void {
+    // Cargar sellers en paralelo (para el onboarding)
+    this.adminSvc.listUsers('seller').subscribe({
+      next: (sellers) => this.sellersCount.set(sellers.length),
+      error: () => this.sellersCount.set(0),
+    });
+
     this.raffleSvc.list().subscribe({
       next: (raffles) => {
         if (!raffles.length) {

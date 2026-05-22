@@ -3,15 +3,17 @@ Endpoints públicos (sin autenticación). Pensados para ser compartidos por
 WhatsApp / redes sociales. No exponen datos sensibles ni nominales.
 """
 
+import re
 from datetime import date
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.database import get_db
+from app.models.customer import Customer
 from app.models.raffle import Raffle
 from app.models.ticket import Ticket, TicketStatus
 
@@ -113,4 +115,95 @@ async def public_raffle_view(
         "responsible_phone": raffle.responsible_phone,
         "responsible_email": raffle.responsible_email,
         "terms": raffle.terms,
+    }
+
+
+def _normalize_phone(p: str) -> str:
+    """Solo dígitos. Permite que el cliente escriba +57 300 123 4567 o 300-123-4567."""
+    return re.sub(r"\D", "", p or "")
+
+
+@router.get("/my-tickets")
+async def my_tickets(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    phone: str = Query(..., min_length=7, max_length=30, description="Teléfono del cliente (con o sin código país)"),
+):
+    """Portal del cliente: ingresa su teléfono y ve todas las boletas que tiene
+    en cualquier rifa de Boletera (sin importar el tenant).
+
+    No expone datos sensibles del organizador ni del vendedor. El teléfono
+    actúa como pseudo-llave de autenticación: solo el dueño debería conocer
+    todas las boletas asociadas a su número.
+    """
+    norm = _normalize_phone(phone)
+    if len(norm) < 7:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "teléfono inválido")
+
+    # Match exacto sobre los dígitos normalizados de los customers.
+    # Hacemos LIKE sobre el último tramo (los últimos 10 dígitos) para
+    # tolerar prefijos internacionales distintos al cargar.
+    suffix = norm[-10:] if len(norm) >= 10 else norm
+    customers = (
+        await db.execute(
+            select(Customer).where(
+                func.regexp_replace(Customer.phone, r"\D", "", "g").like(f"%{suffix}")
+            )
+        )
+    ).scalars().all()
+    if not customers:
+        return {"matched": False, "tickets": []}
+
+    customer_ids = [c.id for c in customers]
+    tickets = (
+        await db.execute(
+            select(Ticket)
+            .options(selectinload(Ticket.numbers))
+            .where(Ticket.customer_id.in_(customer_ids))
+            .order_by(Ticket.id.desc())
+        )
+    ).scalars().all()
+
+    if not tickets:
+        return {"matched": True, "customer_name": customers[0].full_name, "tickets": []}
+
+    # Cargar rifas referenciadas (1 query batched)
+    raffle_ids = list({t.raffle_id for t in tickets})
+    raffles_map = {
+        r.id: r
+        for r in (
+            await db.execute(select(Raffle).where(Raffle.id.in_(raffle_ids)))
+        ).scalars().all()
+    }
+
+    customer_by_id = {c.id: c for c in customers}
+
+    items = []
+    for t in tickets:
+        r = raffles_map.get(t.raffle_id)
+        c = customer_by_id.get(t.customer_id) if t.customer_id else None
+        if not r:
+            continue
+        items.append({
+            "ticket_id": t.id,
+            "ticket_label": t.number_label,
+            "ticket_code": t.code,
+            "status": t.status.value,
+            "is_paid": t.status in (TicketStatus.PAID, TicketStatus.WINNING),
+            "is_winner": t.status == TicketStatus.WINNING,
+            "numbers": sorted([n.number for n in t.numbers]),
+            "customer_name": c.full_name if c else None,
+            "raffle": {
+                "id": r.id,
+                "name": r.name,
+                "final_draw_date": r.final_draw_date.isoformat(),
+                "lottery_name": r.lottery_name,
+                "responsible_phone": r.responsible_phone,
+                "primary_color": r.primary_color,
+            },
+            "verify_url": f"/verify/{t.code}",
+        })
+    return {
+        "matched": True,
+        "customer_name": customers[0].full_name,
+        "tickets": items,
     }

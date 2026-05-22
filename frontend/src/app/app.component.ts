@@ -5,6 +5,7 @@ import {
 } from '@angular/router';
 
 import { ConfirmService } from '@core/services/confirm.service';
+import { ShortcutsService } from '@core/services/shortcuts.service';
 import { ConfirmHostComponent, ToastHostComponent } from '@shared/ui';
 
 @Component({
@@ -49,12 +50,14 @@ export class AppComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly doc = inject(DOCUMENT);
   private readonly confirmSvc = inject(ConfirmService);
+  private readonly shortcuts = inject(ShortcutsService);
 
   /** Visible mientras el router está en una navegación (incluye guards async). */
   readonly navigating = signal(true);
 
   ngOnInit(): void {
     this.resetBodyState();
+    this.shortcuts.install();
 
     this.router.events.subscribe((event) => {
       if (event instanceof NavigationStart) {

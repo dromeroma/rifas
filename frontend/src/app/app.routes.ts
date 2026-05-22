@@ -31,6 +31,11 @@ export const routes: Routes = [
       import('./features/customer/public-raffle.component').then((m) => m.PublicRaffleComponent),
   },
   {
+    path: 'mi-boleta',
+    loadComponent: () =>
+      import('./features/customer/my-tickets.component').then((m) => m.MyTicketsComponent),
+  },
+  {
     path: 'subscription-expired',
     canActivate: [authGuard],
     loadComponent: () =>
