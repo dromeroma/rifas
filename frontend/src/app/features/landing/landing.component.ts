@@ -48,6 +48,9 @@ import { ButtonComponent, ThemeToggleComponent } from '@shared/ui';
           <div class="blob blob--2"></div>
         </div>
 
+        <!-- Decoración Mundial 2026 (balones, trofeo, confetti) -->
+        <app-world-cup-2026 mode="hero" [confetti]="true" />
+
         <div class="hero__content">
           <span class="hero__badge hero__badge--mundial fx-hero fx-hero--1">
             <span class="hero__badge-ball" aria-hidden="true">⚽</span>
@@ -177,7 +180,7 @@ import { ButtonComponent, ThemeToggleComponent } from '@shared/ui';
 
       <!-- ============ MUNDIAL 2026 BANNER ============ -->
       <section class="mundial-banner fx-reveal fx-reveal--zoom" aria-labelledby="mundial-banner-title">
-        <app-world-cup-2026 mode="banner" [confetti]="true" />
+        <app-world-cup-2026 mode="banner" />
         <div class="mundial-banner__inner">
           <span class="mundial-banner__eyebrow">⚽ Mundial 2026</span>
           <h2 id="mundial-banner-title">El año del fútbol también es el año de tus rifas.</h2>
@@ -800,37 +803,57 @@ import { ButtonComponent, ThemeToggleComponent } from '@shared/ui';
        =================================================== */
 
     /* --- Blobs decorativos detrás del hero ---
-       overflow visible a propósito: el blur 120px no se debe cortar contra
-       un rectángulo (eso es lo que generaba el "recuadro" visible). Como
-       .landing ya tiene overflow-x: hidden, no hay scroll horizontal, y
-       el bleed vertical hacia features se funde naturalmente porque
-       ambas secciones comparten el mismo fondo. */
-    .hero { position: relative; contain: layout style paint; }
+       Los blobs viven en .hero__bg pero deben EXTENDERSE hasta los bordes
+       laterales del viewport. El .hero tiene max-width:1080px, así que en
+       pantallas más anchas los blobs se cortarían si los limitamos al hero.
+       Por eso:
+         1) NO usamos contain:paint en el hero (sí clipea y crea el recuadro
+            visible que reportaba el usuario).
+         2) Los blobs se posicionan con vw para que un blob de 50vw arranque
+            fuera del hero y se extienda hacia el borde del viewport.
+         3) .landing tiene overflow-x:hidden → sin scroll horizontal pese al
+            bleed. */
+    .hero { position: relative; }
+    /* .hero__bg se extiende al ancho COMPLETO del viewport, ignorando el
+       max-width:1080px del hero. Los blobs se posicionan relativo a este
+       contenedor full-width, así que llegan a los bordes laterales reales
+       en cualquier tamaño de pantalla. .landing tiene overflow-x:hidden →
+       sin scrollbar horizontal pese al bleed. */
     .hero__bg {
       position: absolute;
-      inset: 0;
+      top: 0; bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100vw;
       pointer-events: none;
       z-index: 0;
     }
     .hero__content, .hero__art { position: relative; z-index: 1; }
     .blob {
       position: absolute;
-      width: 320px; height: 320px;
+      width: 55vw;
+      height: 55vw;
+      max-width: 720px;
+      max-height: 720px;
+      min-width: 360px;
+      min-height: 360px;
       border-radius: 50%;
-      filter: blur(45px);
+      filter: blur(90px);
       opacity: 0.42;
       will-change: transform;
       transform: translate3d(0, 0, 0);
     }
     .blob--1 {
       background: var(--accent);
-      top: -80px; right: -60px;
+      /* Esquina superior derecha — bleed hacia fuera del viewport. */
+      top: -25%; right: -10%;
       animation: blob-drift-1 18s ease-in-out infinite;
     }
     .blob--2 {
       background: var(--info);
-      bottom: -120px; left: -90px;
-      opacity: 0.26;
+      /* Esquina inferior izquierda — bleed hacia fuera del viewport. */
+      bottom: -30%; left: -12%;
+      opacity: 0.28;
       animation: blob-drift-2 22s ease-in-out infinite;
     }
     @keyframes blob-drift-1 {
