@@ -469,6 +469,79 @@ async def send_raffle_postponed_email(
     )
 
 
+def _pre_expiry_html(
+    *, admin_name: str, tenant_name: str, days_left: int, end_date: str,
+    renew_contact_email: str,
+) -> str:
+    tone_color = "#1e8e54" if days_left >= 7 else "#f5b400" if days_left >= 3 else "#e35d6a"
+    urgency = (
+        "Aún tienes tiempo para coordinar tranquilamente." if days_left >= 7
+        else "Quedan pocos días — agenda 5 minutos esta semana." if days_left >= 3
+        else "Mañana o pasado vence. Renueva hoy mismo para no perder acceso."
+    )
+    return f"""
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"></head>
+<body style="font-family:'Inter',sans-serif;background:#0b1116;color:#e6e9ef;margin:0;padding:24px;">
+  <div style="max-width:560px;margin:0 auto;background:#141c25;border-radius:16px;padding:32px;border:1px solid #2a3441;">
+    <div style="background:rgba(245,180,0,0.15);color:{tone_color};padding:10px 14px;border-radius:8px;display:inline-block;font-weight:700;font-size:12px;letter-spacing:0.08em;">
+      ⏰ TU SUSCRIPCIÓN ESTÁ POR VENCER
+    </div>
+    <h1 style="font-size:28px;margin:16px 0 8px;line-height:1.1;">
+      Quedan <span style="color:{tone_color};">{days_left} día(s)</span>
+    </h1>
+    <p>Hola {admin_name},</p>
+    <p>Tu cuenta <strong>{tenant_name}</strong> en Boletera vence el <strong>{end_date}</strong>.</p>
+    <p>{urgency}</p>
+
+    <div style="background:#0b1116;border:1px solid #2a3441;border-radius:12px;padding:16px;margin:16px 0;">
+      <p style="margin:0 0 8px;color:#8290a3;font-size:12px;letter-spacing:0.06em;text-transform:uppercase;">¿Qué pasa si no renuevas?</p>
+      <ul style="margin:0;padding-left:20px;font-size:14px;color:#e6e9ef;">
+        <li>Después del vencimiento entras a un período de gracia de 7 días en modo solo lectura: puedes ver tu data pero no modificarla.</li>
+        <li>Cumplido el período de gracia, el acceso queda bloqueado. <strong>Tu data se conserva intacta</strong>: cuando renueves, vuelve todo.</li>
+      </ul>
+    </div>
+
+    <p style="margin-top:24px;">Para renovar, escríbenos:</p>
+    <p>
+      <a href="mailto:{renew_contact_email}?subject=Renovar%20suscripci%C3%B3n%20{tenant_name}"
+         style="display:inline-block;background:#1e8e54;color:#fff;padding:12px 18px;border-radius:8px;text-decoration:none;font-weight:600;">
+        Escribir para renovar →
+      </a>
+    </p>
+
+    <p style="color:#8290a3;font-size:12px;margin-top:24px;border-top:1px solid #2a3441;padding-top:16px;">
+      Esta es una notificación automática enviada por Boletera.
+      Si ya renovaste, ignora este mensaje.
+    </p>
+  </div>
+</body></html>
+""".strip()
+
+
+async def send_tenant_pre_expiry_email(
+    *,
+    to_email: str,
+    admin_name: str,
+    tenant_name: str,
+    days_left: int,
+    end_date: str,
+    renew_contact_email: str,
+) -> bool:
+    if not to_email:
+        return False
+    html = _pre_expiry_html(
+        admin_name=admin_name, tenant_name=tenant_name,
+        days_left=days_left, end_date=end_date,
+        renew_contact_email=renew_contact_email,
+    )
+    return await _send_via_resend(
+        to=[to_email],
+        subject=f"⏰ Tu cuenta vence en {days_left} día(s) · Boletera",
+        html=html,
+    )
+
+
 async def send_raffle_cancelled_email(
     *,
     to_email: str,

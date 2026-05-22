@@ -45,6 +45,13 @@ class Tenant(Base, TimestampMixin):
     billing_phone: Mapped[str | None] = mapped_column(String(30), nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
+    # Última notificación pre-vencimiento enviada (7, 3, 1 o None).
+    # Usado para evitar duplicados: solo enviamos un threshold si es menor
+    # que el último enviado.
+    last_pre_expiry_notification_days: Mapped[int | None] = mapped_column(
+        Integer, nullable=True,
+    )
+
     # Relaciones inversas (lazy="select" para no cargar a menos que se pida)
     users: Mapped[list["User"]] = relationship(back_populates="tenant", lazy="select")
     raffles: Mapped[list["Raffle"]] = relationship(back_populates="tenant", lazy="select")

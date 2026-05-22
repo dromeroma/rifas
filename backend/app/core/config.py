@@ -61,6 +61,11 @@ class Settings(BaseSettings):
     resend_from_name: str = "Boletera"
     admin_notify_email: str = ""
 
+    # Token compartido para endpoints de cron job (notificaciones automáticas,
+    # liberar reservas). Si se setea, los hits con header X-Cron-Secret=valor
+    # son aceptados sin JWT.
+    cron_secret: str = ""
+
     @cached_property
     def cors_origins(self) -> List[str]:
         return [o.strip() for o in self.cors_origins_raw.split(",") if o.strip()]
