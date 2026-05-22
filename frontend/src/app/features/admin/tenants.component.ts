@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute, Router } from '@angular/router';
 
 import { Tenant, TenantCreatePayload, TenantUpdatePayload } from '@core/models/tenant.model';
 import { ConfirmService } from '@core/services/confirm.service';
@@ -25,13 +26,22 @@ import {
         <div>
           <h1>Cuentas</h1>
           <p class="muted">
-            {{ tenants().length }} cuenta(s). Cada una es un negocio independiente que
-            usa Boletera. Su data está completamente aislada del resto.
+            {{ tenants().length }} cuenta(s). Cada una es un negocio independiente
+            que usa Boletera. Su data está completamente aislada del resto.
           </p>
         </div>
-        <app-button icon="add" variant="primary" (click)="openCreate()">
-          Nueva cuenta
-        </app-button>
+        <div class="page__actions">
+          <app-input
+            class="search"
+            placeholder="Buscar por nombre, slug o email..."
+            icon="search"
+            [(ngModel)]="searchQuery"
+            name="search"
+          />
+          <app-button icon="add" variant="primary" (click)="openCreate()">
+            Nueva cuenta
+          </app-button>
+        </div>
       </header>
 
       @if (loading()) {
@@ -42,66 +52,87 @@ import {
           title="Aún no hay cuentas"
           description="Crea la primera cuenta para empezar a vender accesos a Boletera."
         />
+      } @else if (!filtered().length) {
+        <app-empty
+          icon="search_off"
+          title="Sin resultados"
+          description="Ningún negocio coincide con la búsqueda."
+        />
       } @else {
-        <div class="grid">
-          @for (t of tenants(); track t.id) {
-            <article class="card" [class.card--inactive]="!t.is_active">
-              <header class="card__head">
-                <div>
-                  <strong>{{ t.name }}</strong>
-                  <small class="muted">{{ t.slug }}</small>
-                </div>
-                <app-chip [tone]="statusTone(t.subscription_status)">
-                  {{ statusLabel(t.subscription_status) }}
-                </app-chip>
-              </header>
-
-              <div class="card__stats">
-                <div class="stat">
-                  <small class="stat__label">Rifas</small>
-                  <strong>{{ t.usage.raffles_used }} / {{ t.usage.raffles_max }}</strong>
-                </div>
-                <div class="stat">
-                  <small class="stat__label">Admins</small>
-                  <strong>{{ t.usage.admins_count }}</strong>
-                </div>
-                <div class="stat">
-                  <small class="stat__label">Vendedores</small>
-                  <strong>{{ t.usage.sellers_count }}</strong>
-                </div>
-                <div class="stat stat--wide">
-                  <small class="stat__label">Vence</small>
-                  <strong>{{ t.end_date }}</strong>
-                  <small class="muted">{{ daysLabel(t) }}</small>
-                </div>
-              </div>
-
-              <footer class="card__foot">
-                @if (t.billing_email) {
-                  <small class="muted">
-                    <span class="material-icons">mail</span>{{ t.billing_email }}
-                  </small>
-                }
-                <div class="card__actions">
-                  <app-button variant="secondary" size="sm" icon="edit"
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Negocio</th>
+                <th>Estado</th>
+                <th class="num">Rifas</th>
+                <th class="num">Admins</th>
+                <th class="num">Vendedores</th>
+                <th>Vence</th>
+                <th>Contacto</th>
+                <th class="actions-col">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (t of filtered(); track t.id) {
+                <tr [class.row--inactive]="!t.is_active">
+                  <td>
+                    <div class="biz">
+                      <strong>{{ t.name }}</strong>
+                      <small class="slug">{{ t.slug }}</small>
+                    </div>
+                  </td>
+                  <td>
+                    <app-chip [tone]="statusTone(t.subscription_status)">
+                      {{ statusLabel(t.subscription_status) }}
+                    </app-chip>
+                  </td>
+                  <td class="num">
+                    <strong>{{ t.usage.raffles_used }}<span class="muted">/{{ t.usage.raffles_max }}</span></strong>
+                  </td>
+                  <td class="num">{{ t.usage.admins_count }}</td>
+                  <td class="num">{{ t.usage.sellers_count }}</td>
+                  <td>
+                    <div class="biz">
+                      <strong>{{ t.end_date }}</strong>
+                      <small class="muted">{{ daysLabel(t) }}</small>
+                    </div>
+                  </td>
+                  <td>
+                    @if (t.billing_email) {
+                      <small class="contact">
+                        <span class="material-icons">mail</span>{{ t.billing_email }}
+                      </small>
+                    } @else {
+                      <small class="muted">—</small>
+                    }
+                  </td>
+                  <td class="actions-col">
+                    <div class="actions">
+                      <button type="button" class="icon-btn" title="Editar"
+                              [attr.aria-label]="'Editar ' + t.name"
                               (click)="openEdit(t)">
-                    Editar
-                  </app-button>
-                  @if (t.is_active) {
-                    <app-button variant="secondary" size="sm" icon="block"
+                        <span class="material-icons">edit</span>
+                      </button>
+                      @if (t.is_active) {
+                        <button type="button" class="icon-btn icon-btn--warn" title="Suspender"
+                                [attr.aria-label]="'Suspender ' + t.name"
                                 (click)="suspend(t)">
-                      Suspender
-                    </app-button>
-                  } @else {
-                    <app-button variant="secondary" size="sm" icon="play_arrow"
+                          <span class="material-icons">block</span>
+                        </button>
+                      } @else {
+                        <button type="button" class="icon-btn icon-btn--ok" title="Reactivar"
+                                [attr.aria-label]="'Reactivar ' + t.name"
                                 (click)="reactivate(t)">
-                      Reactivar
-                    </app-button>
-                  }
-                </div>
-              </footer>
-            </article>
-          }
+                          <span class="material-icons">play_arrow</span>
+                        </button>
+                      }
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
         </div>
       }
     </div>
@@ -192,47 +223,101 @@ import {
   `,
   styles: [`
     .page { display: grid; gap: var(--s-4); }
-    .page__head { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--s-3); flex-wrap: wrap; }
-    .page__head h1 { font-size: 22px; }
+    .page__head {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      gap: var(--s-3); flex-wrap: wrap;
+    }
+    .page__head h1 { font-size: 22px; margin: 0; }
+    .page__actions {
+      display: flex; gap: var(--s-2); align-items: center; flex-wrap: wrap;
+    }
+    .page__actions .search { min-width: 260px; }
     .muted { color: var(--text-muted); font-size: 13px; }
     .hint { font-size: 12px; margin: -4px 0 0; }
 
-    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: var(--s-3); }
-
-    .card {
+    /* ====== Tabla ====== */
+    .table-wrap {
       background: var(--bg-surface);
       border: 1px solid var(--border);
       border-radius: var(--r-lg);
-      padding: var(--s-4);
-      display: grid; gap: var(--s-3);
-      transition: border-color var(--t-fast);
+      overflow: hidden;
     }
-    .card:hover { border-color: var(--accent); }
-    .card--inactive { opacity: 0.7; }
-
-    .card__head { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--s-2); }
-    .card__head strong { display: block; font-size: 16px; color: var(--text); }
-    .card__head small { display: block; font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); }
-
-    .card__stats {
-      display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--s-2);
-      padding: var(--s-3);
+    .table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+    .table thead th {
       background: var(--bg-base);
-      border-radius: var(--r-md);
+      color: var(--text-muted);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 12px var(--s-3);
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
     }
-    .stat { display: grid; gap: 2px; }
-    .stat--wide { grid-column: 1 / -1; }
-    .stat__label { font-size: 10px; letter-spacing: 0.06em; color: var(--text-muted); text-transform: uppercase; }
-    .stat strong { font-size: 14px; color: var(--text); font-variant-numeric: tabular-nums; }
+    .table tbody td {
+      padding: 14px var(--s-3);
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+    .table tbody tr:last-child td { border-bottom: 0; }
+    .table tbody tr { transition: background var(--t-fast); }
+    .table tbody tr:hover { background: var(--accent-soft); }
+    .table tbody tr.row--inactive { opacity: 0.55; }
 
-    .card__foot { display: flex; justify-content: space-between; align-items: center; gap: var(--s-2); flex-wrap: wrap; }
-    .card__foot small { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; }
-    .card__foot small .material-icons { font-size: 14px; }
-    .card__actions { display: flex; gap: 6px; }
+    .table .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .table .num strong { font-weight: 700; }
 
+    .biz { display: grid; gap: 2px; min-width: 130px; }
+    .biz strong { font-size: 14px; color: var(--text); }
+    .biz .slug { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); }
+    .biz small { font-size: 12px; }
+
+    .contact {
+      display: inline-flex; align-items: center; gap: 6px;
+      color: var(--text); font-size: 12px;
+      max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .contact .material-icons { font-size: 14px; color: var(--text-muted); }
+
+    .actions-col { width: 1%; white-space: nowrap; text-align: right; }
+    .actions { display: inline-flex; gap: 4px; }
+
+    .icon-btn {
+      width: 32px; height: 32px;
+      display: inline-grid; place-items: center;
+      background: transparent;
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+      border-radius: var(--r-md);
+      cursor: pointer;
+      transition: all var(--t-fast);
+    }
+    .icon-btn:hover {
+      color: var(--accent); border-color: var(--accent);
+      background: var(--accent-soft);
+    }
+    .icon-btn .material-icons { font-size: 18px; }
+    .icon-btn--warn:hover { color: var(--warning); border-color: var(--warning); background: var(--warning-soft); }
+    .icon-btn--ok:hover { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
+
+    @media (max-width: 720px) {
+      .table-wrap { overflow-x: auto; }
+      .table { min-width: 760px; }
+      .page__actions .search { min-width: 0; flex: 1; }
+    }
+
+    /* ====== Modal form ====== */
     .form { display: grid; gap: var(--s-5); }
     .section { display: grid; gap: var(--s-3); }
-    .section h3 { font-size: 13px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; margin: 0; }
+    .section h3 {
+      font-size: 13px; color: var(--text-muted); text-transform: uppercase;
+      letter-spacing: 0.08em; font-weight: 600; margin: 0;
+    }
     .row { display: grid; grid-template-columns: 1fr; gap: var(--s-3); }
     @media (min-width: 540px) { .row { grid-template-columns: 1fr 1fr; } }
 
@@ -261,9 +346,12 @@ export class TenantsComponent implements OnInit {
   private readonly tenantsSvc = inject(TenantsService);
   private readonly toast = inject(ToastService);
   private readonly confirmSvc = inject(ConfirmService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
 
   loading = signal(true);
   tenants = signal<Tenant[]>([]);
+  searchQuery = '';
 
   modalOpen = signal(false);
   saving = signal(false);
@@ -271,14 +359,38 @@ export class TenantsComponent implements OnInit {
   editingId = signal<number | null>(null);
   readonly editing = computed(() => this.editingId() !== null);
 
+  readonly filtered = computed(() => {
+    const q = this.searchQuery.trim().toLowerCase();
+    if (!q) return this.tenants();
+    return this.tenants().filter((t) =>
+      t.name.toLowerCase().includes(q) ||
+      t.slug.toLowerCase().includes(q) ||
+      (t.billing_email?.toLowerCase().includes(q) ?? false),
+    );
+  });
+
   form: TenantCreatePayload & { slug?: string } = this.blankForm();
 
-  ngOnInit(): void { this.refresh(); }
+  ngOnInit(): void {
+    this.refresh();
+  }
 
   refresh() {
     this.loading.set(true);
     this.tenantsSvc.list().subscribe({
-      next: (ts) => { this.tenants.set(ts); this.loading.set(false); },
+      next: (ts) => {
+        this.tenants.set(ts);
+        this.loading.set(false);
+        // Si llegamos con ?edit=ID (desde el dashboard), abre el modal al
+        // tener la lista cargada.
+        const editId = Number(this.route.snapshot.queryParamMap.get('edit'));
+        if (editId) {
+          const t = ts.find((x) => x.id === editId);
+          if (t) this.openEdit(t);
+          // Limpia el queryParam para que un refresh no reabra el modal.
+          this.router.navigate([], { queryParams: { edit: null }, queryParamsHandling: 'merge', replaceUrl: true });
+        }
+      },
       error: () => this.loading.set(false),
     });
   }
