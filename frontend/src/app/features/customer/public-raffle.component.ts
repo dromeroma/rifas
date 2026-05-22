@@ -4,6 +4,7 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 
 import { environment } from '@env/environment';
+import { WhatsAppButtonComponent } from '@shared/components/whatsapp-button/whatsapp-button.component';
 import {
   CardComponent, ChipComponent, ProgressRingComponent, ThemeToggleComponent,
 } from '@shared/ui';
@@ -52,6 +53,7 @@ interface PublicRaffleData {
   imports: [
     CommonModule, RouterLink,
     CardComponent, ChipComponent, ProgressRingComponent, ThemeToggleComponent,
+    WhatsAppButtonComponent,
   ],
   template: `
     <main class="page">
@@ -243,6 +245,8 @@ interface PublicRaffleData {
         }
       </div>
     </main>
+
+    <app-whatsapp-button />
   `,
   styles: [`
     .page { min-height: 100dvh; background: var(--bg-base); }

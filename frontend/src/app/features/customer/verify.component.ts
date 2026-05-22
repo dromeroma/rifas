@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 import { environment } from '@env/environment';
+import { WhatsAppButtonComponent } from '@shared/components/whatsapp-button/whatsapp-button.component';
 import { ButtonComponent, CardComponent, ChipComponent, InputComponent, ThemeToggleComponent } from '@shared/ui';
 
 interface VerifyResponse {
@@ -35,6 +36,7 @@ interface VerifyResponse {
   imports: [
     CommonModule, FormsModule, RouterLink,
     ButtonComponent, CardComponent, ChipComponent, InputComponent, ThemeToggleComponent,
+    WhatsAppButtonComponent,
   ],
   template: `
     <main class="verify">
@@ -197,6 +199,8 @@ interface VerifyResponse {
         }
       </div>
     </main>
+
+    <app-whatsapp-button />
   `,
   styles: [`
     .verify {
