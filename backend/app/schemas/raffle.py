@@ -119,6 +119,22 @@ class RaffleCreate(BaseModel):
         return self
 
 
+class RafflePostpone(BaseModel):
+    new_final_draw_date: date
+    reason: Optional[str] = Field(default=None, max_length=500)
+    # Si se pasa, también desplaza las fechas de los premios pendientes.
+    # Cada item es {prize_id: int, new_draw_date: date}.
+    prize_dates: Optional[List[dict]] = None
+
+
+class RaffleCancel(BaseModel):
+    reason: str = Field(min_length=3, max_length=500)
+    refund_contact: Optional[str] = Field(default=None, max_length=200,
+        description="Cómo contactar al organizador para el reembolso (Nequi, banco, etc.)")
+    refund_message: Optional[str] = Field(default=None, max_length=1000,
+        description="Mensaje personalizado sobre el reembolso. Si no se pasa, se usa un mensaje genérico empático.")
+
+
 class RaffleUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None

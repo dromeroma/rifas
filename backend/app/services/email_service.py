@@ -344,3 +344,154 @@ async def send_admin_pending_payment_email(
         subject=f"💳 Nuevo pago pendiente · Boleta {ticket_label}",
         html=html,
     )
+
+
+# ============ Aplazamiento y cancelación de rifa ============
+
+def _postpone_html(
+    *, customer_name: str, raffle_name: str, new_date: str, old_date: str,
+    reason: str | None, responsible_name: str | None, responsible_phone: str | None,
+) -> str:
+    reason_html = (
+        f"<p><strong>Motivo:</strong> {reason}</p>" if reason else ""
+    )
+    contact_html = ""
+    if responsible_name or responsible_phone:
+        parts = []
+        if responsible_name: parts.append(responsible_name)
+        if responsible_phone: parts.append(f"📞 {responsible_phone}")
+        contact_html = f"<p style='margin-top:24px;'>Si tienes dudas, contacta a {' · '.join(parts)}.</p>"
+
+    return f"""
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"></head>
+<body style="font-family:'Inter',sans-serif;background:#0b1116;color:#e6e9ef;margin:0;padding:24px;">
+  <div style="max-width:560px;margin:0 auto;background:#141c25;border-radius:16px;padding:32px;border:1px solid #2a3441;">
+    <div style="background:#3a2d0a;color:#f5b400;padding:10px 14px;border-radius:8px;display:inline-block;font-weight:700;font-size:12px;letter-spacing:0.08em;">
+      📅 RIFA APLAZADA
+    </div>
+    <h1 style="font-size:24px;margin:16px 0 8px;">{raffle_name}</h1>
+    <p>Hola {customer_name},</p>
+    <p>Te escribimos para informarte que el sorteo final de tu rifa <strong>{raffle_name}</strong> ha sido aplazado.</p>
+    <div style="background:#0b1116;border:1px solid #2a3441;border-radius:12px;padding:16px;margin:16px 0;">
+      <p style="margin:0 0 8px;color:#8290a3;font-size:12px;letter-spacing:0.06em;text-transform:uppercase;">Cambio de fecha</p>
+      <p style="margin:0;font-size:14px;"><span style="text-decoration:line-through;color:#8290a3;">{old_date}</span> → <strong style="color:#1e8e54;font-size:18px;">{new_date}</strong></p>
+    </div>
+    {reason_html}
+    <p><strong>Tu boleta sigue activa.</strong> No tienes que hacer nada — los números que tenías asignados se conservan para el nuevo sorteo.</p>
+    {contact_html}
+    <p style="color:#8290a3;font-size:12px;margin-top:24px;border-top:1px solid #2a3441;padding-top:16px;">
+      Esta es una notificación automática enviada por Boletera.
+    </p>
+  </div>
+</body></html>
+""".strip()
+
+
+def _cancel_html(
+    *, customer_name: str, raffle_name: str, ticket_label: str, ticket_code: str,
+    reason: str, refund_contact: str | None, refund_message: str | None,
+    responsible_name: str | None, responsible_phone: str | None,
+) -> str:
+    refund_contact_html = ""
+    if refund_contact:
+        refund_contact_html = (
+            f"<p><strong>Datos para tu reembolso:</strong> {refund_contact}</p>"
+        )
+    refund_msg_html = ""
+    if refund_message:
+        refund_msg_html = f"<p>{refund_message}</p>"
+    contact_html = ""
+    if responsible_name or responsible_phone:
+        parts = []
+        if responsible_name: parts.append(responsible_name)
+        if responsible_phone: parts.append(f"📞 {responsible_phone}")
+        contact_html = f"<p>Responsable: {' · '.join(parts)}</p>"
+
+    return f"""
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"></head>
+<body style="font-family:'Inter',sans-serif;background:#0b1116;color:#e6e9ef;margin:0;padding:24px;">
+  <div style="max-width:560px;margin:0 auto;background:#141c25;border-radius:16px;padding:32px;border:1px solid #2a3441;">
+    <div style="background:#3a1414;color:#e35d6a;padding:10px 14px;border-radius:8px;display:inline-block;font-weight:700;font-size:12px;letter-spacing:0.08em;">
+      ❗ RIFA CANCELADA
+    </div>
+    <h1 style="font-size:24px;margin:16px 0 8px;">{raffle_name}</h1>
+    <p>Hola {customer_name},</p>
+    <p>Te escribimos con honestidad: lamentablemente la rifa <strong>{raffle_name}</strong> ha sido cancelada.</p>
+
+    <div style="background:#0b1116;border:1px solid #2a3441;border-radius:12px;padding:16px;margin:16px 0;">
+      <p style="margin:0 0 4px;color:#8290a3;font-size:12px;letter-spacing:0.06em;text-transform:uppercase;">Tu boleta</p>
+      <p style="margin:0;font-size:18px;font-weight:700;">N° {ticket_label} · <span style="font-family:monospace;color:#8290a3;font-size:13px;">{ticket_code}</span></p>
+    </div>
+
+    <p><strong>Motivo de la cancelación:</strong></p>
+    <p style="background:#0b1116;border-left:3px solid #e35d6a;padding:12px 16px;border-radius:4px;">{reason}</p>
+
+    <h2 style="font-size:16px;margin:24px 0 8px;color:#1e8e54;">Qué pasa con tu dinero</h2>
+    {refund_msg_html if refund_msg_html else "<p>Tu pago será reembolsado en su totalidad. Nos pondremos en contacto contigo en los próximos días para coordinar la devolución por el mismo medio en el que pagaste.</p>"}
+    {refund_contact_html}
+
+    <p style="margin-top:24px;">Sabemos que esto no es lo que esperabas y te pedimos disculpas sinceras. Gracias por la confianza que depositaste en nosotros — significa mucho.</p>
+
+    {contact_html}
+
+    <p style="color:#8290a3;font-size:12px;margin-top:24px;border-top:1px solid #2a3441;padding-top:16px;">
+      Esta es una notificación automática enviada por Boletera. La rifa ha quedado cerrada y no se realizarán sorteos.
+    </p>
+  </div>
+</body></html>
+""".strip()
+
+
+async def send_raffle_postponed_email(
+    *,
+    to_email: str,
+    customer_name: str,
+    raffle_name: str,
+    new_date: str,
+    old_date: str,
+    reason: str | None = None,
+    responsible_name: str | None = None,
+    responsible_phone: str | None = None,
+) -> bool:
+    if not to_email:
+        return False
+    html = _postpone_html(
+        customer_name=customer_name, raffle_name=raffle_name,
+        new_date=new_date, old_date=old_date, reason=reason,
+        responsible_name=responsible_name, responsible_phone=responsible_phone,
+    )
+    return await _send_via_resend(
+        to=[to_email],
+        subject=f"📅 Tu rifa fue aplazada · {raffle_name}",
+        html=html,
+    )
+
+
+async def send_raffle_cancelled_email(
+    *,
+    to_email: str,
+    customer_name: str,
+    raffle_name: str,
+    ticket_label: str,
+    ticket_code: str,
+    reason: str,
+    refund_contact: str | None = None,
+    refund_message: str | None = None,
+    responsible_name: str | None = None,
+    responsible_phone: str | None = None,
+) -> bool:
+    if not to_email:
+        return False
+    html = _cancel_html(
+        customer_name=customer_name, raffle_name=raffle_name,
+        ticket_label=ticket_label, ticket_code=ticket_code,
+        reason=reason, refund_contact=refund_contact, refund_message=refund_message,
+        responsible_name=responsible_name, responsible_phone=responsible_phone,
+    )
+    return await _send_via_resend(
+        to=[to_email],
+        subject=f"❗ Cancelación · {raffle_name}",
+        html=html,
+    )

@@ -45,6 +45,22 @@ export class RaffleService {
     return this.http.delete<void>(`${this.base}/${raffleId}/prizes/${prizeId}`);
   }
 
+  postpone(raffleId: number, payload: {
+    new_final_draw_date: string;
+    reason?: string;
+    prize_dates?: { prize_id: number; new_draw_date: string }[];
+  }): Observable<Raffle> {
+    return this.http.post<Raffle>(`${this.base}/${raffleId}/postpone`, payload);
+  }
+
+  cancel(raffleId: number, payload: {
+    reason: string;
+    refund_contact?: string;
+    refund_message?: string;
+  }): Observable<Raffle> {
+    return this.http.post<Raffle>(`${this.base}/${raffleId}/cancel`, payload);
+  }
+
   tickets(raffleId: number): Observable<Ticket[]> {
     return this.http.get<Ticket[]>(`${this.base}/${raffleId}/tickets`);
   }

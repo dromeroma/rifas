@@ -47,20 +47,38 @@ import { TicketActionsModalComponent } from '../seller/ticket-actions-modal.comp
           </div>
           <div class="page__actions">
             <app-button variant="secondary" icon="edit" (click)="openEditModal(r)">Editar</app-button>
+            @if (r.status !== 'cancelled') {
+              <app-button variant="secondary" icon="event_repeat" (click)="openPostponeModal(r)">
+                Aplazar
+              </app-button>
+              <app-button variant="secondary" icon="cancel" (click)="openCancelModal(r)">
+                Cancelar
+              </app-button>
+            }
             <app-button variant="secondary" icon="cleaning_services" [loading]="expiring()" (click)="expireOverdue()">
               Liberar vencidas
             </app-button>
-            @if (r.numbers_generated) {
+            @if (r.numbers_generated && r.status !== 'cancelled') {
               <app-button variant="primary" icon="emoji_events" (click)="openDrawModal(r)">
                 Registrar ganador
               </app-button>
             }
-            @if (!r.numbers_generated) {
+            @if (!r.numbers_generated && r.status !== 'cancelled') {
               <app-button variant="primary" icon="bolt" (click)="generate(r.id)" [loading]="generating()">
                 {{ generating() ? 'Generando 10.000...' : 'Generar números' }}
               </app-button>
             }
           </div>
+
+          @if (r.status === 'cancelled') {
+            <div class="cancelled-banner">
+              <span class="material-icons">cancel</span>
+              <div>
+                <strong>Esta rifa fue cancelada</strong>
+                <small>La data se conserva para auditoría, pero ya no admite operaciones.</small>
+              </div>
+            </div>
+          }
         </header>
 
         @if (stats(); as st) {
@@ -211,6 +229,74 @@ import { TicketActionsModalComponent } from '../seller/ticket-actions-modal.comp
           </div>
         </app-card>
       </div>
+
+      <!-- ============ APLAZAR RIFA ============ -->
+      <app-modal
+        [open]="postponeOpen()"
+        title="Aplazar rifa"
+        subtitle="Cambia la fecha del sorteo final. Avisaremos a los clientes con boleta pagada."
+        size="md"
+        (close)="closePostponeModal()"
+      >
+        <form class="edit-form">
+          <app-input label="Nueva fecha de sorteo final *" type="date"
+                      [(ngModel)]="postpone.new_final_draw_date" name="postpone_date"
+                      icon="event" />
+          <label class="textarea-field">
+            <span>Motivo (opcional, se incluye en el email a clientes)</span>
+            <textarea rows="3" [(ngModel)]="postpone.reason" name="postpone_reason"
+                      placeholder="Ej: 'No alcanzamos el 90% de venta. Damos 30 días más para que todos puedan participar.'"></textarea>
+          </label>
+          <p class="muted" style="font-size:12px;">
+            Las boletas pagadas siguen activas con sus mismos números. No se genera reembolso.
+          </p>
+        </form>
+        <ng-container slot="footer">
+          <app-button variant="secondary" (click)="closePostponeModal()">Cancelar</app-button>
+          <app-button variant="primary" icon="event_repeat" [loading]="postponing()" (click)="doPostpone()">
+            {{ postponing() ? 'Aplazando...' : 'Aplazar rifa' }}
+          </app-button>
+        </ng-container>
+      </app-modal>
+
+      <!-- ============ CANCELAR RIFA ============ -->
+      <app-modal
+        [open]="cancelOpen()"
+        title="Cancelar rifa"
+        subtitle="Acción definitiva. Se notificará a cada cliente pagado con un email empático y proceso de reembolso."
+        size="md"
+        (close)="closeCancelModal()"
+      >
+        <form class="edit-form">
+          <label class="textarea-field">
+            <span>Motivo de la cancelación * (visible al cliente)</span>
+            <textarea rows="3" [(ngModel)]="cancelData.reason" name="cancel_reason"
+                      placeholder="Ej: 'Por circunstancias ajenas, no alcanzamos el mínimo de venta para garantizar los premios.'"></textarea>
+          </label>
+          <app-input label="Datos para reembolso (opcional)"
+                      [(ngModel)]="cancelData.refund_contact" name="cancel_refund_contact"
+                      icon="account_balance_wallet"
+                      hint="Ej: 'Nequi 3001234567 · Bancolombia 12345-67890'." />
+          <label class="textarea-field">
+            <span>Mensaje personalizado sobre el reembolso (opcional)</span>
+            <textarea rows="3" [(ngModel)]="cancelData.refund_message" name="cancel_refund_message"
+                      placeholder="Déjalo vacío para usar el mensaje genérico. Si lo escribes, reemplaza el texto por defecto en el email."></textarea>
+          </label>
+          <div class="warn-card">
+            <span class="material-icons">warning</span>
+            <div>
+              <strong>Esto es definitivo.</strong>
+              <small>La rifa quedará marcada como CANCELADA. La data se conserva para auditoría pero ya no podrás operar sobre ella.</small>
+            </div>
+          </div>
+        </form>
+        <ng-container slot="footer">
+          <app-button variant="secondary" (click)="closeCancelModal()">Volver</app-button>
+          <app-button variant="danger" icon="cancel" [loading]="cancelling()" (click)="doCancel()">
+            {{ cancelling() ? 'Cancelando...' : 'Sí, cancelar rifa' }}
+          </app-button>
+        </ng-container>
+      </app-modal>
 
       <!-- ============ REGISTRAR GANADOR ============ -->
       <app-modal
@@ -465,6 +551,28 @@ import { TicketActionsModalComponent } from '../seller/ticket-actions-modal.comp
     .icon-btn--danger:hover { background: var(--danger-soft); color: var(--danger); }
     .icon-btn .material-icons { font-size: 18px; }
 
+    .cancelled-banner {
+      display: flex; align-items: center; gap: var(--s-3);
+      padding: var(--s-3) var(--s-4);
+      background: var(--danger-soft); color: var(--danger);
+      border-radius: var(--r-md);
+      border: 1px solid var(--danger);
+    }
+    .cancelled-banner .material-icons { font-size: 28px; }
+    .cancelled-banner strong { display: block; font-size: 14px; }
+    .cancelled-banner small { display: block; font-size: 12px; opacity: 0.9; }
+
+    .warn-card {
+      display: flex; gap: var(--s-2); align-items: flex-start;
+      padding: var(--s-3);
+      background: var(--warning-soft); color: var(--warning);
+      border-radius: var(--r-md);
+      border: 1px solid var(--warning);
+    }
+    .warn-card .material-icons { font-size: 20px; flex-shrink: 0; }
+    .warn-card strong { display: block; font-size: 13px; }
+    .warn-card small { display: block; font-size: 12px; opacity: 0.9; }
+
     .preview { display: grid; gap: var(--s-3); justify-items: start; }
     .preview__actions { display: flex; gap: 8px; }
 
@@ -603,6 +711,23 @@ export class RaffleDetailComponent implements OnInit {
 
   // Liberar vencidas
   expiring = signal(false);
+
+  // Aplazar
+  postponeOpen = signal(false);
+  postponing = signal(false);
+  postpone: { new_final_draw_date: string; reason: string } = {
+    new_final_draw_date: '',
+    reason: '',
+  };
+
+  // Cancelar
+  cancelOpen = signal(false);
+  cancelling = signal(false);
+  cancelData: { reason: string; refund_contact: string; refund_message: string } = {
+    reason: '',
+    refund_contact: '',
+    refund_message: '',
+  };
 
   // Registrar ganador
   drawOpen = signal(false);
@@ -949,6 +1074,110 @@ export class RaffleDetailComponent implements OnInit {
         },
         error: (e) => {
           this.toast.error('No se pudo eliminar', e?.error?.detail ?? 'Intenta de nuevo.');
+        },
+      });
+    });
+  }
+
+  // ============ Aplazar rifa ============
+
+  openPostponeModal(r: Raffle) {
+    // Sugerimos 1 mes después de la fecha actual
+    const d = new Date(r.final_draw_date);
+    d.setMonth(d.getMonth() + 1);
+    this.postpone = {
+      new_final_draw_date: d.toISOString().slice(0, 10),
+      reason: '',
+    };
+    this.postponeOpen.set(true);
+  }
+  closePostponeModal() { this.postponeOpen.set(false); }
+
+  doPostpone() {
+    const r = this.raffle();
+    if (!r) return;
+    const p = this.postpone;
+    if (!p.new_final_draw_date) {
+      this.toast.error('Datos faltantes', 'Indica la nueva fecha del sorteo.');
+      return;
+    }
+    if (p.new_final_draw_date <= r.final_draw_date) {
+      this.toast.error('Fecha inválida', 'La nueva fecha debe ser posterior a la actual.');
+      return;
+    }
+
+    this.confirmSvc.ask({
+      title: `Aplazar "${r.name}" al ${p.new_final_draw_date}?`,
+      message: 'Avisaremos por email a cada cliente con boleta pagada. Las boletas siguen activas.',
+      tone: 'warning',
+      icon: 'event_repeat',
+      confirmLabel: 'Sí, aplazar',
+      cancelLabel: 'Cancelar',
+    }).subscribe((yes) => {
+      if (!yes) return;
+      this.postponing.set(true);
+      this.raffleSvc.postpone(r.id, {
+        new_final_draw_date: p.new_final_draw_date,
+        reason: p.reason.trim() || undefined,
+      }).subscribe({
+        next: (updated) => {
+          this.postponing.set(false);
+          this.postponeOpen.set(false);
+          this.raffle.set(updated);
+          this.toast.success(
+            'Rifa aplazada',
+            `Nueva fecha: ${updated.final_draw_date}. Se notificó a los clientes pagados.`,
+          );
+        },
+        error: (e) => {
+          this.postponing.set(false);
+          this.toast.error('No se pudo aplazar', e?.error?.detail ?? 'Intenta de nuevo.');
+        },
+      });
+    });
+  }
+
+  // ============ Cancelar rifa ============
+
+  openCancelModal(_r: Raffle) {
+    this.cancelData = { reason: '', refund_contact: '', refund_message: '' };
+    this.cancelOpen.set(true);
+  }
+  closeCancelModal() { this.cancelOpen.set(false); }
+
+  doCancel() {
+    const r = this.raffle();
+    if (!r) return;
+    const c = this.cancelData;
+    if (!c.reason?.trim() || c.reason.trim().length < 3) {
+      this.toast.error('Motivo obligatorio', 'Escribe el motivo de la cancelación (visible al cliente).');
+      return;
+    }
+
+    this.confirmSvc.ask({
+      title: `¿Cancelar "${r.name}" definitivamente?`,
+      message: 'Esta acción es irreversible. Se enviará un email empático a cada cliente pagado con el proceso de reembolso.',
+      tone: 'danger',
+      icon: 'cancel',
+      confirmLabel: 'Sí, cancelar rifa',
+      cancelLabel: 'Volver',
+    }).subscribe((yes) => {
+      if (!yes) return;
+      this.cancelling.set(true);
+      this.raffleSvc.cancel(r.id, {
+        reason: c.reason.trim(),
+        refund_contact: c.refund_contact.trim() || undefined,
+        refund_message: c.refund_message.trim() || undefined,
+      }).subscribe({
+        next: (updated) => {
+          this.cancelling.set(false);
+          this.cancelOpen.set(false);
+          this.raffle.set(updated);
+          this.toast.success('Rifa cancelada', 'Se notificó a los clientes pagados.');
+        },
+        error: (e) => {
+          this.cancelling.set(false);
+          this.toast.error('No se pudo cancelar', e?.error?.detail ?? 'Intenta de nuevo.');
         },
       });
     });
