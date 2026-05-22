@@ -23,13 +23,11 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # 1) Nuevo valor en el enum ticketstatus. ALTER TYPE ADD VALUE no se
-    #    puede ejecutar dentro de una transacción explícita; por eso
-    #    cerramos la transacción de Alembic con COMMIT antes.
-    op.execute("COMMIT")
+    # 1) Nuevo valor en el enum ticketstatus. Postgres 12+ permite ADD VALUE
+    #    dentro de una transacción siempre que el nuevo valor NO se use en la
+    #    misma transacción. Esta migración solo añade la columna y hace backfill
+    #    con valores existentes, sin tocar 'partially_paid' → es seguro inline.
     op.execute("ALTER TYPE ticketstatus ADD VALUE IF NOT EXISTS 'partially_paid' AFTER 'pending_payment'")
-    # Volvemos a abrir transacción para el resto del DDL.
-    op.execute("BEGIN")
 
     # 2) Columna paid_amount en tickets (suma de pagos CONFIRMED). Backfill:
     #    tickets en estado 'paid' o 'winning' ya cubrieron el total → set al

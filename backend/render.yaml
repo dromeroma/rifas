@@ -12,7 +12,10 @@ services:
     region: oregon
     rootDir: backend
     buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    # Aplica migraciones pendientes antes de arrancar la app. Si alguna falla,
+    # el deploy aborta y Render mantiene la versión anterior — protección
+    # natural contra romper el backend con un cambio de schema malo.
+    startCommand: alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
     autoDeploy: true
     envVars:
