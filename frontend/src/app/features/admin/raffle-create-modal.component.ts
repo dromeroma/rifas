@@ -43,6 +43,7 @@ type RaffleModeKey = 'classic' | 'package' | 'express' | 'custom';
       [open]="open()"
       title="Crear nueva rifa"
       subtitle="Configura los datos básicos, premios y responsable."
+      icon="casino"
       size="lg"
       (close)="onClose()"
     >

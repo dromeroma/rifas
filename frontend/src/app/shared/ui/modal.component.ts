@@ -17,9 +17,19 @@ export type ModalSize = 'sm' | 'md' | 'lg';
              [attr.aria-labelledby]="title() ? 'modal-title' : null"
              (click)="$event.stopPropagation()">
 
+          <!-- Acento superior con gradient sutil -->
+          <span class="modal__accent" aria-hidden="true"></span>
+
           <header class="modal__head">
-            <h2 id="modal-title">{{ title() }}</h2>
-            @if (subtitle()) { <small class="muted">{{ subtitle() }}</small> }
+            @if (icon()) {
+              <span class="modal__head-icon" aria-hidden="true">
+                <span class="material-icons">{{ icon() }}</span>
+              </span>
+            }
+            <div class="modal__head-text">
+              <h2 id="modal-title">{{ title() }}</h2>
+              @if (subtitle()) { <small class="muted">{{ subtitle() }}</small> }
+            </div>
             <button class="close" (click)="close.emit()" aria-label="Cerrar">
               <span class="material-icons">close</span>
             </button>
@@ -43,18 +53,20 @@ export type ModalSize = 'sm' | 'md' | 'lg';
 
     .backdrop {
       position: fixed; inset: 0;
-      background: rgba(0, 0, 0, 0.55);
-      backdrop-filter: blur(3px);
-      -webkit-backdrop-filter: blur(3px);
+      background:
+        radial-gradient(circle at 50% 30%, rgba(0,0,0,0.45), rgba(0,0,0,0.72));
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
       z-index: var(--z-modal);
       display: flex;
       align-items: stretch;
       justify-content: center;
       padding: 0;
-      animation: fade var(--t-fast) ease-out;
+      animation: fade var(--t-base) ease-out;
     }
 
     .modal {
+      position: relative;
       background: var(--bg-surface);
       border: 1px solid var(--border);
       width: 100%;
@@ -62,46 +74,77 @@ export type ModalSize = 'sm' | 'md' | 'lg';
       display: flex;
       flex-direction: column;
       overflow: hidden;
-      animation: slide-up var(--t-base) cubic-bezier(0.16, 1, 0.3, 1);
+      animation: slide-up var(--t-slow) cubic-bezier(0.16, 1, 0.3, 1);
       max-height: 100dvh;
+    }
+
+    /* Accent stripe en el top */
+    .modal__accent {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg,
+        transparent 0%,
+        color-mix(in srgb, var(--accent) 70%, transparent) 20%,
+        var(--accent) 50%,
+        color-mix(in srgb, var(--accent) 70%, transparent) 80%,
+        transparent 100%);
+      pointer-events: none;
+      z-index: 2;
     }
 
     .modal__head {
       position: sticky; top: 0; z-index: 1;
-      background: var(--bg-surface);
+      background: linear-gradient(180deg,
+        var(--bg-surface) 0%,
+        color-mix(in srgb, var(--bg-elevated) 40%, var(--bg-surface)) 100%);
       padding: var(--s-4) var(--s-5);
       border-bottom: 1px solid var(--border);
       display: grid;
-      grid-template-columns: 1fr auto;
-      grid-template-areas:
-        'title close'
-        'sub   sub';
+      grid-template-columns: auto 1fr auto;
       align-items: center;
-      gap: 2px var(--s-3);
+      gap: var(--s-3);
     }
+    .modal__head-icon {
+      width: 40px; height: 40px;
+      display: grid; place-items: center;
+      background: var(--accent-soft);
+      color: var(--accent);
+      border-radius: var(--r-md);
+      flex-shrink: 0;
+    }
+    .modal__head-icon .material-icons { font-size: 22px; }
+    .modal__head-text { display: grid; gap: 2px; min-width: 0; }
     .modal__head h2 {
-      grid-area: title;
-      font-size: 16px;
+      font-size: 17px;
       font-weight: 700;
       color: var(--text);
+      letter-spacing: -0.01em;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
     .modal__head .muted {
-      grid-area: sub;
       color: var(--text-muted);
-      font-size: 12px;
+      font-size: 12.5px;
+      line-height: 1.4;
     }
     .close {
-      grid-area: close;
       width: 36px; height: 36px;
-      border: 0;
-      background: var(--bg-hover);
+      border: 1px solid var(--border);
+      background: transparent;
       color: var(--text-muted);
       border-radius: var(--r-full);
       cursor: pointer;
       display: grid; place-items: center;
-      transition: background var(--t-fast), color var(--t-fast);
+      transition: all var(--t-fast);
     }
-    .close:hover { background: var(--danger-soft); color: var(--danger); }
+    .close:hover {
+      background: var(--danger-soft);
+      color: var(--danger);
+      border-color: color-mix(in srgb, var(--danger) 40%, transparent);
+      transform: rotate(90deg);
+    }
     .close .material-icons { font-size: 18px; }
 
     .modal__body {
@@ -115,7 +158,9 @@ export type ModalSize = 'sm' | 'md' | 'lg';
 
     .modal__foot {
       position: sticky; bottom: 0;
-      background: var(--bg-surface);
+      background: linear-gradient(180deg,
+        color-mix(in srgb, var(--bg-elevated) 30%, var(--bg-surface)) 0%,
+        var(--bg-surface) 100%);
       padding: var(--s-3) var(--s-5);
       border-top: 1px solid var(--border);
       display: flex;
@@ -133,6 +178,10 @@ export type ModalSize = 'sm' | 'md' | 'lg';
         border-radius: 0;
         border: 0;
       }
+      .modal__head { padding: var(--s-3) var(--s-4); }
+      .modal__head-icon { width: 36px; height: 36px; }
+      .modal__head h2 { font-size: 16px; }
+      .modal__body { padding: var(--s-4); }
     }
 
     /* ===== Tablet+: centered card ===== */
@@ -144,18 +193,25 @@ export type ModalSize = 'sm' | 'md' | 'lg';
       .modal {
         border-radius: var(--r-xl);
         max-height: calc(100dvh - 40px);
-        box-shadow: var(--shadow-lg);
+        box-shadow:
+          0 1px 0 color-mix(in srgb, var(--accent) 20%, transparent) inset,
+          0 30px 60px -25px rgba(0, 0, 0, 0.65),
+          0 0 0 1px color-mix(in srgb, var(--accent) 8%, transparent);
         height: auto;
       }
-      [data-size='sm'] { max-width: 420px; }
-      [data-size='md'] { max-width: 640px; }
-      [data-size='lg'] { max-width: 880px; }
+      [data-size='sm'] { max-width: 440px; }
+      [data-size='md'] { max-width: 660px; }
+      [data-size='lg'] { max-width: 900px; }
     }
 
     @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
     @keyframes slide-up {
-      from { transform: translateY(40px); opacity: 0; }
-      to   { transform: translateY(0); opacity: 1; }
+      from { transform: translateY(28px) scale(0.97); opacity: 0; }
+      to   { transform: translateY(0)    scale(1);    opacity: 1; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .modal { animation: fade var(--t-base) ease-out; }
     }
   `],
 })
@@ -163,6 +219,7 @@ export class ModalComponent implements OnDestroy {
   readonly open = input<boolean>(false);
   readonly title = input<string>('');
   readonly subtitle = input<string>('');
+  readonly icon = input<string | null>(null);
   readonly size = input<ModalSize>('md');
   readonly closeOnBackdrop = input<boolean>(true);
   readonly closeOnEsc = input<boolean>(true);

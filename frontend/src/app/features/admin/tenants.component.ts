@@ -144,6 +144,7 @@ import {
       [subtitle]="editing()
         ? 'Cambia la suscripción, el cupo o suspende la cuenta.'
         : 'Crea la cuenta y su admin inicial en un solo paso.'"
+      [icon]="editing() ? 'edit' : 'business'"
       size="lg"
       (close)="closeModal()"
     >

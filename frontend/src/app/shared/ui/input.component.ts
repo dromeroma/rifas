@@ -7,7 +7,7 @@ import { ControlValueAccessor, FormsModule, NG_VALUE_ACCESSOR } from '@angular/f
   standalone: true,
   imports: [CommonModule, FormsModule],
   template: `
-    <label class="field" [class.field--err]="!!error()">
+    <label class="field" [class.field--err]="!!error()" [class.field--date]="type() === 'date'">
       @if (label()) { <span class="field__label">{{ label() }}</span> }
       <div class="field__box">
         @if (icon()) { <span class="material-icons field__icon">{{ icon() }}</span> }
@@ -33,7 +33,7 @@ import { ControlValueAccessor, FormsModule, NG_VALUE_ACCESSOR } from '@angular/f
     .field__label {
       font-size: 12px;
       color: var(--text-muted);
-      font-weight: 500;
+      font-weight: 600;
       letter-spacing: 0.02em;
     }
     .field__box {
@@ -43,15 +43,18 @@ import { ControlValueAccessor, FormsModule, NG_VALUE_ACCESSOR } from '@angular/f
       height: var(--h-input);
       padding: 0 var(--s-3);
       background: var(--bg-input);
-      border: 1px solid transparent;
+      border: 1px solid var(--border);
       border-radius: var(--r-md);
-      transition: border-color var(--t-fast), background var(--t-fast);
+      transition: border-color var(--t-fast), background var(--t-fast), box-shadow var(--t-fast);
     }
+    .field__box:hover { border-color: var(--border-strong); }
     .field__box:focus-within {
       border-color: var(--accent);
       background: var(--bg-elevated);
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
     }
     .field__icon { color: var(--text-faint); font-size: 18px; }
+    .field__box:focus-within .field__icon { color: var(--accent); }
     .field__suffix { color: var(--text-muted); font-size: 13px; }
     input {
       flex: 1;
@@ -66,11 +69,46 @@ import { ControlValueAccessor, FormsModule, NG_VALUE_ACCESSOR } from '@angular/f
     input::placeholder { color: var(--text-faint); }
     input:disabled { opacity: 0.6; cursor: not-allowed; }
 
+    /* ===== Date input: premium picker indicator ===== */
+    .field--date input[type="date"] {
+      cursor: pointer;
+      font-variant-numeric: tabular-nums;
+      padding-right: 4px;
+    }
+    /* Webkit/Blink: estiliza el botón del calendario */
+    .field--date input[type="date"]::-webkit-calendar-picker-indicator {
+      filter: invert(0.6);
+      opacity: 0.7;
+      cursor: pointer;
+      padding: 6px;
+      border-radius: var(--r-sm);
+      transition: opacity var(--t-fast), background var(--t-fast);
+    }
+    .field--date input[type="date"]::-webkit-calendar-picker-indicator:hover {
+      opacity: 1;
+      background: var(--accent-soft);
+    }
+    .field--date:focus-within input[type="date"]::-webkit-calendar-picker-indicator {
+      opacity: 1;
+    }
+    /* En light mode el filter:invert no aplica (icono ya oscuro). Restablecemos. */
+    :host-context([data-theme='light']) .field--date input[type="date"]::-webkit-calendar-picker-indicator {
+      filter: none;
+    }
+    /* Oculta el spinner nativo del datetime picker en Firefox/IE */
+    .field--date input[type="date"]::-webkit-inner-spin-button,
+    .field--date input[type="date"]::-webkit-clear-button {
+      display: none;
+    }
+
     .field--err .field__box {
       border-color: var(--danger);
       background: var(--danger-soft);
     }
-    .field__err { color: var(--danger); font-size: 12px; }
+    .field--err .field__box:focus-within {
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger) 18%, transparent);
+    }
+    .field__err { color: var(--danger); font-size: 12px; font-weight: 500; }
     .field__hint { color: var(--text-faint); font-size: 12px; }
   `],
   providers: [{ provide: NG_VALUE_ACCESSOR, useExisting: forwardRef(() => InputComponent), multi: true }],
