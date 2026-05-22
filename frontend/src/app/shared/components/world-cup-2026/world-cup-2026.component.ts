@@ -198,8 +198,15 @@ import {
     .wc-confetti-static--3 { top: 78%; right: 18%; animation-duration: 4.5s; }
     .wc-confetti-static--4 { bottom: 28%; left: 48%; animation-duration: 7s; animation-direction: reverse; }
 
-    /* Banner mode: layout más estrecho */
-    .wc--banner .wc-ball--main { width: 72px; height: 72px; top: 50%; right: 8%; transform: translateY(-50%); }
+    /* Banner mode: solo el balón principal, centrado vertical en el lado derecho.
+       Usamos calc() en lugar de transform porque la animación wc-float ya usa
+       transform y se las sobrescribiría. */
+    .wc--banner .wc-ball--main {
+      width: 72px; height: 72px;
+      top: calc(50% - 36px);
+      right: 5%;
+      opacity: 0.65;
+    }
     .wc--banner .wc-ball--small,
     .wc--banner .wc-trophy,
     .wc--banner .wc-confetti-static,

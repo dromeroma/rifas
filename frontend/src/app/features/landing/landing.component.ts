@@ -48,9 +48,6 @@ import { ButtonComponent, ThemeToggleComponent } from '@shared/ui';
           <div class="blob blob--2"></div>
         </div>
 
-        <!-- Decoración Mundial 2026 (balones, trofeo, confetti) -->
-        <app-world-cup-2026 mode="hero" [confetti]="true" />
-
         <div class="hero__content">
           <span class="hero__badge hero__badge--mundial fx-hero fx-hero--1">
             <span class="hero__badge-ball" aria-hidden="true">⚽</span>
@@ -180,7 +177,7 @@ import { ButtonComponent, ThemeToggleComponent } from '@shared/ui';
 
       <!-- ============ MUNDIAL 2026 BANNER ============ -->
       <section class="mundial-banner fx-reveal fx-reveal--zoom" aria-labelledby="mundial-banner-title">
-        <app-world-cup-2026 mode="banner" />
+        <app-world-cup-2026 mode="banner" [confetti]="true" />
         <div class="mundial-banner__inner">
           <span class="mundial-banner__eyebrow">⚽ Mundial 2026</span>
           <h2 id="mundial-banner-title">El año del fútbol también es el año de tus rifas.</h2>
