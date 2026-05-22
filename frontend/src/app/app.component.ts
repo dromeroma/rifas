@@ -1,5 +1,5 @@
 import { CommonModule, DOCUMENT } from '@angular/common';
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import {
   NavigationCancel, NavigationEnd, NavigationError, NavigationStart, Router, RouterOutlet,
 } from '@angular/router';
@@ -16,7 +16,10 @@ import { ConfirmHostComponent, ToastHostComponent } from '@shared/ui';
     @if (navigating()) {
       <div class="app-loader" role="status" aria-label="Cargando">
         <div class="app-loader__spinner"></div>
-        <p class="app-loader__text">Cargando...</p>
+        <p class="app-loader__text">{{ loaderMessage() }}</p>
+        @if (loaderHint(); as hint) {
+          <small class="app-loader__hint">{{ hint }}</small>
+        }
       </div>
     }
     <router-outlet />
@@ -27,7 +30,8 @@ import { ConfirmHostComponent, ToastHostComponent } from '@shared/ui';
     .app-loader {
       position: fixed; inset: 0;
       display: grid; place-items: center;
-      gap: var(--s-3);
+      align-content: center;
+      gap: var(--s-2);
       background: var(--bg-base);
       z-index: 9999;
     }
@@ -39,9 +43,18 @@ import { ConfirmHostComponent, ToastHostComponent } from '@shared/ui';
       animation: app-loader-spin 0.8s linear infinite;
     }
     .app-loader__text {
+      color: var(--text);
+      font-size: 15px;
+      margin: var(--s-2) 0 0;
+      font-weight: 500;
+    }
+    .app-loader__hint {
       color: var(--text-muted);
-      font-size: 14px;
-      margin: 0;
+      font-size: 12px;
+      max-width: 320px;
+      text-align: center;
+      line-height: 1.5;
+      padding: 0 var(--s-3);
     }
     @keyframes app-loader-spin { to { transform: rotate(360deg); } }
   `],
@@ -54,6 +67,27 @@ export class AppComponent implements OnInit {
 
   /** Visible mientras el router está en una navegación (incluye guards async). */
   readonly navigating = signal(true);
+  /** Segundos transcurridos desde que empezó la navegación actual. */
+  readonly elapsed = signal(0);
+  private intervalId: ReturnType<typeof setInterval> | null = null;
+  private navStartAt = 0;
+
+  /** Mensaje principal del spinner, escalado según el tiempo transcurrido.
+   *  Da feedback útil cuando Render free está dormido (cold start ~30s). */
+  readonly loaderMessage = computed(() => {
+    const s = this.elapsed();
+    if (s < 3) return 'Cargando...';
+    if (s < 8) return 'Conectando al servidor...';
+    if (s < 20) return 'El servidor estaba dormido, está despertando...';
+    return 'Casi listo, dale unos segundos más...';
+  });
+
+  /** Hint secundario explicativo cuando la espera se alarga. */
+  readonly loaderHint = computed<string | null>(() => {
+    const s = this.elapsed();
+    if (s < 8) return null;
+    return 'Esto solo pasa cuando nadie usó la app en los últimos 15 minutos. La próxima vez será instantáneo.';
+  });
 
   ngOnInit(): void {
     this.resetBodyState();
@@ -61,24 +95,44 @@ export class AppComponent implements OnInit {
 
     this.router.events.subscribe((event) => {
       if (event instanceof NavigationStart) {
-        this.navigating.set(true);
+        this.startNavTimer();
       } else if (
         event instanceof NavigationEnd ||
         event instanceof NavigationCancel ||
         event instanceof NavigationError
       ) {
-        this.navigating.set(false);
+        this.stopNavTimer();
         this.confirmSvc.cancel();
         this.resetBodyState();
 
-        // Si la navegación inicial falla (típicamente por chunk desactualizado
-        // tras un deploy nuevo), recargar la página para forzar fetch del
-        // nuevo index.html y sus chunks.
         if (event instanceof NavigationError && !this.router.navigated) {
           window.location.replace('/');
         }
       }
     });
+  }
+
+  private startNavTimer(): void {
+    this.navigating.set(true);
+    this.elapsed.set(0);
+    this.navStartAt = Date.now();
+    this.clearTick();
+    this.intervalId = setInterval(() => {
+      this.elapsed.set(Math.floor((Date.now() - this.navStartAt) / 1000));
+    }, 1000);
+  }
+
+  private stopNavTimer(): void {
+    this.clearTick();
+    this.navigating.set(false);
+    this.elapsed.set(0);
+  }
+
+  private clearTick(): void {
+    if (this.intervalId !== null) {
+      clearInterval(this.intervalId);
+      this.intervalId = null;
+    }
   }
 
   private resetBodyState(): void {

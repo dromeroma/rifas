@@ -703,7 +703,7 @@ import { ButtonComponent, ThemeToggleComponent } from '@shared/ui';
        .landing ya tiene overflow-x: hidden, no hay scroll horizontal, y
        el bleed vertical hacia features se funde naturalmente porque
        ambas secciones comparten el mismo fondo. */
-    .hero { position: relative; }
+    .hero { position: relative; contain: layout style paint; }
     .hero__bg {
       position: absolute;
       inset: 0;
@@ -713,32 +713,33 @@ import { ButtonComponent, ThemeToggleComponent } from '@shared/ui';
     .hero__content, .hero__art { position: relative; z-index: 1; }
     .blob {
       position: absolute;
-      width: 420px; height: 420px;
+      width: 320px; height: 320px;
       border-radius: 50%;
-      filter: blur(110px);
-      opacity: 0.32;
+      filter: blur(45px);
+      opacity: 0.42;
       will-change: transform;
+      transform: translate3d(0, 0, 0);
     }
     .blob--1 {
       background: var(--accent);
-      top: -120px; right: -80px;
+      top: -80px; right: -60px;
       animation: blob-drift-1 18s ease-in-out infinite;
     }
     .blob--2 {
       background: var(--info);
-      bottom: -160px; left: -120px;
-      opacity: 0.18;
+      bottom: -120px; left: -90px;
+      opacity: 0.26;
       animation: blob-drift-2 22s ease-in-out infinite;
     }
     @keyframes blob-drift-1 {
-      0%, 100% { transform: translate(0, 0) scale(1); }
-      33%      { transform: translate(40px, 30px) scale(1.06); }
-      66%      { transform: translate(-30px, 60px) scale(0.96); }
+      0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+      33%      { transform: translate3d(30px, 20px, 0) scale(1.05); }
+      66%      { transform: translate3d(-20px, 40px, 0) scale(0.97); }
     }
     @keyframes blob-drift-2 {
-      0%, 100% { transform: translate(0, 0) scale(1); }
-      40%      { transform: translate(-50px, -30px) scale(1.08); }
-      80%      { transform: translate(40px, -50px) scale(0.94); }
+      0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+      40%      { transform: translate3d(-35px, -20px, 0) scale(1.06); }
+      80%      { transform: translate3d(30px, -35px, 0) scale(0.95); }
     }
 
     /* --- Hero: entrada secuencial --- */

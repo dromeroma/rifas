@@ -14,9 +14,55 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Boletera">
-  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-  <link rel="preconnect" href="https://fonts.gstatic.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Preconnect a Google Fonts para arrancar el TLS antes de pedir los CSS -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+  <!--
+    Inter ya soporta &display=swap → texto visible inmediatamente con fallback
+    mientras carga la fuente real.
+  -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+
+  <!--
+    Material Icons cargado de forma asíncrona para no bloquear el render
+    inicial. Trick: media="print" carga sin block; onload lo activa al
+    cargar. Fallback con noscript para JS deshabilitado.
+  -->
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+  <link rel="stylesheet" media="print" onload="this.onload=null;this.media='all'"
+        href="https://fonts.googleapis.com/icon?family=Material+Icons">
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons"></noscript>
+
+  <!-- Evita el flash del nombre del ícono como texto plano antes de que
+       cargue la fuente Material Icons. Se activa con clase en body. -->
+  <style>
+    body:not(.icons-ready) .material-icons { visibility: hidden; }
+  </style>
+  <script>
+    (function () {
+      function markReady() {
+        if (document.body) document.body.classList.add('icons-ready');
+      }
+      // Si el body ya existe (improbable a esta altura) y la API está,
+      // espera a font-ready. Si no, intenta con DOMContentLoaded.
+      function setup() {
+        if (document.fonts && document.fonts.ready) {
+          document.fonts.ready.then(markReady);
+          // Fallback duro: máximo 1.5s para no dejar invisibles los íconos.
+          setTimeout(markReady, 1500);
+        } else {
+          setTimeout(markReady, 1000);
+        }
+      }
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', setup);
+      } else {
+        setup();
+      }
+    })();
+  </script>
 </head>
 <body class="mat-typography">
   <app-root></app-root>
