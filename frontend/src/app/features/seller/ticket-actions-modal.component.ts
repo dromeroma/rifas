@@ -11,6 +11,7 @@ import { AuthService } from '@core/services/auth.service';
 import { ConfirmService } from '@core/services/confirm.service';
 import { RaffleService } from '@core/services/raffle.service';
 import { ShareService } from '@core/services/share.service';
+import { TicketCaptureService } from '@core/services/ticket-capture.service';
 import { ToastService } from '@core/services/toast.service';
 import { CountdownComponent } from '@shared/components/countdown/countdown.component';
 import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-design.component';
@@ -304,6 +305,7 @@ export class TicketActionsModalComponent {
   private readonly auth = inject(AuthService);
   private readonly confirmSvc = inject(ConfirmService);
   private readonly shareSvc = inject(ShareService);
+  private readonly capture = inject(TicketCaptureService);
 
   readonly open = input<boolean>(false);
   readonly ticket = input<Ticket | null>(null);
@@ -516,21 +518,19 @@ export class TicketActionsModalComponent {
   downloadingPdf = signal(false);
   sharing = signal(false);
 
-  downloadPdf() {
+  async downloadPdf() {
     const t = this.ticket();
     if (!t) return;
     this.downloadingPdf.set(true);
-    this.raffleSvc.ticketPdf(t.id).subscribe({
-      next: (blob) => {
-        this.shareSvc.download(blob, `boleta-${t.code}.pdf`);
-        this.downloadingPdf.set(false);
-        this.toast.success('PDF descargado', `boleta-${t.code}.pdf guardado en tu dispositivo.`);
-      },
-      error: () => {
-        this.downloadingPdf.set(false);
-        this.toast.error('No se pudo descargar', 'Intenta de nuevo.');
-      },
-    });
+    try {
+      const blob = await this.capture.capturePdf(t, this.raffle());
+      this.shareSvc.download(blob, `boleta-${t.code}.pdf`);
+      this.toast.success('PDF descargado', `boleta-${t.code}.pdf guardado en tu dispositivo.`);
+    } catch {
+      this.toast.error('No se pudo descargar', 'Intenta de nuevo.');
+    } finally {
+      this.downloadingPdf.set(false);
+    }
   }
 
   async shareWhatsApp() {
@@ -539,30 +539,28 @@ export class TicketActionsModalComponent {
     if (!t) return;
     this.sharing.set(true);
 
-    this.raffleSvc.ticketImage(t.id).subscribe({
-      next: async (blob) => {
-        const customer = t.customer?.full_name ?? '';
-        const paidLine = t.status === 'paid' || t.status === 'winning' ? '✅ PAGADA · ' : '';
-        const verifyUrl = `${window.location.origin}/verify/${t.code}`;
-        const text = `${paidLine}Boleta ${t.number_label} de "${r.name}"${customer ? ' · ' + customer : ''}\nVerifica autenticidad: ${verifyUrl}`;
+    try {
+      const blob = await this.capture.capturePng(t, r);
+      const customer = t.customer?.full_name ?? '';
+      const paidLine = t.status === 'paid' || t.status === 'winning' ? '✅ PAGADA · ' : '';
+      const verifyUrl = `${window.location.origin}/verify/${t.code}`;
+      const text = `${paidLine}Boleta ${t.number_label} de "${r.name}"${customer ? ' · ' + customer : ''}\nVerifica autenticidad: ${verifyUrl}`;
 
-        const usedNative = await this.shareSvc.shareImage(blob, `boleta-${t.code}.png`, {
-          title: `Boleta ${t.number_label}`,
-          text,
-          fallbackWhatsAppText: text,
-        });
-        this.sharing.set(false);
-        if (usedNative) {
-          this.toast.success('Boleta compartida', 'Elige a quién enviársela.');
-        } else {
-          this.toast.info('Imagen descargada', 'Adjúntala en WhatsApp donde se abrió la conversación.');
-        }
-      },
-      error: () => {
-        this.sharing.set(false);
-        this.toast.error('No se pudo generar la imagen', 'Intenta de nuevo.');
-      },
-    });
+      const usedNative = await this.shareSvc.shareImage(blob, `boleta-${t.code}.png`, {
+        title: `Boleta ${t.number_label}`,
+        text,
+        fallbackWhatsAppText: text,
+      });
+      if (usedNative) {
+        this.toast.success('Boleta compartida', 'Elige a quién enviársela.');
+      } else {
+        this.toast.info('Imagen descargada', 'Adjúntala en WhatsApp donde se abrió la conversación.');
+      }
+    } catch {
+      this.toast.error('No se pudo generar la imagen', 'Intenta de nuevo.');
+    } finally {
+      this.sharing.set(false);
+    }
   }
 
   onClose() { this.close.emit(); }

@@ -22,7 +22,14 @@
               { "glob": "**/*", "input": "public" }
             ],
             "styles": ["src/styles.scss"],
-            "scripts": []
+            "scripts": [],
+            "allowedCommonJsDependencies": [
+              "html2canvas",
+              "qrcode",
+              "dijkstrajs",
+              "canvg",
+              "core-js/modules/es.regexp.to-string.js"
+            ]
           },
           "configurations": {
             "production": {
