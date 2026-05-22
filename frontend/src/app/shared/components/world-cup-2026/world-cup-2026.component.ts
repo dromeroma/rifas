@@ -21,6 +21,10 @@ import {
   selector: 'app-world-cup-2026',
   standalone: true,
   imports: [CommonModule],
+  host: {
+    // Refleja el modo como atributo data-* del host para usarlo en :host([data-mode='...']).
+    '[attr.data-mode]': 'mode()',
+  },
   template: `
     @if (mode() !== 'corner') {
       <div class="wc" [class.wc--banner]="mode() === 'banner'" aria-hidden="true">
@@ -123,10 +127,15 @@ import {
     }
   `,
   styles: [`
+    /* Host = capa decorativa overlay. NO debe ocupar espacio en el flujo
+       del padre — si lo hace, empuja al resto del contenido y se superpone.
+       El contenedor padre debe ser position: relative (hero/banner ya lo son). */
     :host {
-      display: block;
-      position: relative;
+      position: absolute;
+      inset: 0;
       pointer-events: none;
+      z-index: 0;
+      overflow: hidden;
     }
 
     .wc {
@@ -135,56 +144,59 @@ import {
       overflow: hidden;
       color: var(--accent);
     }
-    .wc--banner { position: relative; min-height: 90px; }
 
     /* Líneas de cancha */
     .wc-field {
       position: absolute;
       inset: auto 0 0 0;
-      width: 100%; height: 60%;
-      opacity: 0.5;
+      width: 100%; height: 50%;
+      opacity: 0.3;
       mix-blend-mode: soft-light;
     }
 
-    /* Balón principal — flotando */
+    /* Balón principal — flotando. Movido a esquina superior izquierda para
+       no competir con el ticket art (que está en la columna derecha). */
     .wc-ball {
       position: absolute;
-      filter: drop-shadow(0 12px 24px rgba(0,0,0,0.25));
+      filter: drop-shadow(0 12px 24px rgba(0,0,0,0.18));
       animation: wc-float 7s ease-in-out infinite;
       will-change: transform;
+      opacity: 0.55;
     }
     .wc-ball--main {
-      width: 110px; height: 110px;
-      top: 18%; right: 6%;
+      width: 84px; height: 84px;
+      top: 4%; right: 38%;
       animation-delay: 0s;
     }
     .wc-ball--small {
-      width: 56px; height: 56px;
-      bottom: 22%; left: 8%;
+      width: 44px; height: 44px;
+      bottom: 12%; left: 6%;
       animation: wc-float-rev 9s ease-in-out infinite;
-      opacity: 0.85;
+      opacity: 0.45;
     }
 
-    /* Trofeo */
+    /* Trofeo — movido al borde inferior izquierdo para que no choque con el ticket. */
     .wc-trophy {
       position: absolute;
-      width: 70px; height: 70px;
-      bottom: 8%; right: 14%;
-      filter: drop-shadow(0 8px 18px rgba(184,122,0,0.4));
+      width: 54px; height: 54px;
+      bottom: 6%; left: 32%;
+      filter: drop-shadow(0 6px 14px rgba(184,122,0,0.3));
       animation: wc-tilt 6s ease-in-out infinite;
       transform-origin: center bottom;
+      opacity: 0.7;
     }
 
     /* Confetti estático decorativo */
     .wc-confetti-static {
       position: absolute;
-      width: 12px; height: 12px;
+      width: 10px; height: 10px;
       animation: wc-spin 5s linear infinite;
+      opacity: 0.6;
     }
-    .wc-confetti-static--1 { top: 12%; left: 18%; animation-duration: 5s; }
-    .wc-confetti-static--2 { top: 30%; left: 40%; animation-duration: 6s; animation-direction: reverse; }
-    .wc-confetti-static--3 { top: 55%; right: 28%; animation-duration: 4.5s; }
-    .wc-confetti-static--4 { bottom: 18%; left: 32%; animation-duration: 7s; animation-direction: reverse; }
+    .wc-confetti-static--1 { top: 16%; left: 12%; animation-duration: 5s; }
+    .wc-confetti-static--2 { top: 70%; left: 22%; animation-duration: 6s; animation-direction: reverse; }
+    .wc-confetti-static--3 { top: 78%; right: 18%; animation-duration: 4.5s; }
+    .wc-confetti-static--4 { bottom: 28%; left: 48%; animation-duration: 7s; animation-direction: reverse; }
 
     /* Banner mode: layout más estrecho */
     .wc--banner .wc-ball--main { width: 72px; height: 72px; top: 50%; right: 8%; transform: translateY(-50%); }
