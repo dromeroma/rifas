@@ -1,7 +1,7 @@
 import enum
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Enum, ForeignKey, Integer, String, UniqueConstraint
+from sqlalchemy import Enum, ForeignKey, Integer, Numeric, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -18,6 +18,9 @@ class TicketStatus(str, enum.Enum):
     AVAILABLE = "available"
     RESERVED = "reserved"
     PENDING_PAYMENT = "pending_payment"
+    # Tiene al menos un pago confirmado pero `paid_amount < raffle.ticket_price`.
+    # El vendedor puede seguir reportando cuotas hasta cubrir el total.
+    PARTIALLY_PAID = "partially_paid"
     PAID = "paid"
     EXPIRED = "expired"
     WINNING = "winning"
@@ -44,6 +47,12 @@ class Ticket(Base, TimestampMixin):
         Enum(TicketStatus), default=TicketStatus.AVAILABLE, nullable=False, index=True
     )
     version: Mapped[int] = mapped_column(Integer, default=0, nullable=False)  # bloqueo optimista
+
+    # Suma de Payment.amount de los pagos CONFIRMED de este ticket. Permite
+    # pagos fraccionados: el ticket pasa a PAID cuando paid_amount alcanza
+    # raffle.ticket_price. Mientras tanto vive en PARTIALLY_PAID (si tiene al
+    # menos un pago confirmado) o en RESERVED / PENDING_PAYMENT.
+    paid_amount: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False, default=0)
 
     # Relaciones
     seller_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)

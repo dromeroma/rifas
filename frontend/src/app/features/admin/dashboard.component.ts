@@ -97,6 +97,7 @@ export class AdminDashboardComponent implements OnInit {
       available: 'Disponibles',
       reserved: 'Reservadas',
       pending_payment: 'Pendientes pago',
+      partially_paid: 'Pago parcial',
       paid: 'Pagadas',
       expired: 'Expiradas',
       winning: 'Ganadoras',

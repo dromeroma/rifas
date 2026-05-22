@@ -3,7 +3,8 @@ import { Component, input } from '@angular/core';
 
 export type ChipTone =
   | 'default' | 'accent' | 'info' | 'warning' | 'danger'
-  | 'available' | 'reserved' | 'pending_payment' | 'paid' | 'expired' | 'winning';
+  | 'available' | 'reserved' | 'pending_payment' | 'partially_paid'
+  | 'paid' | 'expired' | 'winning';
 
 @Component({
   selector: 'app-chip',
@@ -43,6 +44,9 @@ export type ChipTone =
     [data-tone='info']    { background: var(--info-soft); color: var(--info); }
     [data-tone='warning'], [data-tone='reserved'], [data-tone='pending_payment'] {
       background: var(--warning-soft); color: var(--warning);
+    }
+    [data-tone='partially_paid'] {
+      background: var(--info-soft); color: var(--info);
     }
     [data-tone='danger'], [data-tone='expired'] {
       background: var(--danger-soft); color: var(--danger);

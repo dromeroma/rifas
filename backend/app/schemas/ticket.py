@@ -1,4 +1,5 @@
 from datetime import datetime
+from decimal import Decimal
 from typing import List, Optional
 
 from pydantic import BaseModel
@@ -47,9 +48,17 @@ class TicketOut(BaseModel):
     customer: Optional[TicketCustomer] = None
     seller: Optional[TicketSeller] = None
     reservation_expires_at: Optional[datetime] = None
+    # Suma de pagos CONFIRMED. Si paid_amount < raffle.ticket_price el ticket
+    # vive en RESERVED / PENDING_PAYMENT / PARTIALLY_PAID. Cuando se completa
+    # el total → PAID y se genera comisión.
+    paid_amount: Decimal = Decimal(0)
 
     class Config:
         from_attributes = True
+
+
+class ExtendReservationRequest(BaseModel):
+    hours: int = 24
 
 
 class TicketSummary(BaseModel):

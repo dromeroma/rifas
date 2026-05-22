@@ -204,6 +204,7 @@ import { TicketActionsModalComponent } from '../seller/ticket-actions-modal.comp
               <option value="available">Disponibles</option>
               <option value="reserved">Reservadas</option>
               <option value="pending_payment">Pendiente pago</option>
+              <option value="partially_paid">Pago parcial</option>
               <option value="paid">Pagadas</option>
               <option value="winning">Ganadoras</option>
             </select>
@@ -215,6 +216,7 @@ import { TicketActionsModalComponent } from '../seller/ticket-actions-modal.comp
             <span class="legend__item"><span class="dot dot--available"></span>Disponible</span>
             <span class="legend__item"><span class="dot dot--reserved"></span>Reservada</span>
             <span class="legend__item"><span class="dot dot--pending_payment"></span>Pendiente pago</span>
+            <span class="legend__item"><span class="dot dot--partially_paid"></span>Pago parcial</span>
             <span class="legend__item"><span class="dot dot--paid"></span>Pagada</span>
             <span class="legend__item"><span class="dot dot--winning"></span>Ganadora</span>
             <span class="legend__item"><span class="dot dot--expired"></span>Expirada</span>
@@ -607,6 +609,7 @@ import { TicketActionsModalComponent } from '../seller/ticket-actions-modal.comp
     .dot--available       { background: var(--bg-base); color: var(--text-faint); }
     .dot--reserved        { background: var(--warning); color: var(--warning); border-color: var(--warning); }
     .dot--pending_payment { background: repeating-linear-gradient(45deg, var(--warning) 0 4px, var(--bg-base) 4px 8px); color: var(--warning); border-color: var(--warning); }
+    .dot--partially_paid  { background: var(--info); color: var(--info); border-color: var(--info); }
     .dot--paid            { background: var(--accent);  color: var(--accent);  border-color: var(--accent); }
     .dot--winning         { background: #f5b400; color: #f5b400; border-color: #f5b400; }
     .dot--expired         { background: var(--danger);  color: var(--danger);  border-color: var(--danger); opacity: 0.5; }
@@ -661,6 +664,13 @@ import { TicketActionsModalComponent } from '../seller/ticket-actions-modal.comp
         );
       color: #1f1500;
       border-color: var(--warning);
+    }
+
+    /* Pago parcial: azul (cuotas en progreso) */
+    .t-btn--partially_paid {
+      background: var(--info);
+      color: #fff;
+      border-color: var(--info);
     }
 
     /* Pagada: verde sólido (es el éxito) */

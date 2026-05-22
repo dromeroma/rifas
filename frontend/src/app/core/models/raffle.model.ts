@@ -85,6 +85,7 @@ export type TicketStatus =
   | 'available'
   | 'reserved'
   | 'pending_payment'
+  | 'partially_paid'
   | 'paid'
   | 'expired'
   | 'winning';
@@ -121,4 +122,6 @@ export interface Ticket {
   customer?: TicketCustomer | null;
   seller?: TicketSeller | null;
   reservation_expires_at?: string | null;
+  /** Suma de pagos confirmados de este ticket. Pagos parciales. */
+  paid_amount?: number;
 }

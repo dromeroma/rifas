@@ -42,6 +42,9 @@ class PaymentListItem(BaseModel):
     ticket_id: int
     ticket_label: str
     ticket_code: str
+    ticket_status: str  # available | reserved | partially_paid | paid | etc.
+    ticket_paid_amount: Decimal  # suma de pagos confirmados del ticket (incluye éste si es CONFIRMED)
+    ticket_total_price: Decimal  # raffle.ticket_price
     raffle_name: str
     customer_id: int
     customer_name: str

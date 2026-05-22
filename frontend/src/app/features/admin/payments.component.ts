@@ -48,6 +48,15 @@ import {
                 <div>
                   <strong class="card__title">Boleta {{ p.ticket_label }}</strong>
                   <small class="muted">{{ p.raffle_name }}</small>
+                  @if (isPartial(p)) {
+                    <small class="partial">
+                      <span class="material-icons">timeline</span>
+                      Cuota · cubre {{ '$' + fmt(p.amount) }} de {{ '$' + fmt(p.ticket_total_price) }}
+                      @if (remainingAfter(p) > 0 && p.status === 'pending') {
+                        · queda {{ '$' + fmt(remainingAfter(p)) }}
+                      }
+                    </small>
+                  }
                 </div>
                 <app-chip [tone]="statusTone(p.status)">{{ statusLabel(p.status) }}</app-chip>
               </header>
@@ -203,9 +212,19 @@ import {
       display: grid;
       gap: var(--s-3);
     }
-    .card__head { display: flex; justify-content: space-between; align-items: center; gap: var(--s-3); }
+    .card__head { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--s-3); }
     .card__title { display: block; font-size: 15px; color: var(--text); }
     .card__head small { font-size: 12px; color: var(--text-muted); }
+    .partial {
+      display: inline-flex; align-items: center; gap: 4px;
+      margin-top: 4px;
+      padding: 2px 8px;
+      background: var(--info-soft); color: var(--info);
+      border-radius: var(--r-full);
+      font-size: 11px; font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+    .partial .material-icons { font-size: 13px; }
 
     .card__grid {
       display: grid;
@@ -467,5 +486,21 @@ export class PaymentsComponent implements OnInit {
   }
   fmt(v: number) {
     return new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 }).format(v);
+  }
+
+  /** Verdadero si este pago no cubre por sí solo el total del ticket. */
+  isPartial(p: PaymentListItem): boolean {
+    const total = Number(p.ticket_total_price) || 0;
+    return total > 0 && Number(p.amount) < total;
+  }
+
+  /** Saldo del ticket DESPUÉS de aplicar este pago si se confirma. */
+  remainingAfter(p: PaymentListItem): number {
+    const total = Number(p.ticket_total_price) || 0;
+    const paid = Number(p.ticket_paid_amount) || 0;
+    // Si este pago aún está pendiente, paid_amount no lo incluye; si está
+    // confirmado, ya está sumado. Calculamos el saldo "hipotético tras confirmar".
+    const willBePaid = p.status === 'confirmed' ? paid : paid + Number(p.amount);
+    return Math.max(total - willBePaid, 0);
   }
 }

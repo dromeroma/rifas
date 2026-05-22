@@ -97,6 +97,14 @@ export class RaffleService {
     return this.http.post<Ticket>(`${environment.apiUrl}/tickets/${ticketId}/mark-paid`, {});
   }
 
+  /** Extiende la reserva activa de una boleta N horas (admin). */
+  extendReservation(ticketId: number, hours = 24): Observable<Ticket> {
+    return this.http.post<Ticket>(
+      `${environment.apiUrl}/tickets/${ticketId}/extend-reservation`,
+      { hours },
+    );
+  }
+
   /** Descarga PDF como blob (pasa por el interceptor → lleva JWT). */
   ticketPdf(ticketId: number): Observable<Blob> {
     return this.http.get(`${environment.apiUrl}/tickets/${ticketId}/pdf`, {

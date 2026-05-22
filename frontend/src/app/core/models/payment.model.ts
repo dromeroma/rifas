@@ -23,6 +23,12 @@ export interface PaymentListItem {
   ticket_id: number;
   ticket_label: string;
   ticket_code: string;
+  /** Estado actual del ticket. Útil para distinguir cuota parcial vs final. */
+  ticket_status: string;
+  /** Suma de cuotas confirmadas del ticket. */
+  ticket_paid_amount: number;
+  /** Precio total del ticket (raffle.ticket_price). */
+  ticket_total_price: number;
   raffle_name: string;
   customer_id: number;
   customer_name: string;

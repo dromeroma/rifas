@@ -57,8 +57,12 @@ async def raffle_stats(
     winning = by_status_map.get(TicketStatus.WINNING.value, 0)
     reserved = by_status_map.get(TicketStatus.RESERVED.value, 0)
     pending = by_status_map.get(TicketStatus.PENDING_PAYMENT.value, 0)
+    partial = by_status_map.get(TicketStatus.PARTIALLY_PAID.value, 0)
     available = by_status_map.get(TicketStatus.AVAILABLE.value, 0)
     sold = paid + winning
+    # Tickets con pagos parciales se contabilizan junto a las reservadas para
+    # el panel; no se cuentan como "vendidas" porque aún no cubrieron el total.
+    reserved = reserved + partial
 
     price = float(raffle.ticket_price or 0)
     revenue_collected = sold * price

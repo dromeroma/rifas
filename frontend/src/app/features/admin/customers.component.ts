@@ -244,6 +244,7 @@ import {
     .t-status--available { background: var(--bg-hover); color: var(--text-muted); }
     .t-status--reserved { background: var(--warning-soft); color: var(--warning); }
     .t-status--pending_payment { background: var(--warning-soft); color: var(--warning); }
+    .t-status--partially_paid { background: var(--info-soft); color: var(--info); }
     .t-status--paid { background: var(--accent-soft); color: var(--accent); }
     .t-status--winning { background: rgba(245, 180, 0, 0.2); color: #b88500; }
     .t-status--expired { background: var(--danger-soft); color: var(--danger); }
@@ -330,6 +331,7 @@ export class CustomersComponent implements OnInit {
       available: 'Disponible',
       reserved: 'Reservada',
       pending_payment: 'Pendiente pago',
+      partially_paid: 'Pago parcial',
       paid: 'Pagada',
       expired: 'Expirada',
       winning: '🏆 Ganadora',

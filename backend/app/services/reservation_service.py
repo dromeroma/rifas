@@ -10,6 +10,7 @@ Reglas:
 """
 
 from datetime import date, datetime, timedelta, timezone
+from decimal import Decimal
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -166,8 +167,11 @@ async def release_reservation(
         return
 
     ticket = (await db.execute(select(Ticket).where(Ticket.id == reservation.ticket_id).with_for_update())).scalar_one()
-    # Liberamos también si quedó en PENDING_PAYMENT (cliente subió comprobante pero no se confirmó)
-    if ticket.status in (TicketStatus.RESERVED, TicketStatus.PENDING_PAYMENT):
+    # Liberamos también si quedó en PENDING_PAYMENT (cliente subió comprobante pero no se confirmó).
+    # NOTA: PARTIALLY_PAID NO se libera automáticamente — el cliente ya pagó algo. Si llega
+    # aquí (admin canceló manualmente), también lo liberamos, pero el worker de expiración
+    # filtra esos casos para evitar perder dinero del cliente sin acción humana.
+    if ticket.status in (TicketStatus.RESERVED, TicketStatus.PENDING_PAYMENT, TicketStatus.PARTIALLY_PAID):
         ticket.status = TicketStatus.AVAILABLE
         ticket.customer_id = None
         ticket.version += 1
@@ -196,7 +200,9 @@ async def release_by_ticket(
     if not res:
         # Defensivo: si no hay reservation activa pero ticket sigue reservado, lo limpiamos
         ticket = (await db.execute(select(Ticket).where(Ticket.id == ticket_id).with_for_update())).scalar_one_or_none()
-        if ticket and ticket.status in (TicketStatus.RESERVED, TicketStatus.PENDING_PAYMENT):
+        if ticket and ticket.status in (
+            TicketStatus.RESERVED, TicketStatus.PENDING_PAYMENT, TicketStatus.PARTIALLY_PAID,
+        ):
             ticket.status = TicketStatus.AVAILABLE
             ticket.customer_id = None
             ticket.version += 1
@@ -224,7 +230,7 @@ async def mark_ticket_paid(
     if not ticket:
         raise TicketUnavailableError("boleta no encontrada")
 
-    if ticket.status not in (TicketStatus.RESERVED, TicketStatus.PENDING_PAYMENT):
+    if ticket.status not in (TicketStatus.RESERVED, TicketStatus.PENDING_PAYMENT, TicketStatus.PARTIALLY_PAID):
         raise TicketUnavailableError(
             f"la boleta no puede marcarse como pagada (estado actual: {ticket.status.value})"
         )
@@ -239,14 +245,20 @@ async def mark_ticket_paid(
     now = datetime.now(timezone.utc)
 
     # 1) Crear Payment fantasma (CASH, sin comprobante) para mantener
-    #    consistencia: toda boleta PAID tiene un Payment CONFIRMED y una
-    #    Commission asociada.
+    #    consistencia: toda boleta PAID tiene Payment(s) CONFIRMED y una
+    #    Commission asociada. Si el ticket ya tenía pagos parciales, este
+    #    Payment cubre solo el saldo restante.
+    from decimal import Decimal as _D
+    remaining = _D(raffle.ticket_price) - _D(ticket.paid_amount or 0)
+    if remaining <= 0:
+        raise TicketUnavailableError("la boleta ya está totalmente pagada")
+
     payment = Payment(
         ticket_id=ticket.id,
         customer_id=ticket.customer_id,
         seller_id=ticket.seller_id,
         method=PaymentMethod.CASH,
-        amount=raffle.ticket_price,
+        amount=remaining,
         reference=None,
         notes="Marcada pagada directamente (sin comprobante).",
         proof_url=None,
@@ -258,6 +270,7 @@ async def mark_ticket_paid(
 
     # 2) Cambiar status del ticket
     ticket.status = TicketStatus.PAID
+    ticket.paid_amount = raffle.ticket_price
     ticket.version += 1
     await db.flush()  # asegura payment.id y status PAID para count del tier
 
@@ -285,7 +298,12 @@ async def mark_ticket_paid(
 
 
 async def expire_overdue(db: AsyncSession) -> int:
-    """Worker: libera todas las reservas vencidas. Retorna cuántas se liberaron."""
+    """Worker: libera reservas vencidas, excepto las que tengan pagos parciales
+    ya confirmados (esas requieren acción manual del admin: extender la
+    reserva, devolver el dinero, o decidir qué hacer con el cliente).
+
+    Retorna cuántas se liberaron.
+    """
     now = datetime.now(timezone.utc)
     overdue = (
         await db.execute(
@@ -297,6 +315,13 @@ async def expire_overdue(db: AsyncSession) -> int:
     ).scalars().all()
     count = 0
     for r in overdue:
+        # Si el ticket tiene pagos parciales confirmados, NO lo expiramos
+        # automáticamente. El admin debe revisarlo manualmente.
+        ticket = (
+            await db.execute(select(Ticket).where(Ticket.id == r.ticket_id))
+        ).scalar_one_or_none()
+        if ticket and Decimal(ticket.paid_amount or 0) > 0:
+            continue
         await release_reservation(db, reservation_id=r.id, reason="expired")
         count += 1
     if count:

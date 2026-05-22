@@ -160,6 +160,7 @@ import { TicketActionsModalComponent } from './ticket-actions-modal.component';
                 <option value="available">Disponibles</option>
                 <option value="reserved">Reservadas</option>
                 <option value="pending_payment">Pendiente pago</option>
+                <option value="partially_paid">Pago parcial</option>
                 <option value="paid">Pagadas</option>
               </select>
             </div>
@@ -169,6 +170,7 @@ import { TicketActionsModalComponent } from './ticket-actions-modal.component';
               <span class="legend__item"><span class="dot dot--available"></span>Disponible</span>
               <span class="legend__item"><span class="dot dot--reserved"></span>Reservada</span>
               <span class="legend__item"><span class="dot dot--pending_payment"></span>Pendiente pago</span>
+              <span class="legend__item"><span class="dot dot--partially_paid"></span>Pago parcial</span>
               <span class="legend__item"><span class="dot dot--paid"></span>Pagada</span>
             </div>
 
@@ -355,6 +357,7 @@ import { TicketActionsModalComponent } from './ticket-actions-modal.component';
     .dot--available       { background: var(--bg-base); color: var(--text-faint); }
     .dot--reserved        { background: var(--warning); color: var(--warning); border-color: var(--warning); }
     .dot--pending_payment { background: repeating-linear-gradient(45deg, var(--warning) 0 4px, var(--bg-base) 4px 8px); color: var(--warning); border-color: var(--warning); }
+    .dot--partially_paid  { background: var(--info); color: var(--info); border-color: var(--info); }
     .dot--paid            { background: var(--accent); color: var(--accent); border-color: var(--accent); }
 
     .ticket-grid {
@@ -382,6 +385,7 @@ import { TicketActionsModalComponent } from './ticket-actions-modal.component';
       background: repeating-linear-gradient(45deg, var(--warning) 0 6px, color-mix(in srgb, var(--warning) 60%, transparent) 6px 12px);
       color: #1f1500; border-color: var(--warning);
     }
+    .t-btn--partially_paid { background: var(--info); color: #fff; border-color: var(--info); }
     .t-btn--paid { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
 
     .alert {
@@ -443,7 +447,7 @@ export class MySalesComponent implements OnInit {
   readonly kpis = computed(() => {
     const tix = this.myTickets();
     const total = tix.length;
-    const reserved = tix.filter((t) => t.status === 'reserved' || t.status === 'pending_payment').length;
+    const reserved = tix.filter((t) => t.status === 'reserved' || t.status === 'pending_payment' || t.status === 'partially_paid').length;
     const paid = tix.filter((t) => t.status === 'paid' || t.status === 'winning').length;
     const available = tix.filter((t) => t.status === 'available').length;
     const ts = this.tierStatus();

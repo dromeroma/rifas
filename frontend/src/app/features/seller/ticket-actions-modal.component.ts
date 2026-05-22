@@ -108,9 +108,32 @@ import { ReportPaymentModalComponent } from './report-payment-modal.component';
               }
             }
 
-            <!-- ========= RESERVADA o PENDING PAYMENT: ver detalle + acciones ========= -->
-            @else if (t.status === 'reserved' || t.status === 'pending_payment') {
-              <h3>{{ t.status === 'reserved' ? 'Reservada' : 'Pendiente de confirmación' }}</h3>
+            <!-- ========= RESERVADA / PENDING / PARTIALLY_PAID: ver detalle + acciones ========= -->
+            @else if (t.status === 'reserved' || t.status === 'pending_payment' || t.status === 'partially_paid') {
+              <h3>
+                @switch (t.status) {
+                  @case ('reserved') { Reservada }
+                  @case ('pending_payment') { Pendiente de confirmación }
+                  @case ('partially_paid') { Pago parcial · faltan {{ '$' + fmt(remainingAmount()) }} }
+                }
+              </h3>
+
+              <!-- Barra de progreso del pago -->
+              @if (ticketPrice() > 0 && (t.status === 'partially_paid' || (t.paid_amount ?? 0) > 0)) {
+                <div class="pay-progress">
+                  <div class="pay-progress__head">
+                    <small class="muted">Pagado hasta ahora</small>
+                    <strong>
+                      {{ '$' + fmt(t.paid_amount ?? 0) }}
+                      <span class="muted">/ {{ '$' + fmt(ticketPrice()) }}</span>
+                    </strong>
+                  </div>
+                  <div class="pay-progress__bar">
+                    <div class="pay-progress__fill" [style.width.%]="paidPct()"></div>
+                  </div>
+                  <small class="muted">{{ paidPct() }}% cubierto · faltan {{ '$' + fmt(remainingAmount()) }}</small>
+                </div>
+              }
 
               @if (t.customer; as c) {
                 <div class="info-block">
@@ -133,6 +156,12 @@ import { ReportPaymentModalComponent } from './report-payment-modal.component';
                 <div class="info-block">
                   <small class="muted">Expira en (auto-libera si no se paga)</small>
                   <app-countdown [seconds]="secondsToExpire()" />
+                  @if (isAdmin()) {
+                    <app-button variant="secondary" size="sm" icon="schedule"
+                                [loading]="extending()" (click)="extendReservation()">
+                      {{ extending() ? 'Extendiendo...' : 'Extender 24h' }}
+                    </app-button>
+                  }
                 </div>
               }
             }
@@ -187,14 +216,16 @@ import { ReportPaymentModalComponent } from './report-payment-modal.component';
           </app-button>
         }
 
-        @if (ticket()?.status === 'reserved' || ticket()?.status === 'pending_payment') {
-          <app-button variant="danger" icon="lock_open" [loading]="releasing()" (click)="release()">
-            {{ releasing() ? 'Liberando...' : 'Liberar' }}
-          </app-button>
+        @if (ticket()?.status === 'reserved' || ticket()?.status === 'pending_payment' || ticket()?.status === 'partially_paid') {
+          @if (ticket()?.status !== 'partially_paid' || isAdmin()) {
+            <app-button variant="danger" icon="lock_open" [loading]="releasing()" (click)="release()">
+              {{ releasing() ? 'Liberando...' : 'Liberar' }}
+            </app-button>
+          }
 
-          @if (ticket()?.status === 'reserved') {
+          @if (ticket()?.status === 'reserved' || ticket()?.status === 'partially_paid') {
             <app-button variant="primary" icon="cloud_upload" (click)="openReportPayment()">
-              Reportar pago
+              {{ ticket()?.status === 'partially_paid' ? 'Reportar otra cuota' : 'Reportar pago' }}
             </app-button>
           }
 
@@ -211,7 +242,8 @@ import { ReportPaymentModalComponent } from './report-payment-modal.component';
     <app-report-payment-modal
       [open]="reportPaymentOpen()"
       [ticket]="ticket()"
-      [defaultAmount]="ticketPrice()"
+      [defaultAmount]="remainingAmount() || ticketPrice()"
+      [maxAmount]="remainingAmount() || ticketPrice()"
       (close)="reportPaymentOpen.set(false)"
       (submitted)="onPaymentSubmitted($event)"
     />
@@ -296,6 +328,30 @@ import { ReportPaymentModalComponent } from './report-payment-modal.component';
     .share-actions {
       display: grid; gap: var(--s-2);
     }
+
+    /* ===== Progreso de pago fraccionado ===== */
+    .pay-progress {
+      display: grid; gap: 6px;
+      padding: var(--s-3);
+      background: var(--info-soft);
+      border: 1px solid color-mix(in srgb, var(--info) 30%, transparent);
+      border-radius: var(--r-md);
+    }
+    .pay-progress__head { display: flex; justify-content: space-between; align-items: baseline; gap: var(--s-2); }
+    .pay-progress__head small { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; }
+    .pay-progress__head strong { font-size: 14px; color: var(--text); font-variant-numeric: tabular-nums; }
+    .pay-progress__bar {
+      height: 8px;
+      background: var(--bg-base);
+      border-radius: var(--r-full);
+      overflow: hidden;
+    }
+    .pay-progress__fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--info), color-mix(in srgb, var(--info) 70%, var(--accent)));
+      border-radius: var(--r-full);
+      transition: width var(--t-base);
+    }
   `],
 })
 export class TicketActionsModalComponent {
@@ -331,6 +387,26 @@ export class TicketActionsModalComponent {
   });
 
   readonly ticketPrice = computed(() => Number(this.raffle().ticket_price) || 0);
+
+  /** Monto ya pagado (suma de cuotas confirmadas). */
+  readonly paidAmount = computed(() => Number(this.ticket()?.paid_amount ?? 0));
+
+  /** Saldo pendiente para completar la boleta. */
+  readonly remainingAmount = computed(() => Math.max(this.ticketPrice() - this.paidAmount(), 0));
+
+  /** Porcentaje pagado (0-100), redondeado. */
+  readonly paidPct = computed(() => {
+    const total = this.ticketPrice();
+    if (!total) return 0;
+    return Math.min(100, Math.round((this.paidAmount() / total) * 100));
+  });
+
+  /** Estado del botón "Extender 24h". */
+  extending = signal(false);
+
+  fmt(v: number): string {
+    return new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 }).format(v);
+  }
 
   search = '';
   newCust = { full_name: '', phone: '', document: '' };
@@ -518,6 +594,24 @@ export class TicketActionsModalComponent {
   downloadingPdf = signal(false);
   sharing = signal(false);
 
+  extendReservation() {
+    const t = this.ticket();
+    if (!t) return;
+    this.extending.set(true);
+    this.raffleSvc.extendReservation(t.id, 24).subscribe({
+      next: (updated) => {
+        this.extending.set(false);
+        this.changed.emit(updated);
+        this.toast.success('Reserva extendida', '24h adicionales. El cliente puede seguir pagando en cuotas.');
+      },
+      error: (e) => {
+        this.extending.set(false);
+        const detail = e?.error?.detail ?? 'No se pudo extender la reserva';
+        this.toast.error('Error', detail);
+      },
+    });
+  }
+
   async downloadPdf() {
     const t = this.ticket();
     if (!t) return;
@@ -582,6 +676,7 @@ export class TicketActionsModalComponent {
       available: 'Disponible',
       reserved: 'Reservada',
       pending_payment: 'Pendiente pago',
+      partially_paid: 'Pago parcial',
       paid: 'Pagada',
       expired: 'Expirada',
       winning: 'Ganadora',

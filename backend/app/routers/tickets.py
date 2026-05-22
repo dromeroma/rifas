@@ -12,7 +12,8 @@ from app.models.reservation import Reservation
 from app.models.ticket import Ticket, TicketStatus
 from app.models.user import User, UserRole
 from app.schemas.ticket import (
-    ReservePackageRequest, ReservePackageResult, ReserveRequest, TicketOut, TicketSummary,
+    ExtendReservationRequest, ReservePackageRequest, ReservePackageResult,
+    ReserveRequest, TicketOut, TicketSummary,
 )
 from app.services.audit_service import log_action
 from app.services.image_service import build_ticket_image
@@ -45,7 +46,9 @@ async def _load_ticket_out(db: AsyncSession, ticket_id: int) -> TicketOut | None
 
     dto = TicketOut.model_validate(ticket)
 
-    if ticket.status in (TicketStatus.RESERVED, TicketStatus.PENDING_PAYMENT):
+    if ticket.status in (
+        TicketStatus.RESERVED, TicketStatus.PENDING_PAYMENT, TicketStatus.PARTIALLY_PAID,
+    ):
         exp = await db.execute(
             select(Reservation.expires_at)
             .where(
@@ -206,7 +209,7 @@ async def release_ticket(
     """Libera una reserva. El vendedor solo puede liberar las suyas; admin puede liberar cualquiera."""
     ticket = await _verify_ticket_tenancy(db, ticket_id, scope)
 
-    if ticket.status not in (TicketStatus.RESERVED, TicketStatus.PENDING_PAYMENT):
+    if ticket.status not in (TicketStatus.RESERVED, TicketStatus.PENDING_PAYMENT, TicketStatus.PARTIALLY_PAID):
         raise HTTPException(
             status.HTTP_409_CONFLICT,
             f"la boleta no está reservada (estado actual: {ticket.status.value})",
@@ -216,6 +219,13 @@ async def release_ticket(
     if actor.role == UserRole.SELLER and ticket.seller_id != actor.id:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "no puedes liberar una boleta que no es tuya")
 
+    # Si tiene pagos parciales confirmados, solo el admin puede liberar (decisión consciente).
+    if ticket.status == TicketStatus.PARTIALLY_PAID and actor.role == UserRole.SELLER:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            "la boleta tiene pagos parciales confirmados — solo un admin puede liberarla",
+        )
+
     released = await release_by_ticket(db, ticket_id=ticket_id, reason="cancelled_by_user")
     if not released:
         raise HTTPException(status.HTTP_409_CONFLICT, "no hay reserva activa para liberar")
@@ -223,6 +233,53 @@ async def release_ticket(
     await log_action(
         db, actor_id=actor.id, action="ticket.release",
         entity_type="ticket", entity_id=ticket_id, request=request,
+    )
+    await db.commit()
+    return await _load_ticket_out(db, ticket_id)
+
+
+@router.post("/tickets/{ticket_id}/extend-reservation", response_model=TicketOut)
+async def extend_reservation(
+    ticket_id: int,
+    payload: ExtendReservationRequest,
+    request: Request,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    actor: Annotated[User, Depends(require_roles(UserRole.ADMIN, UserRole.SUPER_ADMIN))],
+    scope: Annotated[TenantScope, Depends(get_tenant_scope)],
+):
+    """Extiende la reserva activa de una boleta N horas. Solo admin.
+
+    Útil cuando el cliente está pagando en cuotas y se le acaba el plazo de
+    24h original — el admin extiende manualmente. Si no hay reserva activa,
+    devuelve 409.
+    """
+    from datetime import datetime, timedelta, timezone
+
+    await _verify_ticket_tenancy(db, ticket_id, scope)
+
+    if payload.hours <= 0 or payload.hours > 24 * 30:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "horas debe estar entre 1 y 720 (30 días)")
+
+    res = (
+        await db.execute(
+            select(Reservation).where(
+                Reservation.ticket_id == ticket_id,
+                Reservation.is_active.is_(True),
+            ).with_for_update()
+        )
+    ).scalar_one_or_none()
+    if not res:
+        raise HTTPException(status.HTTP_409_CONFLICT, "la boleta no tiene una reserva activa")
+
+    now = datetime.now(timezone.utc)
+    # Si ya venció, se extiende desde ahora; si todavía no vence, se suma al actual.
+    base = res.expires_at if res.expires_at > now else now
+    res.expires_at = base + timedelta(hours=payload.hours)
+
+    await log_action(
+        db, actor_id=actor.id, action="ticket.extend_reservation",
+        entity_type="ticket", entity_id=ticket_id, request=request,
+        metadata={"hours": payload.hours, "new_expires_at": res.expires_at.isoformat()},
     )
     await db.commit()
     return await _load_ticket_out(db, ticket_id)

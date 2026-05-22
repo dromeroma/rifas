@@ -30,6 +30,9 @@ import {
       <form class="form" (ngSubmit)="submit()">
         <p class="muted intro">
           Adjunta el comprobante de pago. El administrador lo revisará y confirmará la venta.
+          @if (maxAmount() > 0 && maxAmount() < defaultAmount()) {
+            <strong> Saldo pendiente: {{ '$' + fmt(maxAmount()) }}.</strong>
+          }
         </p>
 
         <label class="field">
@@ -195,6 +198,8 @@ export class ReportPaymentModalComponent {
   readonly open = input<boolean>(false);
   readonly ticket = input<Ticket | null>(null);
   readonly defaultAmount = input<number>(0);
+  /** Tope superior aceptado. Si el ticket tiene pagos parciales, equivale al saldo pendiente. */
+  readonly maxAmount = input<number>(0);
 
   @Output() close = new EventEmitter<void>();
   @Output() submitted = new EventEmitter<Ticket>();
@@ -258,11 +263,20 @@ export class ReportPaymentModalComponent {
     this.selectedFile.set(null);
   }
 
+  fmt(v: number): string {
+    return new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 }).format(v);
+  }
+
   submit() {
     const t = this.ticket();
     if (!t) return;
     if (!this.form.amount || this.form.amount <= 0) {
       this.error.set('El monto debe ser mayor a cero.');
+      return;
+    }
+    const max = this.maxAmount();
+    if (max > 0 && this.form.amount > max) {
+      this.error.set(`El monto supera el saldo pendiente ($${this.fmt(max)}).`);
       return;
     }
     if (!this.selectedFile()) {
