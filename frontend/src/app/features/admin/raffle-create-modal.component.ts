@@ -24,6 +24,13 @@ interface TierForm {
   amount_per_ticket: number;
 }
 
+interface PackageOption {
+  size: number;
+  price: number;
+}
+
+type RaffleModeKey = 'classic' | 'package' | 'express' | 'custom';
+
 @Component({
   selector: 'app-raffle-create-modal',
   standalone: true,
@@ -40,6 +47,79 @@ interface TierForm {
       (close)="onClose()"
     >
       <form class="form">
+
+        <!-- ============ TEMPLATE / MODALIDAD ============ -->
+        <section class="section">
+          <h3>Modalidad de la rifa</h3>
+          <p class="muted hint">
+            Empieza eligiendo el tipo de rifa. Pre-llenamos los valores típicos
+            según el caso; siempre puedes ajustarlos.
+          </p>
+          <div class="tpl-grid">
+            <button type="button" class="tpl" [class.tpl--active]="form.template === 'classic'"
+                    (click)="applyTemplate('classic')">
+              <span class="tpl__icon">🎟️</span>
+              <strong>Clásica</strong>
+              <small>500 boletas × 20 números (4 dígitos). Vendes la boleta como unidad.</small>
+              <small class="tpl__use">Ej: TV, electrodomésticos, viajes.</small>
+            </button>
+
+            <button type="button" class="tpl" [class.tpl--active]="form.template === 'package'"
+                    (click)="applyTemplate('package')">
+              <span class="tpl__icon">🚗</span>
+              <strong>Premium</strong>
+              <small>Hasta 100.000 números individuales (5 dígitos). Vendes en paquetes de 30/50/100.</small>
+              <small class="tpl__use">Ej: moto, carro, casa.</small>
+            </button>
+
+            <button type="button" class="tpl" [class.tpl--active]="form.template === 'express'"
+                    (click)="applyTemplate('express')">
+              <span class="tpl__icon">⚡</span>
+              <strong>Express</strong>
+              <small>100 números (2 dígitos), 1 por boleta. Sorteo en 24‑72h.</small>
+              <small class="tpl__use">Ej: bonos, mercados, spa.</small>
+            </button>
+
+            <button type="button" class="tpl" [class.tpl--active]="form.template === 'custom'"
+                    (click)="applyTemplate('custom')">
+              <span class="tpl__icon">🛠️</span>
+              <strong>Personalizada</strong>
+              <small>Tú defines todos los valores desde cero.</small>
+              <small class="tpl__use">Para casos especiales.</small>
+            </button>
+          </div>
+        </section>
+
+        <!-- ============ PAQUETES (solo modo Premium) ============ -->
+        @if (form.mode === 'package') {
+          <section class="section">
+            <h3>Paquetes de venta</h3>
+            <p class="muted hint">
+              Define los paquetes que tus vendedores van a ofrecer. Cada paquete
+              entrega N números aleatorios al cliente.
+            </p>
+            @for (p of form.package_options; track $index; let i = $index) {
+              <div class="pkg-row">
+                <app-input label="N° de números" type="number" inputmode="numeric"
+                            [(ngModel)]="p.size" [name]="'pkg_size_' + i" icon="123" />
+                <app-input label="Precio (COP)" type="number" inputmode="numeric"
+                            [(ngModel)]="p.price" [name]="'pkg_price_' + i" icon="payments" />
+                @if (form.package_options.length > 1) {
+                  <button type="button" class="del-btn" (click)="removePackage(i)" aria-label="Eliminar">
+                    <span class="material-icons">close</span>
+                  </button>
+                }
+              </div>
+            }
+            <app-button variant="secondary" size="sm" icon="add" (click)="addPackage()">
+              Agregar paquete
+            </app-button>
+            <app-input label="Compra mínima (números)" type="number" inputmode="numeric"
+                        [(ngModel)]="form.min_package_size" name="min_package_size"
+                        icon="filter_list"
+                        hint="Tamaño mínimo del paquete que un cliente puede comprar. Por defecto: el paquete más chico." />
+          </section>
+        }
 
         <!-- ============ INFORMACIÓN BÁSICA ============ -->
         <section class="section">
@@ -294,6 +374,51 @@ interface TierForm {
     .math-check--ok { background: var(--accent-soft); color: var(--accent); }
     .math-check--err { background: var(--warning-soft); color: var(--warning); }
 
+    /* ============ Template selector (modalidades) ============ */
+    .tpl-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: var(--s-3);
+    }
+    .tpl {
+      background: var(--bg-base);
+      border: 1.5px solid var(--border);
+      border-radius: var(--r-md);
+      padding: var(--s-3);
+      cursor: pointer;
+      text-align: left;
+      display: grid;
+      gap: 4px;
+      transition: border-color 0.15s ease, transform 0.15s ease;
+    }
+    .tpl:hover { border-color: var(--accent); transform: translateY(-2px); }
+    .tpl--active {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+      box-shadow: 0 4px 14px -6px color-mix(in srgb, var(--accent) 40%, transparent);
+    }
+    .tpl__icon { font-size: 24px; }
+    .tpl strong { font-size: 14px; color: var(--text); }
+    .tpl small { color: var(--text-muted); font-size: 12px; line-height: 1.4; }
+    .tpl__use { color: var(--accent) !important; font-weight: 600; font-size: 11px !important; }
+    .tpl--active .tpl__use { color: var(--accent-fg) !important; }
+    .tpl--active strong, .tpl--active small { color: var(--accent-fg) !important; }
+
+    /* ============ Paquetes ============ */
+    .pkg-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr auto;
+      gap: var(--s-3);
+      align-items: end;
+      padding: var(--s-3);
+      background: var(--bg-base);
+      border: 1px solid var(--border);
+      border-radius: var(--r-md);
+    }
+    @media (max-width: 540px) {
+      .pkg-row { grid-template-columns: 1fr 1fr; }
+    }
+
     .seg {
       display: inline-flex;
       background: var(--bg-base);
@@ -419,6 +544,11 @@ export class RaffleCreateModalComponent {
     responsible_email: string;
     terms: string;
     prizes: PrizeForm[];
+    // Modalidad seleccionada
+    template: RaffleModeKey;
+    mode: 'classic' | 'package' | 'express';
+    package_options: PackageOption[];
+    min_package_size: number | null;
   } = this.blankForm();
 
   readonly rangeSize = computed(() => this.form.number_max - this.form.number_min + 1);
@@ -464,7 +594,69 @@ export class RaffleCreateModalComponent {
       responsible_email: '',
       terms: '',
       prizes: [],
+      template: 'classic' as RaffleModeKey,
+      mode: 'classic' as 'classic' | 'package' | 'express',
+      package_options: [] as PackageOption[],
+      min_package_size: null as number | null,
     };
+  }
+
+  /** Aplica los valores típicos del template seleccionado. */
+  applyTemplate(t: RaffleModeKey): void {
+    this.form.template = t;
+    if (t === 'classic') {
+      this.form.mode = 'classic';
+      this.form.total_tickets = 500;
+      this.form.numbers_per_ticket = 20;
+      this.form.number_min = 0;
+      this.form.number_max = 9999;
+      this.form.number_digits = 4;
+      this.form.ticket_price = 20000;
+      this.form.package_options = [];
+      this.form.min_package_size = null;
+    } else if (t === 'package') {
+      this.form.mode = 'package';
+      // Premium con 5 dígitos por defecto (100.000 números). Es lo más
+      // típico para premios grandes tipo moto/carro.
+      this.form.total_tickets = 100000;
+      this.form.numbers_per_ticket = 1;
+      this.form.number_min = 0;
+      this.form.number_max = 99999;
+      this.form.number_digits = 5;
+      this.form.ticket_price = 400; // precio por número
+      this.form.package_options = [
+        { size: 30,  price: 12000 },
+        { size: 50,  price: 20000 },
+        { size: 100, price: 36000 },
+      ];
+      this.form.min_package_size = 30;
+    } else if (t === 'express') {
+      this.form.mode = 'express';
+      this.form.total_tickets = 100;
+      this.form.numbers_per_ticket = 1;
+      this.form.number_min = 0;
+      this.form.number_max = 99;
+      this.form.number_digits = 2;
+      this.form.ticket_price = 5000;
+      this.form.package_options = [];
+      this.form.min_package_size = null;
+    }
+    // 'custom': no toca nada, mantiene el estado actual del formulario.
+    // Solo marca template='custom' para que el usuario sepa que es libre.
+    if (t === 'custom') {
+      this.form.mode = 'classic'; // por defecto técnico, pero el user edita todo
+    }
+  }
+
+  addPackage(): void {
+    const last = this.form.package_options[this.form.package_options.length - 1];
+    const nextSize = last ? Math.max(last.size + 20, 50) : 30;
+    const nextPrice = last ? Math.round(last.price * (nextSize / last.size)) : 12000;
+    this.form.package_options.push({ size: nextSize, price: nextPrice });
+  }
+
+  removePackage(i: number): void {
+    this.form.package_options.splice(i, 1);
   }
 
   setUseTiers(v: boolean) {
@@ -573,6 +765,33 @@ export class RaffleCreateModalComponent {
       this.error.set('La matemática no cuadra: revisa total de boletas, números por boleta y el rango.');
       return;
     }
+
+    // Validaciones de modo Premium (paquetes)
+    if (this.form.mode === 'package') {
+      const pkgs = this.form.package_options;
+      if (!pkgs.length) {
+        this.error.set('En modo Premium debes definir al menos un paquete.');
+        return;
+      }
+      for (const p of pkgs) {
+        if (!p.size || p.size < 1) {
+          this.error.set('Cada paquete debe tener al menos 1 número.');
+          return;
+        }
+        if (!p.price || p.price <= 0) {
+          this.error.set('Cada paquete debe tener un precio mayor a cero.');
+          return;
+        }
+        if (p.size > this.form.total_tickets) {
+          this.error.set(`El paquete de ${p.size} excede el total (${this.form.total_tickets}).`);
+          return;
+        }
+      }
+      if (this.form.numbers_per_ticket !== 1) {
+        this.error.set('En modo Premium cada ticket debe tener 1 número. Cambia "Números por boleta" a 1.');
+        return;
+      }
+    }
     if (!this.form.prizes.length) {
       this.error.set('Agrega al menos el premio mayor antes de crear la rifa.');
       return;
@@ -637,6 +856,16 @@ export class RaffleCreateModalComponent {
       const payload: any = {
         name: this.form.name.trim(),
         description: this.form.description.trim() || undefined,
+        mode: this.form.mode,
+        package_options: this.form.mode === 'package'
+          ? this.form.package_options.map(p => ({
+              size: Number(p.size),
+              price: Number(p.price),
+            }))
+          : undefined,
+        min_package_size: this.form.mode === 'package' && this.form.min_package_size
+          ? Number(this.form.min_package_size)
+          : undefined,
         total_tickets: Number(this.form.total_tickets),
         numbers_per_ticket: Number(this.form.numbers_per_ticket),
         number_min: Number(this.form.number_min),

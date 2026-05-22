@@ -1,5 +1,12 @@
 export type RaffleStatus = 'draft' | 'active' | 'locked' | 'finished' | 'cancelled';
 
+export type RaffleMode = 'classic' | 'package' | 'express';
+
+export interface PackageOption {
+  size: number;
+  price: number;
+}
+
 export interface CommissionTier {
   from_count: number;
   to_count: number | null;
@@ -39,6 +46,9 @@ export interface Raffle {
   number_min: number;
   number_max: number;
   number_digits: number;
+  mode: RaffleMode;
+  package_options?: PackageOption[] | null;
+  min_package_size?: number | null;
   ticket_price: number;
   seller_commission: number;
   commission_tiers?: CommissionTier[] | null;

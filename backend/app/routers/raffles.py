@@ -83,10 +83,19 @@ async def create_raffle(
         if payload.commission_tiers
         else None
     )
+    package_opts_data = (
+        [o.model_dump(mode="json") for o in payload.package_options]
+        if payload.package_options
+        else None
+    )
+
     raffle = Raffle(
         tenant_id=target_tenant_id,
         name=payload.name,
         description=payload.description,
+        mode=payload.mode.value,
+        package_options=package_opts_data,
+        min_package_size=payload.min_package_size,
         total_tickets=payload.total_tickets,
         numbers_per_ticket=payload.numbers_per_ticket,
         number_min=payload.number_min,

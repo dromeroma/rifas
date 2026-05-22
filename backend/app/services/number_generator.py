@@ -80,11 +80,15 @@ async def generate_raffle_numbers(db: AsyncSession, raffle_id: int) -> Raffle:
     digits = raffle.number_digits
     used_codes: set[str] = set()
 
+    # Padding del label: ancho suficiente para el total de boletas.
+    # 500 boletas → 3 dígitos ("001"). 100.000 → 6 dígitos ("000001").
+    label_width = max(3, len(str(raffle.total_tickets)))
+
     new_tickets: list[Ticket] = []
     new_numbers: list[TicketNumber] = []
 
     for idx in range(raffle.total_tickets):
-        label = str(idx + 1).zfill(3)
+        label = str(idx + 1).zfill(label_width)
 
         # Código único de boleta (con re-intento defensivo)
         while True:

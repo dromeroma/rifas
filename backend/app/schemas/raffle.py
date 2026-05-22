@@ -4,7 +4,7 @@ from typing import List, Optional
 
 from pydantic import BaseModel, Field, model_validator
 
-from app.models.raffle import RaffleStatus
+from app.models.raffle import RaffleMode, RaffleStatus
 
 
 # -------- Commission Tier ----------
@@ -75,11 +75,25 @@ class PrizeOut(PrizeBase):
 
 # -------- Raffle ----------
 
+class PackageOption(BaseModel):
+    size: int = Field(ge=1, description="Cantidad de números incluidos en el paquete")
+    price: Decimal = Field(gt=0, description="Precio del paquete (COP)")
+
+
 class RaffleCreate(BaseModel):
     # Solo aplica cuando el creador es super_admin (debe indicar a qué tenant
     # va la rifa). Para usuarios admin de un tenant se ignora y se usa el tenant
     # del usuario autenticado.
     tenant_id: Optional[int] = None
+
+    # Modalidad de venta. 'classic' por defecto.
+    mode: RaffleMode = RaffleMode.CLASSIC
+
+    # Paquetes para mode='package'. Ej:
+    #   [{"size":30,"price":12000}, {"size":50,"price":20000}, {"size":100,"price":36000}]
+    package_options: Optional[List[PackageOption]] = None
+    # Mínimo de paquete que un cliente puede comprar (en cantidad de números).
+    min_package_size: Optional[int] = Field(default=None, ge=1)
 
     name: str = Field(min_length=3, max_length=200)
     description: Optional[str] = None
@@ -118,6 +132,36 @@ class RaffleCreate(BaseModel):
             validate_commission_tiers(self.commission_tiers)
         return self
 
+    @model_validator(mode="after")
+    def _validate_mode(self):
+        """Validaciones cruzadas según la modalidad."""
+        if self.mode in (RaffleMode.PACKAGE, RaffleMode.EXPRESS):
+            # En modalidades por número individual: 1 número por ticket.
+            if self.numbers_per_ticket != 1:
+                raise ValueError(
+                    "en modo Premium/Express, numbers_per_ticket debe ser 1 (cada ticket es un solo número)"
+                )
+            if self.mode == RaffleMode.PACKAGE:
+                if not self.package_options or len(self.package_options) < 1:
+                    raise ValueError(
+                        "en modo Premium debes definir al menos un paquete en package_options"
+                    )
+                # Cada paquete debe caber en el total de números
+                for opt in self.package_options:
+                    if opt.size > self.total_tickets:
+                        raise ValueError(
+                            f"el paquete de {opt.size} excede el total ({self.total_tickets})"
+                        )
+                if self.min_package_size is None:
+                    self.min_package_size = min(o.size for o in self.package_options)
+        else:
+            # Classic: no debe traer package_options ni min_package_size
+            if self.package_options:
+                raise ValueError("package_options solo aplica en modo Premium")
+            if self.min_package_size:
+                raise ValueError("min_package_size solo aplica en modo Premium")
+        return self
+
 
 class RafflePostpone(BaseModel):
     new_final_draw_date: date
@@ -153,6 +197,9 @@ class RaffleOut(BaseModel):
     id: int
     name: str
     description: Optional[str]
+    mode: RaffleMode = RaffleMode.CLASSIC
+    package_options: Optional[List[PackageOption]] = None
+    min_package_size: Optional[int] = None
     total_tickets: int
     numbers_per_ticket: int
     number_min: int

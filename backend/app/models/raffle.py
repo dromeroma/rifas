@@ -23,6 +23,13 @@ class RaffleStatus(str, enum.Enum):
     CANCELLED = "cancelled"
 
 
+class RaffleMode(str, enum.Enum):
+    """Modalidad de venta de la rifa. Inmutable después de crear."""
+    CLASSIC = "classic"   # 500 boletas × 20 números, venta unitaria de boleta
+    PACKAGE = "package"   # N números individuales, venta en paquetes (estilo moto)
+    EXPRESS = "express"   # 100 números, sorteo en 24-72h, 1 número por ticket
+
+
 class Raffle(Base, TimestampMixin):
     __tablename__ = "raffles"
 
@@ -37,12 +44,24 @@ class Raffle(Base, TimestampMixin):
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
 
+    # Modalidad de venta. Inmutable después de crear.
+    mode: Mapped[RaffleMode] = mapped_column(
+        String(20), nullable=False, default=RaffleMode.CLASSIC,
+    )
+
     # Parámetros matemáticos
     total_tickets: Mapped[int] = mapped_column(Integer, nullable=False, default=500)
     numbers_per_ticket: Mapped[int] = mapped_column(Integer, nullable=False, default=20)
     number_min: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     number_max: Mapped[int] = mapped_column(Integer, nullable=False, default=9999)
     number_digits: Mapped[int] = mapped_column(Integer, nullable=False, default=4)
+
+    # Solo para mode='package': configuración de paquetes.
+    # Formato JSONB: [{"size": 30, "price": 12000}, {"size": 50, "price": 20000}]
+    package_options: Mapped[list | None] = mapped_column(JSONB, nullable=True)
+
+    # Tamaño mínimo del paquete que el cliente puede comprar.
+    min_package_size: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     # Económico
     ticket_price: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False)
