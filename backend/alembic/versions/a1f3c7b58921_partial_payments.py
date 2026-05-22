@@ -23,14 +23,17 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # 1) Nuevo valor en el enum ticketstatus. Postgres 12+ permite ADD VALUE
-    #    dentro de una transacción siempre que el nuevo valor NO se use en la
-    #    misma transacción. Esta migración solo añade la columna y hace backfill
-    #    con valores existentes, sin tocar 'partially_paid' → es seguro inline.
-    op.execute("ALTER TYPE ticketstatus ADD VALUE IF NOT EXISTS 'partially_paid' AFTER 'pending_payment'")
+    # 1) Nuevo valor en el enum ticketstatus. SQLAlchemy guarda el .name del
+    #    enum Python (UPPERCASE) por defecto, no el .value. Por eso los labels
+    #    son AVAILABLE/RESERVED/PENDING_PAYMENT/... — el valor nuevo sigue ese
+    #    mismo patrón. Postgres 12+ permite ADD VALUE en transacción mientras
+    #    no se use el nuevo valor en la misma transacción (cumplido aquí).
+    op.execute(
+        "ALTER TYPE ticketstatus ADD VALUE IF NOT EXISTS 'PARTIALLY_PAID' AFTER 'PENDING_PAYMENT'"
+    )
 
     # 2) Columna paid_amount en tickets (suma de pagos CONFIRMED). Backfill:
-    #    tickets en estado 'paid' o 'winning' ya cubrieron el total → set al
+    #    tickets en estado PAID o WINNING ya cubrieron el total → set al
     #    ticket_price de su rifa. El resto queda en 0.
     op.add_column(
         'tickets',
@@ -41,7 +44,7 @@ def upgrade() -> None:
         SET paid_amount = r.ticket_price
         FROM raffles r
         WHERE t.raffle_id = r.id
-          AND t.status IN ('paid', 'winning')
+          AND t.status IN ('PAID', 'WINNING')
     """)
     op.alter_column('tickets', 'paid_amount', server_default=None)
 
