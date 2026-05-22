@@ -39,8 +39,12 @@ class Settings(BaseSettings):
     # Security
     jwt_secret_key: str = Field(..., min_length=32)
     jwt_algorithm: str = "HS256"
-    access_token_expires_min: int = 15
-    refresh_token_expires_days: int = 7
+    access_token_expires_min: int = 30
+    # TTL del refresh token en minutos. Equivale a la "ventana de inactividad"
+    # permitida: si pasa este tiempo sin que el frontend pida /auth/refresh, la
+    # sesión muere. Como /auth/refresh rota el refresh token, mientras el usuario
+    # esté activo el reloj se reinicia → no lo saca a la hora exacta.
+    refresh_token_expires_min: int = 60
     bcrypt_rounds: int = 12
 
     # CORS (CSV en .env). Derivado vía `cors_origins` (lista).

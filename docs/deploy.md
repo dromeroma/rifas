@@ -54,8 +54,8 @@ Copia y pega estos valores. Los marcados ⚠ DEBEN cambiarse:
 | `ALEMBIC_DATABASE_URL` | ⚠ pega el direct connection de Supabase (`db.<REF>.supabase.co:5432`) |
 | `JWT_SECRET_KEY` | ⚠ genera uno NUEVO de 64+ chars (`openssl rand -hex 32` o usa el botón "Generate" de Render) |
 | `JWT_ALGORITHM` | `HS256` |
-| `ACCESS_TOKEN_EXPIRES_MIN` | `15` |
-| `REFRESH_TOKEN_EXPIRES_DAYS` | `7` |
+| `ACCESS_TOKEN_EXPIRES_MIN` | `30` |
+| `REFRESH_TOKEN_EXPIRES_MIN` | `60` (inactividad permitida; se desliza con cada /auth/refresh) |
 | `BCRYPT_ROUNDS` | `12` |
 | `FRONTEND_URL` | ⚠ se rellena después con la URL de Vercel (p. ej. `https://rifas.vercel.app`) |
 | `CORS_ORIGINS` | ⚠ misma URL de Vercel |

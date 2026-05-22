@@ -51,7 +51,7 @@ def create_access_token(subject: str | int, claims: dict[str, Any] | None = None
 def create_refresh_token(subject: str | int) -> str:
     return _create_token(
         subject,
-        timedelta(days=settings.refresh_token_expires_days),
+        timedelta(minutes=settings.refresh_token_expires_min),
         "refresh",
     )
 

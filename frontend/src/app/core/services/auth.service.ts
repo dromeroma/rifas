@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { Observable, catchError, of, shareReplay, switchMap, tap, timeout } from 'rxjs';
+import { Observable, catchError, of, shareReplay, switchMap, tap, throwError, timeout } from 'rxjs';
 
 import { environment } from '@env/environment';
 import { TokenPair, User } from '../models/user.model';
@@ -23,6 +23,30 @@ export class AuthService {
 
   get accessToken(): string | null {
     return localStorage.getItem(ACCESS_KEY);
+  }
+
+  get refreshToken(): string | null {
+    return localStorage.getItem(REFRESH_KEY);
+  }
+
+  /**
+   * Intercambia el refresh token por un nuevo par (access + refresh). El backend
+   * rota el refresh, de modo que mientras se llame periódicamente, la sesión
+   * se desliza y no expira por el TTL absoluto.
+   */
+  refresh(): Observable<TokenPair> {
+    const refresh = this.refreshToken;
+    if (!refresh) {
+      return throwError(() => new Error('no refresh token'));
+    }
+    return this.http
+      .post<TokenPair>(`${environment.apiUrl}/auth/refresh`, { refresh_token: refresh })
+      .pipe(
+        tap((tokens) => {
+          localStorage.setItem(ACCESS_KEY, tokens.access_token);
+          localStorage.setItem(REFRESH_KEY, tokens.refresh_token);
+        }),
+      );
   }
 
   /**
