@@ -20,7 +20,7 @@ import { ButtonComponent, ThemeToggleComponent } from '@shared/ui';
     <main class="landing">
       <header class="nav">
         <a routerLink="/" class="brand" aria-label="Boletera">
-          <span class="brand__logo">🎟️</span>
+          <img class="brand__logo" src="/favicon.svg" alt="" width="32" height="32" />
           <strong class="brand__name">Boletera</strong>
         </a>
         <nav class="nav__links">
@@ -432,7 +432,10 @@ import { ButtonComponent, ThemeToggleComponent } from '@shared/ui';
       <footer class="footer fx-reveal fx-reveal--up">
         <div class="footer__inner">
           <div class="footer__brand">
-            <strong>🎟️ Boletera</strong>
+            <strong>
+              <img src="/favicon.svg" alt="" width="22" height="22" style="vertical-align: middle; margin-right: 6px;" />
+              Boletera
+            </strong>
             <small>Tu rifa, profesional desde el primer ticket.</small>
           </div>
 
@@ -505,7 +508,12 @@ import { ButtonComponent, ThemeToggleComponent } from '@shared/ui';
       display: inline-flex; align-items: center; gap: 8px;
       text-decoration: none; color: var(--text);
     }
-    .brand__logo { font-size: 22px; }
+    .brand__logo {
+      width: 32px; height: 32px;
+      display: block;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px -4px color-mix(in srgb, var(--accent) 45%, transparent);
+    }
     .brand__name { font-size: 18px; font-weight: 800; letter-spacing: -0.02em; }
     .nav__links { display: flex; gap: var(--s-4); }
     .nav__links a { color: var(--text-muted); text-decoration: none; font-size: 14px; }

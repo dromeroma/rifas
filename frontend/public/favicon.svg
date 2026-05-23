@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Boletera">
+  <defs>
+    <linearGradient id="bgG" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#22d3ee"/>
+      <stop offset="55%" stop-color="#1ec77b"/>
+      <stop offset="100%" stop-color="#0a7a4d"/>
+    </linearGradient>
+  </defs>
+  <!-- Fondo del app icon: gradient cyan→verde marca→verde profundo -->
+  <rect width="64" height="64" rx="14" fill="url(#bgG)"/>
+  <!-- Silueta de boleta: rounded rect con dos muescas laterales (clásico ticket) -->
+  <path d="M 11 21 Q 11 17, 15 17 L 49 17 Q 53 17, 53 21 L 53 26 A 4 4 0 0 0 53 36 L 53 41 Q 53 45, 49 45 L 15 45 Q 11 45, 11 41 L 11 36 A 4 4 0 0 0 11 26 Z" fill="#0a1814"/>
+  <!-- Perforación dashed en el medio (separador clásico de ticket) -->
+  <line x1="32" y1="21" x2="32" y2="41" stroke="rgba(255,255,255,0.42)" stroke-width="0.8" stroke-dasharray="1.6,2"/>
+  <!-- Chips de números a la izquierda (verde marca) -->
+  <rect x="16" y="26" width="11" height="3" rx="0.8" fill="#1ec77b"/>
+  <rect x="16" y="32" width="11" height="3" rx="0.8" fill="#1ec77b" opacity="0.55"/>
+  <rect x="16" y="37" width="11" height="2.5" rx="0.6" fill="#1ec77b" opacity="0.3"/>
+  <!-- Chips de números a la derecha (cyan LED) -->
+  <rect x="37" y="26" width="11" height="3" rx="0.8" fill="#22d3ee"/>
+  <rect x="37" y="32" width="11" height="3" rx="0.8" fill="#22d3ee" opacity="0.55"/>
+  <rect x="37" y="37" width="11" height="2.5" rx="0.6" fill="#22d3ee" opacity="0.3"/>
+</svg>

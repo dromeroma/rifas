@@ -1,0 +1,16 @@
+# Boletera — robots.txt
+# Permite a todos los crawlers indexar el sitio público.
+# Rutas privadas (admin, seller, login) son SPA-only; no es necesario bloquearlas
+# pero las dejamos explícitas por claridad.
+
+User-agent: *
+Allow: /
+Allow: /verify
+Allow: /mi-boleta
+Allow: /rifa/
+
+Disallow: /admin
+Disallow: /seller
+Disallow: /login
+
+Sitemap: https://rifas.vercel.app/sitemap.xml

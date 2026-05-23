@@ -1,35 +1,130 @@
 <!doctype html>
-<html lang="es">
+<html lang="es-CO">
 <head>
   <meta charset="utf-8">
-  <title>Boletera · Tu rifa, profesional desde el primer ticket</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#1e8e54">
-  <meta name="description" content="Boletera vuelve cualquier rifa en un negocio profesional. Boletas únicas con QR, comisiones automáticas, verificación pública y trazabilidad total. Hecho en Colombia." />
-  <meta property="og:title" content="Boletera · Tu rifa, profesional desde el primer ticket" />
-  <meta property="og:description" content="Vende tus rifas sin perder cuentas. Boletas únicas, comisiones automáticas, pagos con comprobante y verificación pública por QR." />
-  <meta property="og:type" content="website" />
-  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+
+  <!-- ============================================================
+       SEO PRINCIPAL
+       ============================================================ -->
+  <title>Boletera — Plataforma profesional de rifas digitales · Colombia</title>
+  <meta name="description" content="Vende rifas con boletas únicas con QR, comisiones escalonadas, pagos con comprobante y verificación pública. Sin Excel, sin chats sueltos. Hecho en Colombia.">
+  <meta name="keywords" content="rifas digitales, software para rifas, plataforma de rifas, boletas con QR, vender rifas online, gestor de rifas, rifas en Colombia, sorteo profesional, comisiones para vendedores, verificación de boleta, rifa con Nequi, rifa con Daviplata">
+  <meta name="author" content="Boletera">
+  <meta name="robots" content="index, follow, max-image-preview:large">
+  <meta name="googlebot" content="index, follow">
+  <meta name="theme-color" content="#1ec77b" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#16a366" media="(prefers-color-scheme: light)">
+  <meta name="color-scheme" content="dark light">
+  <meta name="format-detection" content="telephone=no">
+  <link rel="canonical" href="https://rifas.vercel.app/">
+
+  <!-- ============================================================
+       OPEN GRAPH (Facebook, WhatsApp, LinkedIn)
+       ============================================================ -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Boletera">
+  <meta property="og:title" content="Boletera — Tu rifa, profesional desde el primer ticket">
+  <meta property="og:description" content="Vende rifas con boletas únicas con QR, comisiones escalonadas, pagos con comprobante y verificación pública. Sin Excel, sin chats sueltos.">
+  <meta property="og:url" content="https://rifas.vercel.app/">
+  <meta property="og:locale" content="es_CO">
+  <meta property="og:image" content="https://rifas.vercel.app/og-image.svg">
+  <meta property="og:image:type" content="image/svg+xml">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Boletera — Plataforma profesional de rifas digitales con boletas únicas, comisiones automáticas y verificación pública.">
+
+  <!-- ============================================================
+       TWITTER CARD
+       ============================================================ -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Boletera — Plataforma profesional de rifas digitales">
+  <meta name="twitter:description" content="Boletas únicas con QR, comisiones automáticas y verificación pública. Hecho en Colombia.">
+  <meta name="twitter:image" content="https://rifas.vercel.app/og-image.svg">
+  <meta name="twitter:image:alt" content="Boletera — Plataforma profesional de rifas digitales">
+
+  <!-- ============================================================
+       FAVICON + APP ICONS
+       ============================================================ -->
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="apple-touch-icon" href="favicon.svg">
+  <link rel="mask-icon" href="favicon.svg" color="#1ec77b">
   <link rel="manifest" href="manifest.webmanifest">
+
+  <!-- ============================================================
+       PWA / APPLE
+       ============================================================ -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Boletera">
+  <meta name="application-name" content="Boletera">
 
-  <!-- Preconnect a Google Fonts para arrancar el TLS antes de pedir los CSS -->
+  <!-- ============================================================
+       STRUCTURED DATA (JSON-LD) — SoftwareApplication + Organization
+       Ayuda a Google a entender que es una app SaaS y muestra rich
+       snippets (rating, precio, categoría) en resultados de búsqueda.
+       ============================================================ -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "Boletera",
+        "description": "Plataforma profesional para gestionar rifas digitales: boletas únicas con QR, comisiones escalonadas para vendedores, pagos con comprobante y verificación pública. Hecho en Colombia.",
+        "url": "https://rifas.vercel.app/",
+        "applicationCategory": "BusinessApplication",
+        "operatingSystem": "Web (cualquier navegador moderno), iOS, Android (PWA)",
+        "inLanguage": "es-CO",
+        "offers": {
+          "@type": "Offer",
+          "priceCurrency": "COP",
+          "price": "0",
+          "description": "Precio negociable. Planes por rifa, mensual o anual. Cotizar gratis por WhatsApp."
+        },
+        "featureList": [
+          "Boletas únicas inmutables con QR",
+          "Comisiones escalonadas para vendedores",
+          "Pagos con comprobante (foto / PDF)",
+          "Verificación pública de boletas sin login",
+          "Trazabilidad y auditoría completa",
+          "Multi-tenant con datos aislados",
+          "PWA: funciona en celular y desktop"
+        ],
+        "image": "https://rifas.vercel.app/og-image.svg",
+        "screenshot": "https://rifas.vercel.app/og-image.svg"
+      },
+      {
+        "@type": "Organization",
+        "name": "Boletera",
+        "url": "https://rifas.vercel.app/",
+        "logo": "https://rifas.vercel.app/favicon.svg",
+        "description": "Boletera es una plataforma SaaS colombiana para administrar rifas digitales de forma profesional.",
+        "areaServed": {
+          "@type": "Country",
+          "name": "Colombia"
+        },
+        "contactPoint": {
+          "@type": "ContactPoint",
+          "contactType": "customer service",
+          "areaServed": "CO",
+          "availableLanguage": ["Spanish"],
+          "telephone": "+57-313-548-7605"
+        }
+      }
+    ]
+  }
+  </script>
+
+  <!-- ============================================================
+       PERFORMANCE: preconnect a Google Fonts
+       ============================================================ -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
-  <!--
-    Inter ya soporta &display=swap → texto visible inmediatamente con fallback
-    mientras carga la fuente real.
-  -->
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
 
-  <!--
-    Material Icons cargado de forma asíncrona para no bloquear el render
-    inicial. Trick: media="print" carga sin block; onload lo activa al
-    cargar. Fallback con noscript para JS deshabilitado.
-  -->
+  <!-- Material Icons cargado async -->
   <link rel="preload" as="style" href="https://fonts.googleapis.com/icon?family=Material+Icons">
   <link rel="stylesheet" media="print" onload="this.onload=null;this.media='all'"
         href="https://fonts.googleapis.com/icon?family=Material+Icons">
@@ -45,12 +140,9 @@
       function markReady() {
         if (document.body) document.body.classList.add('icons-ready');
       }
-      // Si el body ya existe (improbable a esta altura) y la API está,
-      // espera a font-ready. Si no, intenta con DOMContentLoaded.
       function setup() {
         if (document.fonts && document.fonts.ready) {
           document.fonts.ready.then(markReady);
-          // Fallback duro: máximo 1.5s para no dejar invisibles los íconos.
           setTimeout(markReady, 1500);
         } else {
           setTimeout(markReady, 1000);

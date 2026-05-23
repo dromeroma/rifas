@@ -1,27 +1,27 @@
 {
-  "name": "Boletera",
+  "name": "Boletera — Plataforma profesional de rifas digitales",
   "short_name": "Boletera",
-  "description": "Tu rifa, profesional desde el primer ticket.",
+  "description": "Vende rifas con boletas únicas con QR, comisiones automáticas, pagos con comprobante y verificación pública. Hecho en Colombia.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#0b1116",
-  "theme_color": "#1e8e54",
+  "background_color": "#0a0e0c",
+  "theme_color": "#1ec77b",
   "lang": "es-CO",
   "categories": ["business", "finance", "productivity"],
   "icons": [
     {
-      "src": "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='32' fill='%231e8e54'/><text x='50%25' y='58%25' dominant-baseline='middle' text-anchor='middle' font-size='110' font-family='system-ui'>🎟️</text></svg>",
-      "sizes": "192x192",
+      "src": "favicon.svg",
+      "sizes": "any",
       "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
-      "src": "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='80' fill='%231e8e54'/><text x='50%25' y='58%25' dominant-baseline='middle' text-anchor='middle' font-size='300' font-family='system-ui'>🎟️</text></svg>",
-      "sizes": "512x512",
+      "src": "favicon.svg",
+      "sizes": "192x192 512x512",
       "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "purpose": "maskable"
     }
   ]
 }

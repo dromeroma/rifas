@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" role="img" aria-label="Boletera — Tu rifa, profesional desde el primer ticket">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0a0e0c"/>
+      <stop offset="100%" stop-color="#15191c"/>
+    </linearGradient>
+    <radialGradient id="glowG" cx="20%" cy="20%" r="60%">
+      <stop offset="0%" stop-color="#1ec77b" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#1ec77b" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowC" cx="85%" cy="80%" r="55%">
+      <stop offset="0%" stop-color="#22d3ee" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#22d3ee" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="logoG" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#22d3ee"/>
+      <stop offset="55%" stop-color="#1ec77b"/>
+      <stop offset="100%" stop-color="#0a7a4d"/>
+    </linearGradient>
+    <linearGradient id="textAccent" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#22d3ee"/>
+      <stop offset="100%" stop-color="#1ec77b"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Fondo dark con glows ambient (estadio nocturno) -->
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect width="1200" height="630" fill="url(#glowG)"/>
+  <rect width="1200" height="630" fill="url(#glowC)"/>
+
+  <!-- Líneas tácticas sutiles (atmósfera deportiva premium) -->
+  <g fill="none" stroke="#22d3ee" stroke-width="0.7" opacity="0.18">
+    <path d="M 0 500 Q 300 320, 600 400 T 1200 340"/>
+    <path d="M 0 220 Q 360 400, 720 260 T 1200 400"/>
+    <path d="M 0 100 Q 200 220, 400 160 T 800 220 T 1200 140" stroke-dasharray="4,6"/>
+  </g>
+  <g fill="#22d3ee" opacity="0.35">
+    <circle cx="180" cy="440" r="2"/>
+    <circle cx="420" cy="360" r="2"/>
+    <circle cx="660" cy="400" r="2"/>
+    <circle cx="900" cy="360" r="2"/>
+    <circle cx="540" cy="280" r="1.5"/>
+    <circle cx="820" cy="220" r="1.5"/>
+  </g>
+
+  <!-- Logo (lado izquierdo) -->
+  <g transform="translate(90 195)">
+    <rect width="240" height="240" rx="48" fill="url(#logoG)"/>
+    <path d="M 41 80 Q 41 65, 56 65 L 184 65 Q 199 65, 199 80 L 199 99 A 14 14 0 0 0 199 137 L 199 156 Q 199 171, 184 171 L 56 171 Q 41 171, 41 156 L 41 137 A 14 14 0 0 0 41 99 Z" fill="#0a1814"/>
+    <line x1="120" y1="80" x2="120" y2="156" stroke="rgba(255,255,255,0.42)" stroke-width="2.5" stroke-dasharray="5,6"/>
+    <rect x="60" y="98" width="42" height="11" rx="3" fill="#1ec77b"/>
+    <rect x="60" y="120" width="42" height="11" rx="3" fill="#1ec77b" opacity="0.55"/>
+    <rect x="138" y="98" width="42" height="11" rx="3" fill="#22d3ee"/>
+    <rect x="138" y="120" width="42" height="11" rx="3" fill="#22d3ee" opacity="0.55"/>
+  </g>
+
+  <!-- Wordmark + tagline (lado derecho) -->
+  <g transform="translate(380 0)">
+    <text x="0" y="270"
+          font-family="Inter, system-ui, sans-serif"
+          font-size="96" font-weight="800"
+          letter-spacing="-3"
+          fill="#ffffff">Boletera</text>
+
+    <text x="0" y="360"
+          font-family="Inter, system-ui, sans-serif"
+          font-size="36" font-weight="600"
+          letter-spacing="-0.5"
+          fill="#ffffff" opacity="0.9">Tu rifa, <tspan fill="url(#textAccent)">profesional</tspan></text>
+    <text x="0" y="410"
+          font-family="Inter, system-ui, sans-serif"
+          font-size="36" font-weight="600"
+          letter-spacing="-0.5"
+          fill="#ffffff" opacity="0.9">desde el primer ticket.</text>
+
+    <!-- Trust line -->
+    <text x="0" y="475"
+          font-family="Inter, system-ui, sans-serif"
+          font-size="22" font-weight="500"
+          fill="#1ec77b" opacity="0.9">
+      Boletas únicas con QR · Comisiones automáticas · Verificación pública
+    </text>
+  </g>
+
+  <!-- Badge esquina inferior derecha -->
+  <g transform="translate(960 540)">
+    <rect width="180" height="48" rx="24" fill="rgba(34,211,238,0.12)" stroke="#22d3ee" stroke-opacity="0.45" stroke-width="1"/>
+    <text x="90" y="32"
+          font-family="Inter, system-ui, sans-serif"
+          font-size="16" font-weight="700"
+          fill="#22d3ee" text-anchor="middle"
+          letter-spacing="2">HECHO EN COLOMBIA</text>
+  </g>
+</svg>
