@@ -28,64 +28,55 @@ import {
   template: `
     @if (mode() !== 'corner') {
       <div class="wc" [class.wc--banner]="mode() === 'banner'" aria-hidden="true">
-        <!-- Líneas de cancha (solo hero) -->
-        @if (mode() === 'hero') {
-          <svg class="wc-field" viewBox="0 0 800 400" preserveAspectRatio="none">
-            <defs>
-              <linearGradient id="wcFieldFade" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stop-color="currentColor" stop-opacity="0"/>
-                <stop offset="50%" stop-color="currentColor" stop-opacity="0.35"/>
-                <stop offset="100%" stop-color="currentColor" stop-opacity="0"/>
-              </linearGradient>
-            </defs>
-            <g stroke="url(#wcFieldFade)" stroke-width="1.2" fill="none">
-              <line x1="400" y1="0" x2="400" y2="400" />
-              <circle cx="400" cy="200" r="70" />
-              <rect x="0" y="120" width="60" height="160" />
-              <rect x="740" y="120" width="60" height="160" />
-            </g>
-          </svg>
-        }
-
-        <!-- Balón principal -->
-        <svg class="wc-ball wc-ball--main" viewBox="0 0 100 100">
+        <!-- Definitions compartidas -->
+        <svg class="wc-defs" aria-hidden="true">
           <defs>
             <radialGradient id="wcBallShade" cx="35%" cy="30%" r="70%">
               <stop offset="0%" stop-color="#fff" stop-opacity="1"/>
               <stop offset="80%" stop-color="#f3f3f3" stop-opacity="1"/>
               <stop offset="100%" stop-color="#c8c8c8" stop-opacity="1"/>
             </radialGradient>
+            <linearGradient id="wcGold" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#ffd95a"/>
+              <stop offset="50%" stop-color="#f0b400"/>
+              <stop offset="100%" stop-color="#b87a00"/>
+            </linearGradient>
+            <linearGradient id="wcHorn" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stop-color="#fbbf24"/>
+              <stop offset="55%" stop-color="#f59e0b"/>
+              <stop offset="100%" stop-color="#b45309"/>
+            </linearGradient>
           </defs>
+        </svg>
+
+        <!-- Balón principal — entra desde el borde derecho, parcialmente fuera -->
+        <svg class="wc-ball wc-ball--main" viewBox="0 0 100 100">
           <circle cx="50" cy="50" r="46" fill="url(#wcBallShade)" stroke="#1a1a1a" stroke-width="1.5"/>
-          <!-- Pentágonos clásicos -->
-          <polygon points="50,22 62,32 58,46 42,46 38,32"
-                   fill="#1a1a1a"/>
-          <polygon points="22,52 33,46 42,55 38,68 26,66"
-                   fill="#1a1a1a"/>
-          <polygon points="78,52 67,46 58,55 62,68 74,66"
-                   fill="#1a1a1a"/>
-          <!-- Conectores -->
+          <polygon points="50,22 62,32 58,46 42,46 38,32" fill="#1a1a1a"/>
+          <polygon points="22,52 33,46 42,55 38,68 26,66" fill="#1a1a1a"/>
+          <polygon points="78,52 67,46 58,55 62,68 74,66" fill="#1a1a1a"/>
           <line x1="50" y1="46" x2="50" y2="55" stroke="#1a1a1a" stroke-width="1.5"/>
           <line x1="42" y1="46" x2="33" y2="46" stroke="#1a1a1a" stroke-width="1.5"/>
           <line x1="58" y1="46" x2="67" y2="46" stroke="#1a1a1a" stroke-width="1.5"/>
         </svg>
 
         @if (mode() === 'hero') {
-          <!-- Balón secundario pequeño -->
+          <!-- Balón secundario pequeño en medio-derecha -->
           <svg class="wc-ball wc-ball--small" viewBox="0 0 100 100">
-            <circle cx="50" cy="50" r="46" fill="#fff" stroke="#1a1a1a" stroke-width="1.5"/>
+            <circle cx="50" cy="50" r="46" fill="url(#wcBallShade)" stroke="#1a1a1a" stroke-width="1.5"/>
+            <polygon points="50,22 62,32 58,46 42,46 38,32" fill="#1a1a1a"/>
+            <polygon points="22,52 33,46 42,55 38,68 26,66" fill="#1a1a1a"/>
+            <polygon points="78,52 67,46 58,55 62,68 74,66" fill="#1a1a1a"/>
+          </svg>
+
+          <!-- Balón mini que entra desde el borde derecho -->
+          <svg class="wc-ball wc-ball--mini" viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="46" fill="#fff" stroke="#1a1a1a" stroke-width="2"/>
             <polygon points="50,22 62,32 58,46 42,46 38,32" fill="#1a1a1a"/>
           </svg>
 
-          <!-- Trofeo -->
+          <!-- Trofeo en esquina inferior derecha -->
           <svg class="wc-trophy" viewBox="0 0 64 64">
-            <defs>
-              <linearGradient id="wcGold" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stop-color="#ffd95a"/>
-                <stop offset="50%" stop-color="#f0b400"/>
-                <stop offset="100%" stop-color="#b87a00"/>
-              </linearGradient>
-            </defs>
             <g fill="url(#wcGold)" stroke="#7a4f00" stroke-width="0.8">
               <path d="M22 8h20v4c0 8-3 14-10 16-7-2-10-8-10-16V8z"/>
               <path d="M14 12h8v4c0 4 2 7 5 8-4 1-9-1-11-5-1-2-2-4-2-7z"/>
@@ -96,7 +87,31 @@ import {
             </g>
           </svg>
 
-          <!-- Confetti decorativos estáticos (rombos pequeños) -->
+          <!-- Corneta / vuvuzela entrando angulada desde el borde superior derecho -->
+          <svg class="wc-horn wc-horn--1" viewBox="0 0 220 70">
+            <!-- Tubo -->
+            <rect x="10" y="28" width="130" height="14" rx="3"
+                  fill="url(#wcHorn)" stroke="#5a2e00" stroke-width="1"/>
+            <!-- Campana (bell) -->
+            <polygon points="140,18 215,2 215,68 140,52"
+                     fill="url(#wcHorn)" stroke="#5a2e00" stroke-width="1"/>
+            <!-- Boquilla -->
+            <circle cx="8" cy="35" r="6" fill="#1a1a1a"/>
+            <!-- Highlight -->
+            <rect x="12" y="30" width="125" height="3" fill="rgba(255,255,255,0.35)"/>
+          </svg>
+
+          <!-- Corneta más pequeña entrando angulada desde abajo derecho -->
+          <svg class="wc-horn wc-horn--2" viewBox="0 0 220 70">
+            <rect x="10" y="28" width="130" height="14" rx="3"
+                  fill="url(#wcHorn)" stroke="#5a2e00" stroke-width="1"/>
+            <polygon points="140,18 215,2 215,68 140,52"
+                     fill="url(#wcHorn)" stroke="#5a2e00" stroke-width="1"/>
+            <circle cx="8" cy="35" r="6" fill="#1a1a1a"/>
+            <rect x="12" y="30" width="125" height="3" fill="rgba(255,255,255,0.35)"/>
+          </svg>
+
+          <!-- Confetti decorativos estáticos, solo en lado derecho -->
           <svg class="wc-confetti-static wc-confetti-static--1" viewBox="0 0 10 10">
             <polygon points="5,0 10,5 5,10 0,5" fill="#22c55e"/>
           </svg>
@@ -145,58 +160,93 @@ import {
       color: var(--accent);
     }
 
-    /* Líneas de cancha */
-    .wc-field {
-      position: absolute;
-      inset: auto 0 0 0;
-      width: 100%; height: 50%;
-      opacity: 0.3;
-      mix-blend-mode: soft-light;
-    }
+    /* Defs SVG fuera de viewport (solo para los gradients reutilizables). */
+    .wc-defs { position: absolute; width: 0; height: 0; }
 
-    /* Balón principal — flotando. Movido a esquina superior izquierda para
-       no competir con el ticket art (que está en la columna derecha). */
+    /* Balones — todos del lado derecho, distintos tamaños para variedad.
+       Algunos entran parcialmente desde el borde para dar sensación de
+       movimiento "hacia dentro de la página". */
     .wc-ball {
       position: absolute;
-      filter: drop-shadow(0 12px 24px rgba(0,0,0,0.18));
+      filter: drop-shadow(0 10px 22px rgba(0,0,0,0.22));
       animation: wc-float 7s ease-in-out infinite;
       will-change: transform;
-      opacity: 0.55;
     }
+
+    /* Balón GRANDE — entra parcialmente desde el borde derecho, esquina
+       superior. Mitad de él queda fuera del viewport. */
     .wc-ball--main {
-      width: 84px; height: 84px;
-      top: 4%; right: 38%;
+      width: 140px; height: 140px;
+      top: 6%; right: -50px;
+      opacity: 0.7;
       animation-delay: 0s;
     }
+
+    /* Balón mediano flotando libre en el centro-derecho. */
     .wc-ball--small {
-      width: 44px; height: 44px;
-      bottom: 12%; left: 6%;
+      width: 72px; height: 72px;
+      top: 50%; right: 18%;
+      opacity: 0.55;
       animation: wc-float-rev 9s ease-in-out infinite;
-      opacity: 0.45;
     }
 
-    /* Trofeo — movido al borde inferior izquierdo para que no choque con el ticket. */
+    /* Balón mini entrando desde el borde derecho, parte inferior. */
+    .wc-ball--mini {
+      width: 50px; height: 50px;
+      bottom: 28%; right: -18px;
+      opacity: 0.5;
+      animation: wc-float 11s ease-in-out infinite;
+      animation-delay: 1.5s;
+    }
+
+    /* Trofeo — esquina inferior derecha. */
     .wc-trophy {
       position: absolute;
-      width: 54px; height: 54px;
-      bottom: 6%; left: 32%;
-      filter: drop-shadow(0 6px 14px rgba(184,122,0,0.3));
+      width: 64px; height: 64px;
+      bottom: 8%; right: 38%;
+      filter: drop-shadow(0 8px 18px rgba(184,122,0,0.4));
       animation: wc-tilt 6s ease-in-out infinite;
       transform-origin: center bottom;
-      opacity: 0.7;
+      opacity: 0.8;
     }
 
-    /* Confetti estático decorativo */
+    /* Cornetas (vuvuzelas) — entran anguladas desde el borde derecho. */
+    .wc-horn {
+      position: absolute;
+      filter: drop-shadow(0 8px 16px rgba(180,83,9,0.4));
+      will-change: transform;
+    }
+    /* Corneta grande, esquina superior derecha apuntando hacia adentro. */
+    .wc-horn--1 {
+      --base-rot: -18deg;
+      width: 180px; height: auto;
+      top: 22%; right: -40px;
+      transform: rotate(-18deg);
+      opacity: 0.7;
+      animation: wc-horn-sway 5s ease-in-out infinite;
+    }
+    /* Corneta más pequeña, parte inferior derecha. */
+    .wc-horn--2 {
+      --base-rot: 15deg;
+      width: 130px; height: auto;
+      bottom: 12%; right: 8%;
+      transform: rotate(15deg);
+      opacity: 0.55;
+      animation: wc-horn-sway 7s ease-in-out infinite;
+      animation-delay: 1s;
+    }
+
+    /* Confetti estático decorativo — todos en mitad derecha. */
     .wc-confetti-static {
       position: absolute;
-      width: 10px; height: 10px;
+      width: 11px; height: 11px;
       animation: wc-spin 5s linear infinite;
-      opacity: 0.6;
+      opacity: 0.65;
     }
-    .wc-confetti-static--1 { top: 16%; left: 12%; animation-duration: 5s; }
-    .wc-confetti-static--2 { top: 70%; left: 22%; animation-duration: 6s; animation-direction: reverse; }
-    .wc-confetti-static--3 { top: 78%; right: 18%; animation-duration: 4.5s; }
-    .wc-confetti-static--4 { bottom: 28%; left: 48%; animation-duration: 7s; animation-direction: reverse; }
+    .wc-confetti-static--1 { top: 14%; right: 22%; animation-duration: 5s; }
+    .wc-confetti-static--2 { top: 38%; right: 6%; animation-duration: 6s; animation-direction: reverse; }
+    .wc-confetti-static--3 { top: 62%; right: 32%; animation-duration: 4.5s; }
+    .wc-confetti-static--4 { bottom: 18%; right: 24%; animation-duration: 7s; animation-direction: reverse; }
 
     /* Banner mode: solo el balón principal, centrado vertical en el lado derecho.
        Usamos calc() en lugar de transform porque la animación wc-float ya usa
@@ -208,8 +258,10 @@ import {
       opacity: 0.65;
     }
     .wc--banner .wc-ball--small,
+    .wc--banner .wc-ball--mini,
     .wc--banner .wc-trophy,
     .wc--banner .wc-confetti-static,
+    .wc--banner .wc-horn,
     .wc--banner .wc-field { display: none; }
 
     /* Corner */
@@ -248,13 +300,29 @@ import {
       from { transform: rotate(0deg); }
       to   { transform: rotate(360deg); }
     }
+    /* Las cornetas tienen un rotate base (ya sea -18deg o 15deg). Para el
+       sway, mezclamos ese rotate base con un pequeño vaivén; cada instancia
+       ajusta su propio offset definiendo --base-rot en línea. */
+    @keyframes wc-horn-sway {
+      0%, 100% { transform: rotate(var(--base-rot, -18deg)) translateY(0); }
+      50%      { transform: rotate(calc(var(--base-rot, -18deg) + 3deg)) translateY(-6px); }
+    }
     @keyframes wc-spin-slow {
       from { transform: rotate(0deg); }
       to   { transform: rotate(360deg); }
     }
 
     @media (prefers-reduced-motion: reduce) {
-      .wc-ball, .wc-trophy, .wc-confetti-static, .wc-corner { animation: none; }
+      .wc-ball, .wc-trophy, .wc-confetti-static, .wc-corner, .wc-horn { animation: none; }
+    }
+
+    /* En móvil, ocultar algunas decoraciones para no saturar pantallas chicas. */
+    @media (max-width: 720px) {
+      .wc-ball--small, .wc-ball--mini, .wc-horn--2,
+      .wc-confetti-static--3, .wc-confetti-static--4 { display: none; }
+      .wc-ball--main { width: 100px; height: 100px; top: 4%; right: -36px; }
+      .wc-horn--1 { width: 130px; top: 18%; right: -30px; }
+      .wc-trophy { width: 52px; height: 52px; right: 18%; }
     }
 
     @media (max-width: 720px) {
