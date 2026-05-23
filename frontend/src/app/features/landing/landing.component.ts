@@ -473,6 +473,15 @@ import { ButtonComponent, ThemeToggleComponent } from '@shared/ui';
   styles: [`
     :host {
       --landing-max: 1080px;
+
+      /* ===== Mundial 2026 — accents secundarios (uso sutil) =====
+         80% sigue siendo dark + verde marca. Estos son acentos sutiles
+         para los hovers, glows y elementos "oficiales tipo torneo". */
+      --led-cyan: #22d3ee;
+      --stadium-blue: #3b82f6;
+      --fifa-red: #ef4444;
+      --gold: #fbbf24;
+
       display: block;
     }
     .landing {
@@ -1266,6 +1275,331 @@ import { ButtonComponent, ThemeToggleComponent } from '@shared/ui';
       .fx-reveal { opacity: 1 !important; transform: none !important; }
       .fx-hero   { opacity: 1 !important; transform: none !important; }
       .blob      { animation: none !important; }
+    }
+
+    /* ============================================================
+       MUNDIAL 2026 — IDENTIDAD VISUAL DEPORTIVA PREMIUM
+       ============================================================
+       Bloque consolidado al final del estilo para que sea trivial
+       revertir si no convence el resultado. Todos los cambios viven
+       aquí como overrides y additions, sin tocar la estructura HTML.
+
+       Distribución: 80% dark+verde marca, 15% cyan/blue, 5% rojo/dorado.
+       Inspiración: FIFA+, Apple Sports, Stripe, Linear, broadcast LED.
+       ============================================================ */
+
+    /* ----- HERO: ambient stadium glow + tactical grid backdrop ----- */
+    .hero__bg::before {
+      /* Grid de líneas tácticas ultra sutiles (estilo táctico de fútbol)
+         como SVG inline data-URI. Opacidad muy baja para que se sienta
+         como atmósfera, no como decoración obvia. */
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 600' preserveAspectRatio='xMidYMid slice'><defs><linearGradient id='g' x1='0' y1='0' x2='0' y2='1'><stop offset='0%25' stop-color='%2322d3ee' stop-opacity='0'/><stop offset='50%25' stop-color='%2322d3ee' stop-opacity='0.8'/><stop offset='100%25' stop-color='%2322d3ee' stop-opacity='0'/></linearGradient></defs><g fill='none' stroke='url(%23g)' stroke-width='0.6'><path d='M 0 480 Q 300 300, 600 380 T 1200 320'/><path d='M 0 200 Q 360 380, 720 240 T 1200 380'/><path d='M -40 540 Q 200 480, 400 520 T 800 480 T 1240 530'/></g><g fill='%2322d3ee' opacity='0.4'><circle cx='180' cy='420' r='1.5'/><circle cx='420' cy='340' r='1.5'/><circle cx='660' cy='380' r='1.5'/><circle cx='900' cy='340' r='1.5'/><circle cx='180' cy='240' r='1'/><circle cx='540' cy='280' r='1'/><circle cx='820' cy='220' r='1'/></g></svg>");
+      background-size: cover;
+      background-position: center;
+      opacity: 0.18;
+      pointer-events: none;
+      mix-blend-mode: screen;
+    }
+    .hero__bg::after {
+      /* Ambient stadium glow: un radial gradient extra muy suave que da
+         la sensación de luz cenital tipo estadio nocturno. */
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 50% at 50% 0%,
+          color-mix(in srgb, var(--led-cyan) 12%, transparent),
+          transparent 70%);
+      pointer-events: none;
+      mix-blend-mode: screen;
+    }
+
+    /* Noise texture global ultra leve: da profundidad sin que se note. */
+    .landing::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 1;
+      opacity: 0.025;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+      mix-blend-mode: overlay;
+    }
+
+    /* ----- HERO TICKET: glassmorphism + border glow + 3D tilt ----- */
+    .ticket {
+      /* Inclinación sutil 3D + glass premium. */
+      transform: perspective(1200px) rotateY(-6deg) rotateX(2deg) rotate(-2deg);
+      background:
+        linear-gradient(160deg,
+          color-mix(in srgb, var(--bg-surface) 92%, transparent),
+          color-mix(in srgb, var(--bg-base) 92%, transparent));
+      backdrop-filter: blur(10px) saturate(140%);
+      -webkit-backdrop-filter: blur(10px) saturate(140%);
+      border: 1px solid color-mix(in srgb, var(--led-cyan) 18%, var(--border));
+      box-shadow:
+        0 30px 80px -30px rgba(0, 0, 0, 0.75),
+        0 0 0 1px color-mix(in srgb, var(--accent) 15%, transparent) inset,
+        0 0 60px -20px color-mix(in srgb, var(--led-cyan) 35%, transparent);
+      position: relative;
+    }
+    .ticket::before {
+      /* Border iluminado animado (rotación de glow alrededor del ticket). */
+      content: '';
+      position: absolute;
+      inset: -1px;
+      border-radius: inherit;
+      padding: 1px;
+      background: conic-gradient(
+        from var(--ticket-angle, 0deg),
+        transparent 0deg,
+        color-mix(in srgb, var(--led-cyan) 60%, transparent) 80deg,
+        color-mix(in srgb, var(--accent) 70%, transparent) 160deg,
+        transparent 240deg,
+        transparent 360deg
+      );
+      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor;
+              mask-composite: exclude;
+      pointer-events: none;
+      animation: ticket-glow-rotate 8s linear infinite;
+    }
+    .ticket::after {
+      /* Reflejo dinámico tipo cristal: brillo diagonal que se desplaza. */
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      background: linear-gradient(115deg,
+        transparent 0%,
+        transparent 38%,
+        rgba(255,255,255,0.06) 50%,
+        transparent 62%,
+        transparent 100%);
+      pointer-events: none;
+      animation: ticket-shine 6s ease-in-out infinite;
+    }
+    @property --ticket-angle {
+      syntax: '<angle>';
+      inherits: false;
+      initial-value: 0deg;
+    }
+    @keyframes ticket-glow-rotate {
+      to { --ticket-angle: 360deg; }
+    }
+    @keyframes ticket-shine {
+      0%, 100% { opacity: 0; transform: translateX(-30%); }
+      40%      { opacity: 1; transform: translateX(0%); }
+      60%      { opacity: 1; transform: translateX(10%); }
+      80%      { opacity: 0; transform: translateX(30%); }
+    }
+
+    /* Números del ticket: estilo pantalla LED con leve glow. */
+    .ticket__num {
+      background: linear-gradient(180deg,
+        var(--accent),
+        color-mix(in srgb, var(--accent) 80%, #0a3a26));
+      box-shadow:
+        0 0 12px -2px color-mix(in srgb, var(--accent) 55%, transparent),
+        0 1px 0 rgba(255,255,255,0.18) inset;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 0.04em;
+    }
+
+    /* ----- BLOBS más cinematográficos (sin cambiar layout) ----- */
+    .blob--1 {
+      /* Mezcla verde marca + cyan estadio para más profundidad. */
+      background: radial-gradient(circle,
+        color-mix(in srgb, var(--accent) 70%, var(--led-cyan)),
+        var(--accent) 60%);
+      opacity: 0.48;
+    }
+    .blob--2 {
+      background: radial-gradient(circle,
+        color-mix(in srgb, var(--stadium-blue) 80%, transparent),
+        var(--stadium-blue) 70%);
+      opacity: 0.32;
+    }
+
+    /* ----- CARDS (feature/role): hover con glow premium ----- */
+    .feature, .role {
+      position: relative;
+      transition:
+        transform var(--t-base),
+        border-color var(--t-base),
+        box-shadow var(--t-base);
+    }
+    .feature:hover {
+      transform: translateY(-3px);
+      border-color: color-mix(in srgb, var(--led-cyan) 40%, var(--accent));
+      box-shadow:
+        0 18px 48px -22px color-mix(in srgb, var(--accent) 50%, transparent),
+        0 0 0 1px color-mix(in srgb, var(--led-cyan) 25%, transparent) inset;
+    }
+    .role:hover {
+      transform: translateY(-4px);
+      border-color: color-mix(in srgb, var(--accent) 60%, var(--led-cyan));
+      box-shadow:
+        0 24px 60px -28px color-mix(in srgb, var(--accent) 55%, transparent),
+        0 0 0 1px color-mix(in srgb, var(--accent) 18%, transparent) inset;
+    }
+
+    /* ----- HOW IT WORKS: numeración tipo scoreboard LED ----- */
+    .how__num {
+      background: linear-gradient(180deg, #0a1814, #051a10);
+      color: var(--accent);
+      border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+      font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+      font-size: 20px;
+      box-shadow:
+        0 0 18px -4px color-mix(in srgb, var(--accent) 55%, transparent),
+        0 0 0 1px color-mix(in srgb, var(--led-cyan) 22%, transparent) inset;
+      text-shadow: 0 0 8px color-mix(in srgb, var(--accent) 80%, transparent);
+    }
+    .how__steps li {
+      transition: border-color var(--t-base), box-shadow var(--t-base);
+    }
+    .how__steps li:hover {
+      border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+      box-shadow: 0 16px 40px -22px color-mix(in srgb, var(--accent) 45%, transparent);
+    }
+
+    /* ----- PLANES: el destacado se siente "plan oficial del torneo" ----- */
+    .plan {
+      transition:
+        transform var(--t-base),
+        border-color var(--t-base),
+        box-shadow var(--t-base);
+    }
+    .plan:hover {
+      box-shadow: 0 22px 60px -28px color-mix(in srgb, var(--accent) 45%, transparent);
+    }
+    .plan--featured {
+      border-color: color-mix(in srgb, var(--gold) 60%, var(--accent));
+      background:
+        radial-gradient(ellipse 120% 60% at 50% 0%,
+          color-mix(in srgb, var(--gold) 14%, transparent),
+          transparent 70%),
+        linear-gradient(180deg,
+          color-mix(in srgb, var(--accent) 10%, var(--bg-surface)),
+          var(--bg-surface));
+      box-shadow:
+        0 20px 60px -20px color-mix(in srgb, var(--gold) 40%, transparent),
+        0 0 0 1px color-mix(in srgb, var(--gold) 30%, transparent) inset;
+    }
+    .plan--featured .plan__badge {
+      background: linear-gradient(90deg, var(--gold), #f59e0b);
+      color: #1f0e00;
+      box-shadow: 0 6px 18px -6px color-mix(in srgb, var(--gold) 70%, transparent);
+    }
+    .plan--featured .plan__tag {
+      color: var(--gold);
+    }
+    .plan--featured .plan__features .material-icons {
+      color: var(--gold);
+    }
+
+    /* ----- VERIFY CARD: centro oficial de validación ----- */
+    .verify-card {
+      position: relative;
+      background:
+        radial-gradient(ellipse 70% 100% at 0% 50%,
+          color-mix(in srgb, var(--led-cyan) 18%, transparent),
+          transparent 70%),
+        radial-gradient(ellipse 70% 100% at 100% 50%,
+          color-mix(in srgb, var(--accent) 14%, transparent),
+          transparent 70%),
+        var(--bg-surface);
+      border: 1px solid color-mix(in srgb, var(--led-cyan) 50%, var(--accent));
+      box-shadow:
+        0 20px 60px -25px color-mix(in srgb, var(--led-cyan) 40%, transparent),
+        0 0 0 1px color-mix(in srgb, var(--led-cyan) 18%, transparent) inset;
+      overflow: hidden;
+    }
+    .verify-card::before {
+      /* Línea de scan tipo radar/VAR muy sutil que recorre la card. */
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(110deg,
+        transparent 0%,
+        transparent 45%,
+        color-mix(in srgb, var(--led-cyan) 35%, transparent) 50%,
+        transparent 55%,
+        transparent 100%);
+      animation: verify-scan 5s ease-in-out infinite;
+      pointer-events: none;
+      mix-blend-mode: screen;
+    }
+    @keyframes verify-scan {
+      0%, 100% { transform: translateX(-30%); opacity: 0; }
+      40%      { transform: translateX(0%);   opacity: 1; }
+      60%      { transform: translateX(15%);  opacity: 1; }
+      90%      { transform: translateX(40%);  opacity: 0; }
+    }
+    .verify-card__icon {
+      background: linear-gradient(135deg, var(--led-cyan), var(--accent));
+      box-shadow:
+        0 0 24px -4px color-mix(in srgb, var(--led-cyan) 65%, transparent),
+        0 0 0 1px rgba(255,255,255,0.18) inset;
+    }
+    .verify-card__label {
+      color: var(--led-cyan);
+      text-shadow: 0 0 8px color-mix(in srgb, var(--led-cyan) 45%, transparent);
+    }
+    .verify-card__cta--primary {
+      box-shadow: 0 8px 24px -8px color-mix(in srgb, var(--accent) 60%, transparent);
+    }
+
+    /* ----- BADGE del hero: pequeño dot pulsante tipo "ON AIR" ----- */
+    .hero__badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .hero__badge::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 8px var(--accent);
+      animation: live-dot 1.6s ease-in-out infinite;
+    }
+    @keyframes live-dot {
+      0%, 100% { opacity: 0.5; transform: scale(0.9); }
+      50%      { opacity: 1;   transform: scale(1.1); }
+    }
+
+    /* ----- CTA final: glow gold sutil al hover ----- */
+    .cta__card {
+      transition: box-shadow var(--t-base);
+    }
+    .cta__card:hover {
+      box-shadow:
+        0 30px 80px -30px color-mix(in srgb, var(--accent) 55%, transparent),
+        0 0 0 1px color-mix(in srgb, var(--gold) 22%, transparent) inset;
+    }
+
+    /* ----- MOTION OFF: cuando el usuario quiere menos movimiento ----- */
+    @media (prefers-reduced-motion: reduce) {
+      .ticket::before,
+      .ticket::after,
+      .verify-card::before,
+      .hero__badge::before { animation: none !important; }
+    }
+
+    /* ----- Móvil: simplifica algunos efectos premium ----- */
+    @media (max-width: 720px) {
+      .ticket {
+        transform: rotate(-2deg);  /* sin 3D tilt en móvil */
+      }
+      .hero__bg::before { opacity: 0.10; }
+      .landing::after { opacity: 0.018; }
     }
   `],
 })
