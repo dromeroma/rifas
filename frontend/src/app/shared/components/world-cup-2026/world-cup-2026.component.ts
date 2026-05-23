@@ -133,6 +133,20 @@ import {
       overflow: hidden;
     }
 
+    /* En modo HERO, el host se EXTIENDE al ancho completo del viewport
+       (100vw, centrado) — ignorando el max-width:1080px del .hero. Esto
+       permite que los balones/trofeos/vuvuzelas asomen desde los bordes
+       REALES de la pantalla con su mitad fuera del viewport. Sin esto,
+       en pantallas anchas las decoraciones aparecen "cortadas por un
+       div" porque el host está limitado al ancho del hero centrado.
+       .landing tiene overflow-x:hidden → no genera scroll horizontal. */
+    :host([data-mode='hero']) {
+      left: 50%;
+      right: auto;
+      width: 100vw;
+      transform: translateX(-50%);
+    }
+
     .wc {
       position: absolute;
       inset: 0;
