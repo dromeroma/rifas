@@ -173,65 +173,67 @@ import {
       will-change: transform;
     }
 
-    /* Balón GRANDE — entra parcialmente desde el borde derecho, esquina
-       superior. Mitad de él queda fuera del viewport. */
+    /* Balón GRANDE — asoma DESDE ATRÁS del ticket por su esquina superior
+       izquierda. El ticket (z-index:1) tapa la mitad derecha del balón →
+       efecto de profundidad: el balón emerge del fondo, no del borde. */
     .wc-ball--main {
-      width: 140px; height: 140px;
-      top: 6%; right: -50px;
-      opacity: 0.7;
+      width: 130px; height: 130px;
+      top: 4%; right: 38%;
+      opacity: 0.75;
       animation-delay: 0s;
     }
 
-    /* Balón mediano flotando libre en el centro-derecho. */
+    /* Balón mediano asoma desde atrás del ticket, esquina inferior derecha. */
     .wc-ball--small {
-      width: 72px; height: 72px;
-      top: 50%; right: 18%;
-      opacity: 0.55;
+      width: 78px; height: 78px;
+      bottom: 6%; right: 4%;
+      opacity: 0.65;
       animation: wc-float-rev 9s ease-in-out infinite;
     }
 
-    /* Balón mini entrando desde el borde derecho, parte inferior. */
+    /* Balón mini flotando libre arriba a la derecha del ticket. */
     .wc-ball--mini {
-      width: 50px; height: 50px;
-      bottom: 28%; right: -18px;
-      opacity: 0.5;
+      width: 44px; height: 44px;
+      top: 14%; right: 6%;
+      opacity: 0.55;
       animation: wc-float 11s ease-in-out infinite;
       animation-delay: 1.5s;
     }
 
-    /* Trofeo — esquina inferior derecha. */
+    /* Trofeo — asoma desde atrás del borde izquierdo del ticket, parte media. */
     .wc-trophy {
       position: absolute;
       width: 64px; height: 64px;
-      bottom: 8%; right: 38%;
+      bottom: 22%; right: 40%;
       filter: drop-shadow(0 8px 18px rgba(184,122,0,0.4));
       animation: wc-tilt 6s ease-in-out infinite;
       transform-origin: center bottom;
-      opacity: 0.8;
+      opacity: 0.85;
     }
 
-    /* Cornetas (vuvuzelas) — entran anguladas desde el borde derecho. */
+    /* Cornetas (vuvuzelas) — anguladas, asomando desde detrás del ticket. */
     .wc-horn {
       position: absolute;
       filter: drop-shadow(0 8px 16px rgba(180,83,9,0.4));
       will-change: transform;
     }
-    /* Corneta grande, esquina superior derecha apuntando hacia adentro. */
+    /* Corneta grande asoma desde detrás del lateral izquierdo del ticket,
+       parte media, angulada hacia adentro (-22deg). */
     .wc-horn--1 {
-      --base-rot: -18deg;
-      width: 180px; height: auto;
-      top: 22%; right: -40px;
-      transform: rotate(-18deg);
-      opacity: 0.7;
+      --base-rot: -22deg;
+      width: 170px; height: auto;
+      top: 42%; right: 28%;
+      transform: rotate(-22deg);
+      opacity: 0.75;
       animation: wc-horn-sway 5s ease-in-out infinite;
     }
-    /* Corneta más pequeña, parte inferior derecha. */
+    /* Corneta más pequeña asoma desde detrás del borde inferior derecho del ticket. */
     .wc-horn--2 {
-      --base-rot: 15deg;
-      width: 130px; height: auto;
-      bottom: 12%; right: 8%;
-      transform: rotate(15deg);
-      opacity: 0.55;
+      --base-rot: 18deg;
+      width: 120px; height: auto;
+      bottom: 4%; right: 14%;
+      transform: rotate(18deg);
+      opacity: 0.6;
       animation: wc-horn-sway 7s ease-in-out infinite;
       animation-delay: 1s;
     }
@@ -316,13 +318,16 @@ import {
       .wc-ball, .wc-trophy, .wc-confetti-static, .wc-corner, .wc-horn { animation: none; }
     }
 
-    /* En móvil, ocultar algunas decoraciones para no saturar pantallas chicas. */
+    /* En móvil, ocultar algunas decoraciones para no saturar pantallas chicas.
+       Recuerda: en móvil el hero pasa a 1 columna y .hero__art se oculta
+       (display:none en el landing). Así que las decoraciones quedan más
+       libres a la derecha del bloque de texto. */
     @media (max-width: 720px) {
       .wc-ball--small, .wc-ball--mini, .wc-horn--2,
       .wc-confetti-static--3, .wc-confetti-static--4 { display: none; }
-      .wc-ball--main { width: 100px; height: 100px; top: 4%; right: -36px; }
-      .wc-horn--1 { width: 130px; top: 18%; right: -30px; }
-      .wc-trophy { width: 52px; height: 52px; right: 18%; }
+      .wc-ball--main { width: 90px; height: 90px; top: 4%; right: 8%; }
+      .wc-horn--1 { width: 120px; top: 36%; right: 6%; }
+      .wc-trophy { width: 50px; height: 50px; bottom: 18%; right: 12%; }
     }
 
     @media (max-width: 720px) {
