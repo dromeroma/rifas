@@ -1296,10 +1296,10 @@ import { ButtonComponent, ThemeToggleComponent } from '@shared/ui';
       content: '';
       position: absolute;
       inset: 0;
-      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 600' preserveAspectRatio='xMidYMid slice'><defs><linearGradient id='g' x1='0' y1='0' x2='0' y2='1'><stop offset='0%25' stop-color='%2322d3ee' stop-opacity='0'/><stop offset='50%25' stop-color='%2322d3ee' stop-opacity='0.8'/><stop offset='100%25' stop-color='%2322d3ee' stop-opacity='0'/></linearGradient></defs><g fill='none' stroke='url(%23g)' stroke-width='0.6'><path d='M 0 480 Q 300 300, 600 380 T 1200 320'/><path d='M 0 200 Q 360 380, 720 240 T 1200 380'/><path d='M -40 540 Q 200 480, 400 520 T 800 480 T 1240 530'/></g><g fill='%2322d3ee' opacity='0.4'><circle cx='180' cy='420' r='1.5'/><circle cx='420' cy='340' r='1.5'/><circle cx='660' cy='380' r='1.5'/><circle cx='900' cy='340' r='1.5'/><circle cx='180' cy='240' r='1'/><circle cx='540' cy='280' r='1'/><circle cx='820' cy='220' r='1'/></g></svg>");
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 600' preserveAspectRatio='xMidYMid slice'><defs><linearGradient id='g' x1='0' y1='0' x2='0' y2='1'><stop offset='0%25' stop-color='%2322d3ee' stop-opacity='0'/><stop offset='50%25' stop-color='%2322d3ee' stop-opacity='1'/><stop offset='100%25' stop-color='%2322d3ee' stop-opacity='0'/></linearGradient></defs><g fill='none' stroke='url(%23g)' stroke-width='1.1'><path d='M 0 480 Q 300 300, 600 380 T 1200 320'/><path d='M 0 200 Q 360 380, 720 240 T 1200 380'/><path d='M -40 540 Q 200 480, 400 520 T 800 480 T 1240 530'/><path d='M 0 80 Q 200 200, 400 140 T 800 200 T 1200 120' stroke-dasharray='4,6' stroke-width='0.7'/></g><g fill='%2322d3ee' opacity='0.7'><circle cx='180' cy='420' r='2'/><circle cx='420' cy='340' r='2'/><circle cx='660' cy='380' r='2'/><circle cx='900' cy='340' r='2'/><circle cx='180' cy='240' r='1.5'/><circle cx='540' cy='280' r='1.5'/><circle cx='820' cy='220' r='1.5'/><circle cx='300' cy='140' r='1.2'/><circle cx='1020' cy='460' r='1.2'/></g></svg>");
       background-size: cover;
       background-position: center;
-      opacity: 0.18;
+      opacity: 0.42;
       pointer-events: none;
       mix-blend-mode: screen;
     }
@@ -1593,13 +1593,92 @@ import { ButtonComponent, ThemeToggleComponent } from '@shared/ui';
       .hero__badge::before { animation: none !important; }
     }
 
-    /* ----- Móvil: simplifica algunos efectos premium ----- */
+    /* ============================================================
+       PATTERNS POR SECCIÓN — atmósfera de torneo en cada bloque
+       ============================================================
+       Cada sección recibe su propio backdrop SVG sutil con variación
+       (dots, brackets, rayos, arcos). Mismo color cyan que el hero
+       para coherencia, pero distinto formato para que no se sienta
+       repetitivo. Todos viven en ::before del contenedor de sección
+       con z-index:-1 + isolation:isolate → siempre detrás del contenido. */
+
+    .features, .how, .roles, .planes {
+      position: relative;
+      isolation: isolate;
+    }
+    .features::before,
+    .how::before,
+    .roles::before,
+    .planes::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      pointer-events: none;
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      mix-blend-mode: screen;
+      opacity: 0.28;
+    }
+
+    /* Beneficios → DOT GRID táctico (posiciones de jugadores conectadas) */
+    .features::before {
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 500' preserveAspectRatio='xMidYMid slice'><g fill='none' stroke='%2322d3ee' stroke-width='0.6' opacity='0.7'><line x1='150' y1='100' x2='350' y2='200'/><line x1='350' y1='200' x2='560' y2='130'/><line x1='560' y1='130' x2='780' y2='220'/><line x1='780' y1='220' x2='980' y2='150'/><line x1='200' y1='380' x2='420' y2='300'/><line x1='420' y1='300' x2='640' y2='400'/><line x1='640' y1='400' x2='860' y2='320'/><line x1='860' y1='320' x2='1060' y2='420'/></g><g fill='%2322d3ee'><circle cx='150' cy='100' r='2.2'/><circle cx='350' cy='200' r='2.2'/><circle cx='560' cy='130' r='2.2'/><circle cx='780' cy='220' r='2.2'/><circle cx='980' cy='150' r='2.2'/><circle cx='200' cy='380' r='2.2'/><circle cx='420' cy='300' r='2.2'/><circle cx='640' cy='400' r='2.2'/><circle cx='860' cy='320' r='2.2'/><circle cx='1060' cy='420' r='2.2'/></g></svg>");
+    }
+
+    /* Cómo funciona → BRACKETS verticales tipo cuadro de torneo */
+    .how::before {
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 500' preserveAspectRatio='xMidYMid slice'><g fill='none' stroke='%2322d3ee' stroke-width='0.7' opacity='0.65'><path d='M 60 60 L 100 60 L 100 440 L 60 440'/><path d='M 1140 60 L 1100 60 L 1100 440 L 1140 440'/><line x1='240' y1='80' x2='240' y2='420' stroke-dasharray='4,8'/><line x1='960' y1='80' x2='960' y2='420' stroke-dasharray='4,8'/><line x1='600' y1='40' x2='600' y2='460' stroke-dasharray='2,12' opacity='0.5'/></g><g fill='%2322d3ee' opacity='0.8'><circle cx='100' cy='60' r='2'/><circle cx='100' cy='440' r='2'/><circle cx='1100' cy='60' r='2'/><circle cx='1100' cy='440' r='2'/><circle cx='600' cy='40' r='2'/><circle cx='600' cy='460' r='2'/></g></svg>");
+    }
+
+    /* Para quién es → RAYOS suaves desde un punto central tipo broadcast */
+    .roles::before {
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 500' preserveAspectRatio='xMidYMid slice'><defs><radialGradient id='r' cx='50%25' cy='50%25' r='50%25'><stop offset='0%25' stop-color='%2322d3ee' stop-opacity='1'/><stop offset='100%25' stop-color='%2322d3ee' stop-opacity='0'/></radialGradient></defs><g fill='none' stroke='url(%23r)' stroke-width='0.8'><line x1='600' y1='250' x2='50' y2='40'/><line x1='600' y1='250' x2='50' y2='460'/><line x1='600' y1='250' x2='1150' y2='40'/><line x1='600' y1='250' x2='1150' y2='460'/><line x1='600' y1='250' x2='600' y2='10'/><line x1='600' y1='250' x2='600' y2='490'/><line x1='600' y1='250' x2='300' y2='10'/><line x1='600' y1='250' x2='900' y2='10'/><line x1='600' y1='250' x2='300' y2='490'/><line x1='600' y1='250' x2='900' y2='490'/></g><circle cx='600' cy='250' r='3' fill='%2322d3ee' opacity='0.85'/><circle cx='600' cy='250' r='18' fill='none' stroke='%2322d3ee' stroke-width='0.4' opacity='0.45'/></svg>");
+    }
+
+    /* Planes → ARCOS concéntricos tipo gradas de estadio */
+    .planes::before {
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 500' preserveAspectRatio='xMidYMid slice'><g fill='none' stroke='%2322d3ee' stroke-width='0.7' opacity='0.6'><path d='M -100 480 Q 600 250 1300 480'/><path d='M -100 520 Q 600 320 1300 520'/><path d='M -100 560 Q 600 390 1300 560'/><path d='M -100 600 Q 600 460 1300 600'/></g><g fill='none' stroke='%2322d3ee' stroke-width='0.5' opacity='0.4' stroke-dasharray='5,8'><path d='M -100 60 Q 600 -150 1300 60'/></g></svg>");
+      opacity: 0.22;
+    }
+
+    /* ============================================================
+       RESPONSIVE: tablet (≤980px) y mobile (≤720px) afinan opacidades
+       y simplifican efectos pesados para mantener performance + claridad
+       ============================================================ */
+
+    /* Tablet */
+    @media (max-width: 980px) {
+      .hero__bg::before { opacity: 0.32; }
+      .features::before,
+      .how::before,
+      .roles::before { opacity: 0.22; }
+      .planes::before { opacity: 0.18; }
+      .ticket {
+        /* Tilt 3D atenuado para que en tablet no se sienta exagerado. */
+        transform: perspective(1400px) rotateY(-3deg) rotate(-2deg);
+      }
+    }
+
+    /* Móvil */
     @media (max-width: 720px) {
       .ticket {
         transform: rotate(-2deg);  /* sin 3D tilt en móvil */
       }
-      .hero__bg::before { opacity: 0.10; }
+      .hero__bg::before { opacity: 0.22; }
+      .features::before,
+      .how::before,
+      .roles::before { opacity: 0.16; }
+      .planes::before { opacity: 0.14; }
       .landing::after { opacity: 0.018; }
+      /* En móvil reducimos un poco el glow del ticket para que no compita
+         con el texto principal en pantallas chicas. */
+      .ticket {
+        box-shadow:
+          0 18px 50px -22px rgba(0, 0, 0, 0.7),
+          0 0 30px -16px color-mix(in srgb, var(--led-cyan) 35%, transparent);
+      }
     }
   `],
 })
