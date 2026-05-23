@@ -1296,10 +1296,10 @@ import { ButtonComponent, ThemeToggleComponent } from '@shared/ui';
       content: '';
       position: absolute;
       inset: 0;
-      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 600' preserveAspectRatio='xMidYMid slice'><defs><linearGradient id='g' x1='0' y1='0' x2='0' y2='1'><stop offset='0%25' stop-color='%2322d3ee' stop-opacity='0'/><stop offset='50%25' stop-color='%2322d3ee' stop-opacity='1'/><stop offset='100%25' stop-color='%2322d3ee' stop-opacity='0'/></linearGradient></defs><g fill='none' stroke='url(%23g)' stroke-width='0.85'><path d='M 0 480 Q 300 300, 600 380 T 1200 320'/><path d='M 0 200 Q 360 380, 720 240 T 1200 380'/><path d='M -40 540 Q 200 480, 400 520 T 800 480 T 1240 530'/><path d='M 0 80 Q 200 200, 400 140 T 800 200 T 1200 120' stroke-dasharray='4,6' stroke-width='0.55'/></g><g fill='%2322d3ee' opacity='0.55'><circle cx='180' cy='420' r='1.7'/><circle cx='420' cy='340' r='1.7'/><circle cx='660' cy='380' r='1.7'/><circle cx='900' cy='340' r='1.7'/><circle cx='180' cy='240' r='1.3'/><circle cx='540' cy='280' r='1.3'/><circle cx='820' cy='220' r='1.3'/><circle cx='300' cy='140' r='1'/><circle cx='1020' cy='460' r='1'/></g></svg>");
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 600' preserveAspectRatio='xMidYMid slice'><defs><linearGradient id='g' x1='0' y1='0' x2='0' y2='1'><stop offset='0%25' stop-color='%2322d3ee' stop-opacity='0'/><stop offset='50%25' stop-color='%2322d3ee' stop-opacity='1'/><stop offset='100%25' stop-color='%2322d3ee' stop-opacity='0'/></linearGradient></defs><g fill='none' stroke='url(%23g)' stroke-width='0.55'><path d='M 0 480 Q 300 300, 600 380 T 1200 320'/><path d='M 0 200 Q 360 380, 720 240 T 1200 380'/><path d='M -40 540 Q 200 480, 400 520 T 800 480 T 1240 530'/><path d='M 0 80 Q 200 200, 400 140 T 800 200 T 1200 120' stroke-dasharray='4,6' stroke-width='0.35'/></g><g fill='%2322d3ee' opacity='0.4'><circle cx='180' cy='420' r='1.4'/><circle cx='420' cy='340' r='1.4'/><circle cx='660' cy='380' r='1.4'/><circle cx='900' cy='340' r='1.4'/><circle cx='180' cy='240' r='1.1'/><circle cx='540' cy='280' r='1.1'/><circle cx='820' cy='220' r='1.1'/><circle cx='300' cy='140' r='0.9'/><circle cx='1020' cy='460' r='0.9'/></g></svg>");
       background-size: cover;
       background-position: center;
-      opacity: 0.30;
+      opacity: 0.20;
       pointer-events: none;
       mix-blend-mode: screen;
     }
@@ -1650,7 +1650,7 @@ import { ButtonComponent, ThemeToggleComponent } from '@shared/ui';
 
     /* Tablet */
     @media (max-width: 980px) {
-      .hero__bg::before { opacity: 0.24; }
+      .hero__bg::before { opacity: 0.16; }
       .features::before,
       .how::before,
       .roles::before { opacity: 0.22; }
@@ -1666,7 +1666,7 @@ import { ButtonComponent, ThemeToggleComponent } from '@shared/ui';
       .ticket {
         transform: rotate(-2deg);  /* sin 3D tilt en móvil */
       }
-      .hero__bg::before { opacity: 0.18; }
+      .hero__bg::before { opacity: 0.12; }
       .features::before,
       .how::before,
       .roles::before { opacity: 0.16; }
