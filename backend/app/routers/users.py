@@ -43,11 +43,14 @@ async def sellers_summary(
     raffle_id: Optional[int] = Query(default=None, description="Si se pasa, filtra stats a esa rifa"),
 ):
     """Lista de vendedores con métricas reales agregadas:
-      - paid_tickets: boletas pagadas (PAID + WINNING) del vendedor
-      - commission_total: suma de Commission.amount del vendedor
-      - commission_paid: suma de Commission.amount donde paid=True
-      - commission_pending: suma de Commission.amount donde paid=False
-      - default_commission: valor por defecto configurado al crear el usuario
+      - assigned_tickets: TOTAL de boletas con seller_id == vendedor (todos los estados:
+        available asignadas al rango del vendedor, reserved, pending, partially_paid,
+        paid, winning, expired).
+      - paid_tickets: boletas pagadas (PAID + WINNING) del vendedor.
+      - commission_total: suma de Commission.amount del vendedor.
+      - commission_paid: suma de Commission.amount donde paid=True.
+      - commission_pending: suma de Commission.amount donde paid=False.
+      - default_commission: valor por defecto configurado al crear el usuario.
     """
     sellers_q = select(User).where(User.role == UserRole.SELLER).order_by(User.id.desc())
     if scope.tenant_id is not None:
@@ -56,6 +59,16 @@ async def sellers_summary(
     if not sellers:
         return []
 
+    # 1) Total de boletas asignadas al vendedor (todos los estados).
+    assigned_q = (
+        select(
+            Ticket.seller_id,
+            func.count(Ticket.id).label("assigned"),
+        )
+        .where(Ticket.seller_id.is_not(None))
+        .group_by(Ticket.seller_id)
+    )
+    # 2) Boletas pagadas o ganadoras.
     ticket_q = (
         select(
             Ticket.seller_id,
@@ -78,9 +91,11 @@ async def sellers_summary(
         .group_by(Commission.seller_id)
     )
     if raffle_id is not None:
+        assigned_q = assigned_q.where(Ticket.raffle_id == raffle_id)
         ticket_q = ticket_q.where(Ticket.raffle_id == raffle_id)
         com_q = com_q.where(Commission.raffle_id == raffle_id)
 
+    assigned_by_seller = {row.seller_id: int(row.assigned) for row in (await db.execute(assigned_q)).all()}
     paid_by_seller = {row.seller_id: int(row.paid) for row in (await db.execute(ticket_q)).all()}
     com_by_seller = {
         row.seller_id: (float(row.total or 0), float(row.paid_total or 0))
@@ -98,6 +113,7 @@ async def sellers_summary(
                 phone=s.phone,
                 is_active=s.is_active,
                 default_commission=s.default_commission,
+                assigned_tickets=assigned_by_seller.get(s.id, 0),
                 paid_tickets=paid_by_seller.get(s.id, 0),
                 commission_total=total,
                 commission_paid=paid_total,

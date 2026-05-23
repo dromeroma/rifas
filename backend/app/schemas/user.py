@@ -44,6 +44,7 @@ class SellerSummary(BaseModel):
     phone: Optional[str] = None
     is_active: bool
     default_commission: Optional[Decimal] = None
+    assigned_tickets: int = 0
     paid_tickets: int
     commission_total: Decimal
     commission_paid: Decimal

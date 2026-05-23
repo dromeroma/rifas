@@ -45,6 +45,8 @@ export interface SellerSummary {
   phone?: string | null;
   is_active: boolean;
   default_commission?: number | null;
+  /** Total de boletas con seller_id == este vendedor (todos los estados). */
+  assigned_tickets: number;
   paid_tickets: number;
   commission_total: number;
   commission_paid: number;

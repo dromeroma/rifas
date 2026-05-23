@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
 import { SellerSummary } from '@core/models/stats.model';
@@ -25,9 +25,18 @@ import {
           <h1>Vendedores</h1>
           <p class="muted">{{ sellers().length }} vendedor(es) registrado(s).</p>
         </div>
-        <app-button icon="add" variant="primary" (click)="openModal()">
-          Nuevo vendedor
-        </app-button>
+        <div class="page__actions">
+          <app-input
+            class="search"
+            placeholder="Buscar por nombre, email o teléfono..."
+            icon="search"
+            [(ngModel)]="searchQuery"
+            name="search"
+          />
+          <app-button icon="add" variant="primary" (click)="openModal()">
+            Nuevo vendedor
+          </app-button>
+        </div>
       </header>
 
       @if (loading()) {
@@ -38,42 +47,70 @@ import {
           title="Aún no hay vendedores"
           description="Crea el primero con el botón Nuevo vendedor."
         />
+      } @else if (!filtered().length) {
+        <app-empty
+          icon="search_off"
+          title="Sin resultados"
+          description="Ningún vendedor coincide con la búsqueda."
+        />
       } @else {
-        <div class="list">
-          @for (s of sellers(); track s.id) {
-            <article class="seller">
-              <app-avatar [name]="s.full_name" [size]="44" />
-              <div class="seller__info">
-                <strong>{{ s.full_name }}</strong>
-                <small class="muted">{{ s.email }}{{ s.phone ? ' · ' + s.phone : '' }}</small>
-              </div>
-              <div class="seller__stats">
-                <div class="stat">
-                  <small class="stat__label">Boletas pagadas</small>
-                  <strong>{{ s.paid_tickets }}</strong>
-                </div>
-                <div class="stat">
-                  <small class="stat__label">Comisión generada</small>
-                  <strong class="stat__money">{{ '$' + fmt(s.commission_total) }}</strong>
-                </div>
-                @if (s.commission_pending > 0) {
-                  <small class="stat__pending">
-                    Pendiente: {{ '$' + fmt(s.commission_pending) }}
-                  </small>
-                }
-              </div>
-              <div class="seller__meta">
-                <app-chip [tone]="s.is_active ? 'accent' : 'danger'">
-                  {{ s.is_active ? 'Activo' : 'Inactivo' }}
-                </app-chip>
-                @if (s.default_commission) {
-                  <small class="muted">
-                    Default: {{ '$' + fmt(s.default_commission) }} / boleta
-                  </small>
-                }
-              </div>
-            </article>
-          }
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Vendedor</th>
+                <th>Contacto</th>
+                <th class="num">Boletas asignadas</th>
+                <th class="num">Boletas pagadas</th>
+                <th class="num">Comisión generada</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (s of filtered(); track s.id) {
+                <tr [class.row--inactive]="!s.is_active">
+                  <td>
+                    <div class="who">
+                      <app-avatar [name]="s.full_name" [size]="36" />
+                      <div class="who__info">
+                        <strong>{{ s.full_name }}</strong>
+                        @if (s.default_commission) {
+                          <small class="muted">
+                            Default: {{ '$' + fmt(s.default_commission) }} / boleta
+                          </small>
+                        }
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="contact">
+                      <small>{{ s.email }}</small>
+                      @if (s.phone) { <small class="muted">{{ s.phone }}</small> }
+                    </div>
+                  </td>
+                  <td class="num">
+                    <strong>{{ s.assigned_tickets }}</strong>
+                  </td>
+                  <td class="num">
+                    <strong>{{ s.paid_tickets }}</strong>
+                  </td>
+                  <td class="num">
+                    <strong class="money">{{ '$' + fmt(s.commission_total) }}</strong>
+                    @if (s.commission_pending > 0) {
+                      <small class="pending">
+                        Pendiente: {{ '$' + fmt(s.commission_pending) }}
+                      </small>
+                    }
+                  </td>
+                  <td>
+                    <app-chip [tone]="s.is_active ? 'accent' : 'danger'">
+                      {{ s.is_active ? 'Activo' : 'Inactivo' }}
+                    </app-chip>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
         </div>
       }
     </div>
@@ -83,6 +120,7 @@ import {
       [open]="modalOpen()"
       title="Crear vendedor"
       subtitle="El vendedor podrá iniciar sesión y reservar boletas para clientes."
+      icon="badge"
       size="md"
       (close)="closeModal()"
     >
@@ -133,8 +171,73 @@ import {
       display: flex; justify-content: space-between;
       align-items: flex-start; gap: var(--s-3); flex-wrap: wrap;
     }
-    .page__head h1 { font-size: 22px; }
+    .page__head h1 { font-size: 22px; margin: 0; }
+    .page__actions {
+      display: flex; gap: var(--s-2); align-items: center; flex-wrap: wrap;
+    }
+    .page__actions .search { min-width: 260px; }
+    .muted { color: var(--text-muted); font-size: 13px; }
 
+    /* ===== Tabla ===== */
+    .table-wrap {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r-lg);
+      overflow: hidden;
+    }
+    .table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+    .table thead th {
+      background: var(--bg-base);
+      color: var(--text-muted);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 12px var(--s-3);
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    .table tbody td {
+      padding: 14px var(--s-3);
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+    .table tbody tr:last-child td { border-bottom: 0; }
+    .table tbody tr { transition: background var(--t-fast); }
+    .table tbody tr:hover { background: var(--accent-soft); }
+    .table tbody tr.row--inactive { opacity: 0.55; }
+
+    .table .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .table .num strong { font-size: 14px; color: var(--text); font-weight: 700; }
+    .money { color: var(--accent); }
+    .pending {
+      display: block;
+      font-size: 11px;
+      color: var(--warning);
+      margin-top: 2px;
+    }
+
+    .who { display: flex; align-items: center; gap: var(--s-2); min-width: 180px; }
+    .who__info { display: grid; gap: 2px; min-width: 0; }
+    .who__info strong { font-size: 14px; color: var(--text); }
+    .who__info small { font-size: 11px; }
+
+    .contact { display: grid; gap: 2px; min-width: 0; }
+    .contact small { font-size: 12px; }
+    .contact small:first-child { color: var(--text); }
+
+    @media (max-width: 720px) {
+      .table-wrap { overflow-x: auto; }
+      .table { min-width: 760px; }
+      .page__actions .search { min-width: 0; flex: 1; }
+    }
+
+    /* ===== Modal form ===== */
     .form { display: grid; gap: var(--s-4); }
     .form__row { display: grid; grid-template-columns: 1fr; gap: var(--s-3); }
     @media (min-width: 540px) {
@@ -148,60 +251,6 @@ import {
       border-radius: var(--r-md);
       font-size: 13px;
     }
-
-    .list { display: grid; gap: var(--s-2); }
-    .seller {
-      background: var(--bg-surface);
-      border: 1px solid var(--border);
-      border-radius: var(--r-md);
-      padding: var(--s-3);
-      display: grid;
-      grid-template-columns: auto 1.5fr 1fr auto;
-      align-items: center;
-      gap: var(--s-3);
-    }
-    .seller__info { display: grid; gap: 2px; min-width: 0; }
-    .seller__info strong { font-size: 14px; color: var(--text); }
-
-    .seller__stats {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: var(--s-2);
-      padding: 0 var(--s-3);
-      border-left: 1px solid var(--border);
-      border-right: 1px solid var(--border);
-    }
-    .stat { display: grid; gap: 2px; }
-    .stat__label { font-size: 11px; letter-spacing: 0.04em; color: var(--text-muted); text-transform: uppercase; }
-    .stat strong { font-size: 16px; color: var(--text); font-variant-numeric: tabular-nums; }
-    .stat__money { color: var(--accent); }
-    .stat__pending {
-      grid-column: 1 / -1;
-      font-size: 11px;
-      color: var(--warning);
-      margin-top: 2px;
-    }
-
-    .seller__meta { display: grid; gap: 4px; text-align: right; }
-
-    @media (max-width: 720px) {
-      .seller {
-        grid-template-columns: auto 1fr;
-        grid-template-areas:
-          'avatar info'
-          'stats  stats'
-          'meta   meta';
-      }
-      .seller > app-avatar { grid-area: avatar; }
-      .seller__info { grid-area: info; }
-      .seller__stats {
-        grid-area: stats;
-        border: 1px solid var(--border);
-        border-radius: var(--r-md);
-        padding: var(--s-2);
-      }
-      .seller__meta { grid-area: meta; text-align: left; flex-direction: row; display: flex; gap: var(--s-2); align-items: center; flex-wrap: wrap; }
-    }
   `],
 })
 export class SellersComponent implements OnInit {
@@ -213,6 +262,17 @@ export class SellersComponent implements OnInit {
   saving = signal(false);
   error = signal<string | null>(null);
   sellers = signal<SellerSummary[]>([]);
+  searchQuery = '';
+
+  readonly filtered = computed(() => {
+    const q = this.searchQuery.trim().toLowerCase();
+    if (!q) return this.sellers();
+    return this.sellers().filter((s) =>
+      s.full_name.toLowerCase().includes(q) ||
+      s.email.toLowerCase().includes(q) ||
+      (s.phone?.toLowerCase().includes(q) ?? false),
+    );
+  });
 
   form: { full_name: string; email: string; phone?: string; password: string; default_commission?: number } = {
     full_name: '', email: '', phone: '', password: '', default_commission: undefined,
