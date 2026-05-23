@@ -49,7 +49,7 @@ import {
           </defs>
         </svg>
 
-        <!-- Balón principal — entra desde el borde derecho, parcialmente fuera -->
+        <!-- Balón principal — asoma desde el borde superior derecho del hero -->
         <svg class="wc-ball wc-ball--main" viewBox="0 0 100 100">
           <circle cx="50" cy="50" r="46" fill="url(#wcBallShade)" stroke="#1a1a1a" stroke-width="1.5"/>
           <polygon points="50,22 62,32 58,46 42,46 38,32" fill="#1a1a1a"/>
@@ -61,7 +61,7 @@ import {
         </svg>
 
         @if (mode() === 'hero') {
-          <!-- Balón secundario pequeño en medio-derecha -->
+          <!-- Balón mediano — asoma desde el borde derecho del hero -->
           <svg class="wc-ball wc-ball--small" viewBox="0 0 100 100">
             <circle cx="50" cy="50" r="46" fill="url(#wcBallShade)" stroke="#1a1a1a" stroke-width="1.5"/>
             <polygon points="50,22 62,32 58,46 42,46 38,32" fill="#1a1a1a"/>
@@ -69,13 +69,7 @@ import {
             <polygon points="78,52 67,46 58,55 62,68 74,66" fill="#1a1a1a"/>
           </svg>
 
-          <!-- Balón mini que entra desde el borde derecho -->
-          <svg class="wc-ball wc-ball--mini" viewBox="0 0 100 100">
-            <circle cx="50" cy="50" r="46" fill="#fff" stroke="#1a1a1a" stroke-width="2"/>
-            <polygon points="50,22 62,32 58,46 42,46 38,32" fill="#1a1a1a"/>
-          </svg>
-
-          <!-- Trofeo en esquina inferior derecha -->
+          <!-- Trofeo — asoma desde el borde inferior derecho del hero -->
           <svg class="wc-trophy" viewBox="0 0 64 64">
             <g fill="url(#wcGold)" stroke="#7a4f00" stroke-width="0.8">
               <path d="M22 8h20v4c0 8-3 14-10 16-7-2-10-8-10-16V8z"/>
@@ -87,42 +81,28 @@ import {
             </g>
           </svg>
 
-          <!-- Corneta / vuvuzela entrando angulada desde el borde superior derecho -->
-          <svg class="wc-horn wc-horn--1" viewBox="0 0 220 70">
-            <!-- Tubo -->
-            <rect x="10" y="28" width="130" height="14" rx="3"
-                  fill="url(#wcHorn)" stroke="#5a2e00" stroke-width="1"/>
-            <!-- Campana (bell) -->
-            <polygon points="140,18 215,2 215,68 140,52"
-                     fill="url(#wcHorn)" stroke="#5a2e00" stroke-width="1"/>
-            <!-- Boquilla -->
-            <circle cx="8" cy="35" r="6" fill="#1a1a1a"/>
-            <!-- Highlight -->
-            <rect x="12" y="30" width="125" height="3" fill="rgba(255,255,255,0.35)"/>
-          </svg>
-
-          <!-- Corneta más pequeña entrando angulada desde abajo derecho -->
-          <svg class="wc-horn wc-horn--2" viewBox="0 0 220 70">
-            <rect x="10" y="28" width="130" height="14" rx="3"
-                  fill="url(#wcHorn)" stroke="#5a2e00" stroke-width="1"/>
-            <polygon points="140,18 215,2 215,68 140,52"
-                     fill="url(#wcHorn)" stroke="#5a2e00" stroke-width="1"/>
-            <circle cx="8" cy="35" r="6" fill="#1a1a1a"/>
-            <rect x="12" y="30" width="125" height="3" fill="rgba(255,255,255,0.35)"/>
-          </svg>
-
-          <!-- Confetti decorativos estáticos, solo en lado derecho -->
-          <svg class="wc-confetti-static wc-confetti-static--1" viewBox="0 0 10 10">
-            <polygon points="5,0 10,5 5,10 0,5" fill="#22c55e"/>
-          </svg>
-          <svg class="wc-confetti-static wc-confetti-static--2" viewBox="0 0 10 10">
-            <polygon points="5,0 10,5 5,10 0,5" fill="#ef4444"/>
-          </svg>
-          <svg class="wc-confetti-static wc-confetti-static--3" viewBox="0 0 10 10">
-            <polygon points="5,0 10,5 5,10 0,5" fill="#f59e0b"/>
-          </svg>
-          <svg class="wc-confetti-static wc-confetti-static--4" viewBox="0 0 10 10">
-            <polygon points="5,0 10,5 5,10 0,5" fill="#3b82f6"/>
+          <!-- Vuvuzela rediseñada: cuerpo curvo claramente acampanado, no
+               tubo+triángulo. Asoma angulada desde el borde superior derecho. -->
+          <svg class="wc-horn wc-horn--1" viewBox="0 0 260 90">
+            <!-- Sombra interior de la campana (para dar profundidad) -->
+            <ellipse cx="252" cy="45" rx="3" ry="40" fill="rgba(0,0,0,0.32)"/>
+            <!-- Cuerpo principal de la vuvuzela: tubo delgado curvándose hacia campana acampanada -->
+            <path d="
+              M 18 40
+              L 165 33
+              C 185 30, 200 24, 215 14
+              L 250 4
+              C 256 12, 256 78, 250 86
+              L 215 76
+              C 200 66, 185 60, 165 57
+              L 18 50
+              Z
+            " fill="url(#wcHorn)" stroke="#7a2e00" stroke-width="1.5"/>
+            <!-- Brillo / highlight superior del tubo -->
+            <path d="M 22 36 L 162 32 L 162 35 L 22 39 Z" fill="rgba(255,255,255,0.42)"/>
+            <!-- Boquilla redonda al inicio -->
+            <circle cx="14" cy="45" r="9" fill="#1a1a1a" stroke="#000" stroke-width="0.5"/>
+            <circle cx="14" cy="45" r="4.5" fill="#3a3a3a"/>
           </svg>
         }
       </div>
@@ -173,82 +153,56 @@ import {
       will-change: transform;
     }
 
-    /* Balón GRANDE — asoma DESDE ATRÁS del ticket por su esquina superior
-       izquierda. El ticket (z-index:1) tapa la mitad derecha del balón →
-       efecto de profundidad: el balón emerge del fondo, no del borde. */
+    /* Balones GRANDES, asomando exactamente con la MITAD visible desde los
+       bordes del hero. El host tiene overflow:hidden → el navegador clipea
+       lo que esté fuera de inset:0. Posicionamos con offset negativo igual
+       a la mitad del tamaño para que entren exactamente a la mitad. */
+
+    /* Balón GRANDE asoma desde el borde SUPERIOR derecho. 240px de diámetro,
+       offset top:-120px → exactamente la mitad superior queda fuera del hero. */
     .wc-ball--main {
-      width: 130px; height: 130px;
-      top: 4%; right: 38%;
-      opacity: 0.75;
+      width: 240px; height: 240px;
+      top: -120px; right: 6%;
+      opacity: 0.85;
       animation-delay: 0s;
     }
 
-    /* Balón mediano asoma desde atrás del ticket, esquina inferior derecha. */
+    /* Balón mediano asoma desde el borde DERECHO. 160px, right:-80px →
+       mitad derecha del balón fuera del hero. */
     .wc-ball--small {
-      width: 78px; height: 78px;
-      bottom: 6%; right: 4%;
-      opacity: 0.65;
+      width: 160px; height: 160px;
+      top: 42%; right: -80px;
+      opacity: 0.75;
       animation: wc-float-rev 9s ease-in-out infinite;
     }
 
-    /* Balón mini flotando libre arriba a la derecha del ticket. */
-    .wc-ball--mini {
-      width: 44px; height: 44px;
-      top: 14%; right: 6%;
-      opacity: 0.55;
-      animation: wc-float 11s ease-in-out infinite;
-      animation-delay: 1.5s;
-    }
-
-    /* Trofeo — asoma desde atrás del borde izquierdo del ticket, parte media. */
+    /* Trofeo grande asoma desde el borde INFERIOR derecho. 180px, bottom:-90px. */
     .wc-trophy {
       position: absolute;
-      width: 64px; height: 64px;
-      bottom: 22%; right: 40%;
-      filter: drop-shadow(0 8px 18px rgba(184,122,0,0.4));
+      width: 180px; height: 180px;
+      bottom: -90px; right: 22%;
+      filter: drop-shadow(0 12px 24px rgba(184,122,0,0.5));
       animation: wc-tilt 6s ease-in-out infinite;
-      transform-origin: center bottom;
-      opacity: 0.85;
+      transform-origin: center top;
+      opacity: 0.9;
     }
 
-    /* Cornetas (vuvuzelas) — anguladas, asomando desde detrás del ticket. */
+    /* Vuvuzela grande asoma desde el borde DERECHO, angulada hacia abajo-izq.
+       Posicionada para que el cuerpo del tubo y la boquilla queden ocultos
+       del lado derecho y solo se vea la campana entrando al hero. */
     .wc-horn {
       position: absolute;
-      filter: drop-shadow(0 8px 16px rgba(180,83,9,0.4));
+      filter: drop-shadow(0 10px 20px rgba(180,83,9,0.5));
       will-change: transform;
     }
-    /* Corneta grande asoma desde detrás del lateral izquierdo del ticket,
-       parte media, angulada hacia adentro (-22deg). */
     .wc-horn--1 {
-      --base-rot: -22deg;
-      width: 170px; height: auto;
-      top: 42%; right: 28%;
-      transform: rotate(-22deg);
-      opacity: 0.75;
+      --base-rot: 155deg;
+      width: 260px; height: auto;
+      top: 12%; right: -140px;
+      transform: rotate(155deg);
+      opacity: 0.85;
       animation: wc-horn-sway 5s ease-in-out infinite;
     }
-    /* Corneta más pequeña asoma desde detrás del borde inferior derecho del ticket. */
-    .wc-horn--2 {
-      --base-rot: 18deg;
-      width: 120px; height: auto;
-      bottom: 4%; right: 14%;
-      transform: rotate(18deg);
-      opacity: 0.6;
-      animation: wc-horn-sway 7s ease-in-out infinite;
-      animation-delay: 1s;
-    }
-
-    /* Confetti estático decorativo — todos en mitad derecha. */
-    .wc-confetti-static {
-      position: absolute;
-      width: 11px; height: 11px;
-      animation: wc-spin 5s linear infinite;
-      opacity: 0.65;
-    }
-    .wc-confetti-static--1 { top: 14%; right: 22%; animation-duration: 5s; }
-    .wc-confetti-static--2 { top: 38%; right: 6%; animation-duration: 6s; animation-direction: reverse; }
-    .wc-confetti-static--3 { top: 62%; right: 32%; animation-duration: 4.5s; }
-    .wc-confetti-static--4 { bottom: 18%; right: 24%; animation-duration: 7s; animation-direction: reverse; }
 
     /* Banner mode: solo el balón principal, centrado vertical en el lado derecho.
        Usamos calc() en lugar de transform porque la animación wc-float ya usa
@@ -260,11 +214,8 @@ import {
       opacity: 0.65;
     }
     .wc--banner .wc-ball--small,
-    .wc--banner .wc-ball--mini,
     .wc--banner .wc-trophy,
-    .wc--banner .wc-confetti-static,
-    .wc--banner .wc-horn,
-    .wc--banner .wc-field { display: none; }
+    .wc--banner .wc-horn { display: none; }
 
     /* Corner */
     .wc-corner {
@@ -315,19 +266,16 @@ import {
     }
 
     @media (prefers-reduced-motion: reduce) {
-      .wc-ball, .wc-trophy, .wc-confetti-static, .wc-corner, .wc-horn { animation: none; }
+      .wc-ball, .wc-trophy, .wc-corner, .wc-horn { animation: none; }
     }
 
-    /* En móvil, ocultar algunas decoraciones para no saturar pantallas chicas.
-       Recuerda: en móvil el hero pasa a 1 columna y .hero__art se oculta
-       (display:none en el landing). Así que las decoraciones quedan más
-       libres a la derecha del bloque de texto. */
+    /* En móvil ocultamos decoraciones grandes para no saturar pantallas chicas.
+       En móvil .hero__art se oculta (display:none en landing) y el hero pasa
+       a 1 columna → menos espacio para decoraciones grandes. */
     @media (max-width: 720px) {
-      .wc-ball--small, .wc-ball--mini, .wc-horn--2,
-      .wc-confetti-static--3, .wc-confetti-static--4 { display: none; }
-      .wc-ball--main { width: 90px; height: 90px; top: 4%; right: 8%; }
-      .wc-horn--1 { width: 120px; top: 36%; right: 6%; }
-      .wc-trophy { width: 50px; height: 50px; bottom: 18%; right: 12%; }
+      .wc-ball--small, .wc-horn--1 { display: none; }
+      .wc-ball--main { width: 160px; height: 160px; top: -80px; right: -30px; }
+      .wc-trophy { width: 120px; height: 120px; bottom: -60px; right: 6%; }
     }
 
     @media (max-width: 720px) {
@@ -384,24 +332,36 @@ export class WorldCup2026Component implements AfterViewInit, OnDestroy {
     ctx.scale(dpr, dpr);
 
     const colors = ['#22c55e', '#ef4444', '#f59e0b', '#3b82f6', '#fff', '#ffd95a'];
-    const count = window.innerWidth < 600 ? 80 : 140;
-    const cx = window.innerWidth / 2;
+    // Lluvia continua desde TODO el ancho superior, no solo desde el centro
+    // → efecto "lluvia de confetti" en lugar de "explosión central".
+    const count = window.innerWidth < 600 ? 120 : 220;
     this.particles = Array.from({ length: count }, () => ({
-      x: cx + (Math.random() - 0.5) * 160,
-      y: -20 - Math.random() * 60,
-      vx: (Math.random() - 0.5) * 6,
+      x: Math.random() * window.innerWidth,
+      y: -20 - Math.random() * window.innerHeight * 0.5,
+      vx: (Math.random() - 0.5) * 2.5,
       vy: 2 + Math.random() * 4,
       rot: Math.random() * Math.PI * 2,
-      vr: (Math.random() - 0.5) * 0.2,
-      size: 6 + Math.random() * 6,
+      vr: (Math.random() - 0.5) * 0.25,
+      size: 6 + Math.random() * 8,
       color: colors[Math.floor(Math.random() * colors.length)],
       shape: Math.random() < 0.5 ? 'rect' : 'circle',
     }));
+
+    // Duración total de la lluvia: 5 segundos. El fade arranca a los 3s
+    // para que los primeros segundos se vea fuerte y se desvanece gradual.
+    const TOTAL_DURATION = 5.0;
+    const FADE_START = 3.0;
 
     this.startTs = performance.now();
     const tick = (now: number) => {
       const t = (now - this.startTs) / 1000;
       ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+
+      // Alpha global: 1.0 durante los primeros 3s, luego fade lineal a 0
+      // entre 3s y 5s → desaparece degradado.
+      const alpha = t < FADE_START
+        ? 1
+        : Math.max(0, 1 - (t - FADE_START) / (TOTAL_DURATION - FADE_START));
 
       for (const p of this.particles) {
         p.vy += 0.08; // gravedad
@@ -414,7 +374,7 @@ export class WorldCup2026Component implements AfterViewInit, OnDestroy {
         ctx.translate(p.x, p.y);
         ctx.rotate(p.rot);
         ctx.fillStyle = p.color;
-        ctx.globalAlpha = Math.max(0, 1 - t / 3.5);
+        ctx.globalAlpha = alpha;
         if (p.shape === 'rect') {
           ctx.fillRect(-p.size / 2, -p.size / 4, p.size, p.size / 2);
         } else {
@@ -425,7 +385,7 @@ export class WorldCup2026Component implements AfterViewInit, OnDestroy {
         ctx.restore();
       }
 
-      if (t < 3.5) {
+      if (t < TOTAL_DURATION) {
         this.rafId = requestAnimationFrame(tick);
       } else {
         // limpiar canvas al terminar
