@@ -98,6 +98,15 @@
 }
 .profile-menu__item:hover { background: var(--bg-hover); }
 .profile-menu__item .material-icons { font-size: 18px; color: var(--text-muted); }
+.profile-menu__version {
+  padding: 10px var(--s-3);
+  border-top: 1px solid var(--border);
+  font-size: 11px;
+  color: var(--text-faint);
+  text-align: center;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+}
 
 .profile-backdrop {
   position: fixed; inset: 0;

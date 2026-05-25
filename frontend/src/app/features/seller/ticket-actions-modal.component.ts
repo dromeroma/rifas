@@ -647,16 +647,31 @@ export class TicketActionsModalComponent {
     try {
       const blob = await this.capture.capturePng(t, r);
       const text = this.buildWhatsappMessage();
-      const usedNative = await this.shareSvc.shareImage(blob, `boleta-${t.code}.png`, {
+      const result = await this.shareSvc.shareImage(blob, `boleta-${t.code}.png`, {
         title: `Boleta ${t.number_label}`,
         text,
         fallbackWhatsAppText: text,
         toPhone: t.customer?.phone || undefined,
       });
-      if (usedNative) {
-        this.toast.success('Boleta compartida', 'Elige a quién enviársela.');
-      } else {
-        this.toast.info('Imagen descargada', 'Adjúntala en WhatsApp donde se abrió la conversación.');
+      switch (result) {
+        case 'native':
+          this.toast.success('Boleta lista para compartir', 'Selecciona el chat donde enviarla.');
+          break;
+        case 'clipboard':
+          this.toast.success(
+            'Imagen copiada al portapapeles',
+            'WhatsApp Web se abrió. Pega la imagen con Ctrl+V en el chat.',
+          );
+          break;
+        case 'download':
+          this.toast.info(
+            'Imagen descargada',
+            'Adjúntala manualmente en el chat de WhatsApp que se abrió.',
+          );
+          break;
+        case 'cancelled':
+          // Usuario canceló el share nativo — no decimos nada.
+          break;
       }
     } catch {
       this.toast.error('No se pudo generar la imagen', 'Intenta de nuevo.');
