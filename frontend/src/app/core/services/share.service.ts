@@ -9,10 +9,10 @@ function normalizePhone(phone: string): string {
 }
 
 export type ShareImageResult =
-  | 'native'        // Web Share API con archivos → la imagen va con el mensaje (mejor caso, móvil)
-  | 'clipboard'     // Imagen copiada al portapapeles → usuario la pega en WhatsApp Web (Ctrl+V)
-  | 'download'      // Imagen descargada → usuario la adjunta manualmente
-  | 'cancelled';    // Usuario canceló el share nativo (AbortError)
+  | 'native'        // Web Share API: la imagen viajó al chat
+  | 'clipboard'     // Imagen en clipboard → user pega con Ctrl+V
+  | 'download'      // Solo descarga → user adjunta manualmente
+  | 'cancelled';    // User canceló el share sheet
 
 @Injectable({ providedIn: 'root' })
 export class ShareService {
@@ -29,18 +29,24 @@ export class ShareService {
   }
 
   /**
-   * Comparte una imagen + texto. Estrategia robusta para asegurar que la
-   * imagen SIEMPRE llegue al cliente, no solo el texto:
+   * Comparte una imagen por el camino MÁS RELIABLE posible.
    *
-   *   1) Web Share API con archivos (móviles Android/iOS modernos): es el
-   *      camino ideal — la imagen y el texto viajan juntos al chat
-   *      seleccionado en WhatsApp.
-   *   2) Clipboard API (desktop Chrome/Edge): copia la imagen al
-   *      portapapeles para que el usuario haga Ctrl+V en WhatsApp Web.
-   *   3) Download fallback: descarga la imagen para que el usuario la
-   *      adjunte manualmente al chat que se abre.
+   * Limitación real de la web: navigator.share({files, text}) en Android
+   * y WhatsApp NO garantiza que ambas cosas lleguen — WhatsApp suele
+   * elegir una y descarta la otra silenciosamente. Por eso aquí
+   * separamos las jugadas:
    *
-   * Pase lo que pase, abre WhatsApp con el texto pre-armado.
+   *   1) Copiamos el texto al portapapeles (para que el usuario lo
+   *      pegue como caption / mensaje de seguimiento).
+   *   2) Disparamos navigator.share con SOLO el archivo de imagen
+   *      (sin text/title que confundan a WhatsApp). Esto es lo único
+   *      que garantiza que la foto llegue al chat seleccionado.
+   *   3) Si Web Share no está disponible (desktop), intentamos copiar
+   *      la imagen al clipboard como ClipboardItem para que el usuario
+   *      la pegue con Ctrl+V en WhatsApp Web.
+   *   4) Siempre, como red de seguridad, descargamos el archivo.
+   *
+   * El caller usa el `text` para decidir el toast y guiar al usuario.
    */
   async shareImage(blob: Blob, filename: string, options: {
     title?: string;
@@ -50,38 +56,40 @@ export class ShareService {
   } = {}): Promise<ShareImageResult> {
     const file = new File([blob], filename, { type: blob.type || 'image/png' });
     const text = options.text || '';
-    const phone = options.toPhone ? normalizePhone(options.toPhone) : '';
-    const waUrl = phone
-      ? `https://wa.me/${phone}?text=${encodeURIComponent(options.fallbackWhatsAppText || text)}`
-      : `https://wa.me/?text=${encodeURIComponent(options.fallbackWhatsAppText || text)}`;
 
-    // === 1) Web Share API con archivos ===
-    // Intentamos siempre que navigator.share exista. canShare puede dar
-    // false positives/negatives — preferimos intentar y capturar el error.
+    // 1) Pre-cargamos el texto en el portapapeles ANTES del share. Tiene que
+    //    ser antes de la acción "user gesture" porque algunos navegadores
+    //    pierden el permiso de clipboard cuando se abre el share sheet.
+    if (text) {
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(text);
+        }
+      } catch {
+        // ignorar — no es bloqueante
+      }
+    }
+
+    // 2) Web Share API con archivo SOLAMENTE (sin text/title) para que
+    //    WhatsApp no se confunda y mande la imagen sí o sí.
     if (typeof navigator !== 'undefined' && 'share' in navigator) {
-      const shareData: ShareData = {
-        title: options.title || 'Boleta',
-        text,
-        files: [file],
-      };
+      const fileOnlyData: ShareData = { files: [file] };
       const nav = navigator as Navigator & { canShare?: (data: ShareData) => boolean };
-      const canShareFiles = !nav.canShare || nav.canShare(shareData);
+      const canShareFiles = !nav.canShare || nav.canShare(fileOnlyData);
       if (canShareFiles) {
         try {
-          await navigator.share(shareData);
+          await navigator.share(fileOnlyData);
           return 'native';
         } catch (e: unknown) {
           const err = e as { name?: string };
           if (err?.name === 'AbortError') return 'cancelled';
-          // Si no es AbortError, caemos al fallback de clipboard/download.
+          // Otro error → caemos al fallback clipboard/download
         }
       }
     }
 
-    // === 2) Clipboard API (escritorio moderno) ===
-    // ClipboardItem soporta image/png en Chrome 76+, Edge 79+, Safari 13.1+.
-    // Si el navegador lo soporta, copiamos la imagen → el usuario solo
-    // tiene que hacer Ctrl+V en el chat de WhatsApp Web que abrimos.
+    // 3) Fallback desktop: copia la imagen al clipboard como ClipboardItem
+    //    + abre WhatsApp Web con el texto pre-cargado.
     let usedClipboard = false;
     try {
       if (
@@ -94,14 +102,18 @@ export class ShareService {
         usedClipboard = true;
       }
     } catch {
-      // Falla común: la página debe estar enfocada y el browser puede bloquear.
       usedClipboard = false;
     }
 
-    // === 3) Download como respaldo (siempre, así el usuario tiene el archivo) ===
+    // 4) Red de seguridad: siempre dejamos el archivo en el dispositivo.
     this.download(blob, filename);
 
-    // Abrimos WhatsApp con texto pre-cargado.
+    // Abrimos WhatsApp con texto.
+    const phone = options.toPhone ? normalizePhone(options.toPhone) : '';
+    const waText = options.fallbackWhatsAppText || text;
+    const waUrl = phone
+      ? `https://wa.me/${phone}?text=${encodeURIComponent(waText)}`
+      : `https://wa.me/?text=${encodeURIComponent(waText)}`;
     window.open(waUrl, '_blank', 'noopener');
 
     return usedClipboard ? 'clipboard' : 'download';

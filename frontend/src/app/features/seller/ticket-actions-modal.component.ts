@@ -171,9 +171,14 @@ import { ReportPaymentModalComponent } from './report-payment-modal.component';
                 <app-button variant="primary" icon="share" [loading]="sharing()" [full]="true" (click)="shareWhatsApp()">
                   {{ sharing() ? 'Preparando...' : 'Compartir por WhatsApp' }}
                 </app-button>
-                <app-button variant="secondary" icon="download" [loading]="downloadingPdf()" [full]="true" (click)="downloadPdf()">
-                  {{ downloadingPdf() ? 'Descargando...' : 'Descargar PDF' }}
-                </app-button>
+                <div class="share-actions__row">
+                  <app-button variant="secondary" icon="image" [loading]="downloadingImage()" [full]="true" (click)="downloadImage()">
+                    {{ downloadingImage() ? 'Descargando...' : 'Descargar imagen' }}
+                  </app-button>
+                  <app-button variant="secondary" icon="picture_as_pdf" [loading]="downloadingPdf()" [full]="true" (click)="downloadPdf()">
+                    {{ downloadingPdf() ? 'Descargando...' : 'Descargar PDF' }}
+                  </app-button>
+                </div>
               </div>
             }
 
@@ -199,9 +204,14 @@ import { ReportPaymentModalComponent } from './report-payment-modal.component';
                 <app-button variant="primary" icon="share" [loading]="sharing()" [full]="true" (click)="shareWhatsApp()">
                   {{ sharing() ? 'Preparando...' : 'Compartir por WhatsApp' }}
                 </app-button>
-                <app-button variant="secondary" icon="download" [loading]="downloadingPdf()" [full]="true" (click)="downloadPdf()">
-                  {{ downloadingPdf() ? 'Descargando...' : 'Descargar PDF' }}
-                </app-button>
+                <div class="share-actions__row">
+                  <app-button variant="secondary" icon="image" [loading]="downloadingImage()" [full]="true" (click)="downloadImage()">
+                    {{ downloadingImage() ? 'Descargando...' : 'Descargar imagen' }}
+                  </app-button>
+                  <app-button variant="secondary" icon="picture_as_pdf" [loading]="downloadingPdf()" [full]="true" (click)="downloadPdf()">
+                    {{ downloadingPdf() ? 'Descargando...' : 'Descargar PDF' }}
+                  </app-button>
+                </div>
               </div>
             }
 
@@ -338,6 +348,13 @@ import { ReportPaymentModalComponent } from './report-payment-modal.component';
 
     .share-actions {
       display: grid; gap: var(--s-2);
+    }
+    .share-actions__row {
+      display: grid; gap: var(--s-2);
+      grid-template-columns: 1fr 1fr;
+    }
+    @media (max-width: 480px) {
+      .share-actions__row { grid-template-columns: 1fr; }
     }
 
     /* ===== Progreso de pago fraccionado ===== */
@@ -603,6 +620,7 @@ export class TicketActionsModalComponent {
   }
 
   downloadingPdf = signal(false);
+  downloadingImage = signal(false);
   sharing = signal(false);
 
   extendReservation() {
@@ -638,6 +656,24 @@ export class TicketActionsModalComponent {
     }
   }
 
+  async downloadImage() {
+    const t = this.ticket();
+    if (!t) return;
+    this.downloadingImage.set(true);
+    try {
+      const blob = await this.capture.capturePng(t, this.raffle());
+      this.shareSvc.download(blob, `boleta-${t.code}.png`);
+      this.toast.success(
+        'Imagen descargada',
+        `boleta-${t.code}.png guardada en tu dispositivo. Adjúntala en WhatsApp si la imagen no se cargó al compartir.`,
+      );
+    } catch {
+      this.toast.error('No se pudo descargar', 'Intenta de nuevo.');
+    } finally {
+      this.downloadingImage.set(false);
+    }
+  }
+
   async shareWhatsApp() {
     const t = this.ticket();
     const r = this.raffle();
@@ -655,18 +691,21 @@ export class TicketActionsModalComponent {
       });
       switch (result) {
         case 'native':
-          this.toast.success('Boleta lista para compartir', 'Selecciona el chat donde enviarla.');
+          this.toast.success(
+            'Selecciona el chat para enviar la imagen',
+            'El mensaje quedó copiado en tu portapapeles — pégalo después de mandar la foto.',
+          );
           break;
         case 'clipboard':
           this.toast.success(
             'Imagen copiada al portapapeles',
-            'WhatsApp Web se abrió. Pega la imagen con Ctrl+V en el chat.',
+            'WhatsApp Web se abrió con el mensaje. Pega la imagen con Ctrl+V en el chat.',
           );
           break;
         case 'download':
           this.toast.info(
             'Imagen descargada',
-            'Adjúntala manualmente en el chat de WhatsApp que se abrió.',
+            'Adjúntala manualmente en el chat de WhatsApp que se abrió. El mensaje ya está pre-cargado.',
           );
           break;
         case 'cancelled':
