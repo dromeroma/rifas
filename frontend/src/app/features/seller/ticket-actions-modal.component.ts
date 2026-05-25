@@ -698,8 +698,8 @@ export class TicketActionsModalComponent {
       switch (result) {
         case 'native':
           this.toast.success(
-            'Selecciona el chat para enviar la imagen',
-            'El mensaje quedó copiado en tu portapapeles — pégalo después de mandar la foto.',
+            '1) Envía la imagen al cliente',
+            'Apenas la mandes, WhatsApp se abrirá de nuevo con el mensaje listo para enviar.',
           );
           break;
         case 'clipboard':

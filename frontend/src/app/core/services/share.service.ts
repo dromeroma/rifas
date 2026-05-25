@@ -70,8 +70,20 @@ export class ShareService {
       }
     }
 
+    // Prepara los datos para abrir WhatsApp con el texto después de la imagen.
+    const phone = options.toPhone ? normalizePhone(options.toPhone) : '';
+    const waText = options.fallbackWhatsAppText || text;
+    const waUrl = phone
+      ? `https://wa.me/${phone}?text=${encodeURIComponent(waText)}`
+      : `https://wa.me/?text=${encodeURIComponent(waText)}`;
+
     // 2) Web Share API con archivo SOLAMENTE (sin text/title) para que
     //    WhatsApp no se confunda y mande la imagen sí o sí.
+    //
+    //    DESPUÉS de que la imagen se comparta, abrimos un segundo WhatsApp
+    //    con el texto via wa.me. Es la única forma reliable de garantizar
+    //    que ambas cosas lleguen al chat (WhatsApp descarta uno cuando se
+    //    mandan juntos en el mismo navigator.share).
     if (typeof navigator !== 'undefined' && 'share' in navigator) {
       const fileOnlyData: ShareData = { files: [file] };
       const nav = navigator as Navigator & { canShare?: (data: ShareData) => boolean };
@@ -79,6 +91,12 @@ export class ShareService {
       if (canShareFiles) {
         try {
           await navigator.share(fileOnlyData);
+          // Imagen compartida. Ahora disparamos WhatsApp con el texto.
+          // setTimeout difiere el window.open al siguiente tick para
+          // evitar que algunos navegadores lo bloqueen como popup.
+          setTimeout(() => {
+            window.open(waUrl, '_blank', 'noopener');
+          }, 600);
           return 'native';
         } catch (e: unknown) {
           const err = e as { name?: string };
@@ -109,11 +127,6 @@ export class ShareService {
     this.download(blob, filename);
 
     // Abrimos WhatsApp con texto.
-    const phone = options.toPhone ? normalizePhone(options.toPhone) : '';
-    const waText = options.fallbackWhatsAppText || text;
-    const waUrl = phone
-      ? `https://wa.me/${phone}?text=${encodeURIComponent(waText)}`
-      : `https://wa.me/?text=${encodeURIComponent(waText)}`;
     window.open(waUrl, '_blank', 'noopener');
 
     return usedClipboard ? 'clipboard' : 'download';
