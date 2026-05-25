@@ -698,8 +698,8 @@ export class TicketActionsModalComponent {
       switch (result) {
         case 'native':
           this.toast.success(
-            '1) Envía la imagen al cliente',
-            'Apenas la mandes, WhatsApp se abrirá de nuevo con el mensaje listo para enviar.',
+            'Manda la imagen, luego vuelve atrás',
+            'Cuando regreses al navegador, WhatsApp se abre solo con el mensaje listo para enviar.',
           );
           break;
         case 'clipboard':

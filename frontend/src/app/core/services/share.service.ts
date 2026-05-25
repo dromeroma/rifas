@@ -77,13 +77,9 @@ export class ShareService {
       ? `https://wa.me/${phone}?text=${encodeURIComponent(waText)}`
       : `https://wa.me/?text=${encodeURIComponent(waText)}`;
 
-    // 2) Web Share API con archivo SOLAMENTE (sin text/title) para que
-    //    WhatsApp no se confunda y mande la imagen sí o sí.
-    //
-    //    DESPUÉS de que la imagen se comparta, abrimos un segundo WhatsApp
-    //    con el texto via wa.me. Es la única forma reliable de garantizar
-    //    que ambas cosas lleguen al chat (WhatsApp descarta uno cuando se
-    //    mandan juntos en el mismo navigator.share).
+    // 2) Web Share API con archivo SOLAMENTE → la imagen viaja al chat
+    //    de WhatsApp. Como WhatsApp descarta el texto cuando se manda
+    //    junto al archivo, el texto va por una segunda jugada (paso 3).
     if (typeof navigator !== 'undefined' && 'share' in navigator) {
       const fileOnlyData: ShareData = { files: [file] };
       const nav = navigator as Navigator & { canShare?: (data: ShareData) => boolean };
@@ -91,12 +87,15 @@ export class ShareService {
       if (canShareFiles) {
         try {
           await navigator.share(fileOnlyData);
-          // Imagen compartida. Ahora disparamos WhatsApp con el texto.
-          // setTimeout difiere el window.open al siguiente tick para
-          // evitar que algunos navegadores lo bloqueen como popup.
+          // Imagen compartida. Ahora forzamos que la pestaña actual
+          // navegue a wa.me con el texto. Cuando el vendedor regrese
+          // del envío de imagen al navegador, la pestaña YA está
+          // apuntando a WhatsApp con el mensaje listo (a diferencia
+          // de window.open que muchos browsers bloquean como popup).
+          // setTimeout para no interferir con la animación del share.
           setTimeout(() => {
-            window.open(waUrl, '_blank', 'noopener');
-          }, 600);
+            window.location.href = waUrl;
+          }, 800);
           return 'native';
         } catch (e: unknown) {
           const err = e as { name?: string };
