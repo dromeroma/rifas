@@ -164,6 +164,17 @@ import { ReportPaymentModalComponent } from './report-payment-modal.component';
                   }
                 </div>
               }
+
+              <!-- Compartir/Descargar disponible desde el momento de la reserva
+                   para que el cliente sepa sus números asignados. -->
+              <div class="share-actions">
+                <app-button variant="primary" icon="share" [loading]="sharing()" [full]="true" (click)="shareWhatsApp()">
+                  {{ sharing() ? 'Preparando...' : 'Compartir por WhatsApp' }}
+                </app-button>
+                <app-button variant="secondary" icon="download" [loading]="downloadingPdf()" [full]="true" (click)="downloadPdf()">
+                  {{ downloadingPdf() ? 'Descargando...' : 'Descargar PDF' }}
+                </app-button>
+              </div>
             }
 
             <!-- ========= PAGADA / GANADORA: solo info ========= -->
@@ -635,15 +646,12 @@ export class TicketActionsModalComponent {
 
     try {
       const blob = await this.capture.capturePng(t, r);
-      const customer = t.customer?.full_name ?? '';
-      const paidLine = t.status === 'paid' || t.status === 'winning' ? '✅ PAGADA · ' : '';
-      const verifyUrl = `${window.location.origin}/verify/${t.code}`;
-      const text = `${paidLine}Boleta ${t.number_label} de "${r.name}"${customer ? ' · ' + customer : ''}\nVerifica autenticidad: ${verifyUrl}`;
-
+      const text = this.buildWhatsappMessage();
       const usedNative = await this.shareSvc.shareImage(blob, `boleta-${t.code}.png`, {
         title: `Boleta ${t.number_label}`,
         text,
         fallbackWhatsAppText: text,
+        toPhone: t.customer?.phone || undefined,
       });
       if (usedNative) {
         this.toast.success('Boleta compartida', 'Elige a quién enviársela.');
@@ -655,6 +663,103 @@ export class TicketActionsModalComponent {
     } finally {
       this.sharing.set(false);
     }
+  }
+
+  /**
+   * Construye el mensaje completo de WhatsApp con: encabezado según estado,
+   * números asignados, sorteos en los que participa (1 por premio × N números),
+   * total de oportunidades, contacto del vendedor y del responsable, y URL de
+   * verificación pública. Diseñado para que cualquier persona, sin importar
+   * el nivel educativo, entienda exactamente qué tiene en sus manos.
+   */
+  private buildWhatsappMessage(): string {
+    const t = this.ticket()!;
+    const r = this.raffle();
+    const firstName = (t.customer?.full_name ?? '').split(' ')[0] || 'Hola';
+    const verifyUrl = `${window.location.origin}/verify/${t.code}`;
+
+    const status = t.status;
+    let header = '';
+    if (status === 'paid' || status === 'winning') {
+      header = '✅ *BOLETA PAGADA Y CONFIRMADA*';
+    } else if (status === 'partially_paid') {
+      header = '🟦 *BOLETA RESERVADA — Pago parcial registrado*';
+    } else {
+      header = '🎟️ *TU BOLETA QUEDÓ RESERVADA*';
+    }
+
+    // Números ordenados, en filas de 5 para que se lean bien
+    const nums = [...t.numbers]
+      .sort((a, b) => a.position - b.position)
+      .map((n) => n.number);
+    const rows: string[] = [];
+    for (let i = 0; i < nums.length; i += 5) {
+      rows.push(nums.slice(i, i + 5).join(' · '));
+    }
+    const numbersBlock = rows.join('\n');
+
+    // Sorteos: 1 sorteo por premio × N números de la boleta
+    const prizes = [...(r.prizes ?? [])].sort((a, b) => a.position - b.position);
+    const perTicket = r.numbers_per_ticket || nums.length;
+    const sorteosLines = prizes.map((p) => {
+      const date = this.formatDate(p.draw_date);
+      return `✅ ${perTicket} números para ganar el *${p.name}* — sorteo ${date}`;
+    });
+    const totalOps = perTicket * prizes.length;
+
+    // Contactos: vendedor (quien reservó) + responsable de la rifa
+    const sellerName = t.seller?.full_name ?? '';
+    const sellerPhone = t.seller?.phone ?? '';
+    const respName = r.responsible_name ?? '';
+    const respPhone = r.responsible_phone ?? '';
+
+    const contactLines: string[] = [];
+    if (sellerName) {
+      contactLines.push(
+        sellerPhone
+          ? `🧑‍💼 *Vendedor:* ${sellerName} — ${sellerPhone}`
+          : `🧑‍💼 *Vendedor:* ${sellerName}`,
+      );
+    }
+    if (respName) {
+      contactLines.push(
+        respPhone
+          ? `📞 *Responsable de la rifa:* ${respName} — ${respPhone}`
+          : `📞 *Responsable de la rifa:* ${respName}`,
+      );
+    }
+
+    // Armado final
+    return [
+      header,
+      '',
+      `Hola *${firstName}*, esta es tu boleta oficial de la rifa *"${r.name}"*.`,
+      '',
+      `🎫 *Boleta N° ${t.number_label}*`,
+      `🔐 Código: ${t.code}`,
+      '',
+      `🔢 *Tus ${nums.length} números asignados:*`,
+      numbersBlock,
+      '',
+      `🏆 *Con esta boleta participas en TODOS los sorteos:*`,
+      ...sorteosLines,
+      '',
+      `🎯 En total tienes *${totalOps} oportunidades de ganar* con esta sola boleta.`,
+      ...(contactLines.length ? ['', ...contactLines] : []),
+      '',
+      `✅ Verifica que tu boleta es auténtica aquí:`,
+      verifyUrl,
+    ].join('\n');
+  }
+
+  /** Convierte "2026-07-01" → "01 jul 2026" (siempre legible en español). */
+  private formatDate(iso: string): string {
+    if (!iso) return '';
+    const d = new Date(iso + 'T00:00:00');
+    if (isNaN(d.getTime())) return iso;
+    const day = String(d.getDate()).padStart(2, '0');
+    const months = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+    return `${day} ${months[d.getMonth()]} ${d.getFullYear()}`;
   }
 
   onClose() { this.close.emit(); }
