@@ -688,19 +688,13 @@ export class TicketActionsModalComponent {
       header = '🎟️ *TU BOLETA QUEDÓ RESERVADA*';
     }
 
-    // Números ordenados, en filas de 5 para que se lean bien
-    const nums = [...t.numbers]
-      .sort((a, b) => a.position - b.position)
-      .map((n) => n.number);
-    const rows: string[] = [];
-    for (let i = 0; i < nums.length; i += 5) {
-      rows.push(nums.slice(i, i + 5).join(' · '));
-    }
-    const numbersBlock = rows.join('\n');
+    // Los números van en la IMAGEN adjunta, no en el texto, para evitar
+    // duplicación y mantener el mensaje legible.
+    const numCount = t.numbers.length;
 
     // Sorteos: 1 sorteo por premio × N números de la boleta
     const prizes = [...(r.prizes ?? [])].sort((a, b) => a.position - b.position);
-    const perTicket = r.numbers_per_ticket || nums.length;
+    const perTicket = r.numbers_per_ticket || numCount;
     const sorteosLines = prizes.map((p) => {
       const date = this.formatDate(p.draw_date);
       return `✅ ${perTicket} números para ganar el *${p.name}* — sorteo ${date}`;
@@ -738,8 +732,7 @@ export class TicketActionsModalComponent {
       `🎫 *Boleta N° ${t.number_label}*`,
       `🔐 Código: ${t.code}`,
       '',
-      `🔢 *Tus ${nums.length} números asignados:*`,
-      numbersBlock,
+      `📸 Tus *${numCount} números asignados* están en la imagen adjunta.`,
       '',
       `🏆 *Con esta boleta participas en TODOS los sorteos:*`,
       ...sorteosLines,
