@@ -77,4 +77,24 @@
       </ul>
     </div>
   </footer>
+
+  <!-- Banda inferior con oportunidades totales + contacto responsable
+       (toda la info importante queda DENTRO de la imagen). -->
+  <section class="ticket__summary">
+    <div class="ticket__summary-main">
+      🎯 <strong>{{ totalOpportunities() }} oportunidades</strong> de ganar
+    </div>
+    @if (responsibleName() || responsiblePhone()) {
+      <div class="ticket__summary-contact">
+        📞 Responsable:
+        @if (responsibleName()) { <strong>{{ responsibleName() }}</strong> }
+        @if (responsiblePhone()) { · {{ responsiblePhone() }} }
+      </div>
+    }
+    @if (verifyUrl()) {
+      <div class="ticket__summary-verify">
+        ✓ Verifica en: {{ verifyUrl() }}
+      </div>
+    }
+  </section>
 </article>

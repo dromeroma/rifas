@@ -31,6 +31,17 @@ export class TicketDesignComponent {
   readonly primaryColor = input<string>('#1b8b3b');
   readonly qrImageUrl = input<string | null>(null);
   readonly verifyUrl = input<string | null>(null);
+  /** Nombre del responsable de la rifa (aparece en banda inferior del ticket). */
+  readonly responsibleName = input<string | null>(null);
+  /** Teléfono del responsable de la rifa. */
+  readonly responsiblePhone = input<string | null>(null);
+
+  /** N° de sorteos × N° de números por boleta. */
+  readonly totalOpportunities = computed(() => {
+    const numbers = this.ticket().numbers?.length ?? 0;
+    const prizesCount = this.prizes().length || 1;
+    return numbers * prizesCount;
+  });
 
   /** Devuelve los 20 números ordenados por position. */
   readonly orderedNumbers = computed(() =>

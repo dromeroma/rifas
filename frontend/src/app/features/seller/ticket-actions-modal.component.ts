@@ -46,6 +46,9 @@ import { ReportPaymentModalComponent } from './report-payment-modal.component';
               [raffleName]="raffle().name"
               [prizes]="raffle().prizes"
               [primaryColor]="raffle().primary_color || '#1e8e54'"
+              [responsibleName]="raffle().responsible_name ?? null"
+              [responsiblePhone]="raffle().responsible_phone ?? null"
+              [verifyUrl]="origin + '/verify/' + t.code"
             />
             <div class="preview__status">
               <app-chip [tone]="statusTone(t.status)">{{ statusLabel(t.status) }}</app-chip>
@@ -415,6 +418,9 @@ export class TicketActionsModalComponent {
   });
 
   readonly ticketPrice = computed(() => Number(this.raffle().ticket_price) || 0);
+
+  /** Origin del browser (https://rifas.vercel.app), usado para armar el verify URL. */
+  readonly origin = typeof window !== 'undefined' ? window.location.origin : '';
 
   /** Monto ya pagado (suma de cuotas confirmadas). */
   readonly paidAmount = computed(() => Number(this.ticket()?.paid_amount ?? 0));

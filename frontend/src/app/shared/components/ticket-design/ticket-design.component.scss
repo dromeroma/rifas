@@ -198,6 +198,41 @@
   }
 }
 
+/* Banda inferior con resumen — todo lo crítico va en la imagen para que
+   sea autosuficiente cuando se comparte por WhatsApp (no depende de
+   que el vendedor pegue texto extra). */
+.ticket__summary {
+  background: var(--ticket-border);
+  color: #fff;
+  padding: 10px 14px;
+  display: grid;
+  gap: 4px;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 11px;
+  line-height: 1.35;
+  text-align: center;
+}
+.ticket__summary-main {
+  font-size: 13px;
+}
+.ticket__summary-main strong {
+  font-weight: 800;
+  color: #ffd95a;
+}
+.ticket__summary-contact {
+  font-size: 11px;
+  opacity: 0.95;
+}
+.ticket__summary-contact strong {
+  font-weight: 700;
+}
+.ticket__summary-verify {
+  font-size: 9.5px;
+  opacity: 0.75;
+  word-break: break-all;
+  letter-spacing: 0.01em;
+}
+
 @media (max-width: 360px) {
   .ticket { width: 100%; }
 }

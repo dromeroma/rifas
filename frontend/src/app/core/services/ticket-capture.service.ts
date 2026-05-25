@@ -101,6 +101,10 @@ export class TicketCaptureService {
         'verifyUrl',
         `${window.location.origin}/verify/${ticket.code}`,
       );
+      // Contacto del responsable de la rifa → va en la banda inferior del
+      // ticket-design para que la imagen sea autosuficiente al compartir.
+      compRef.setInput('responsibleName', raffle.responsible_name ?? null);
+      compRef.setInput('responsiblePhone', raffle.responsible_phone ?? null);
 
       this.appRef.attachView(compRef.hostView);
       compRef.changeDetectorRef.detectChanges();
