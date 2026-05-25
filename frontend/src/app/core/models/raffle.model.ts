@@ -79,6 +79,8 @@ export interface RaffleUpdatePayload {
   responsible_phone?: string | null;
   responsible_email?: string | null;
   terms?: string | null;
+  /** Tramos escalonados de comisión. Editable después de crear la rifa. */
+  commission_tiers?: CommissionTier[];
 }
 
 export type TicketStatus =

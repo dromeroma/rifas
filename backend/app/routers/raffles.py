@@ -167,7 +167,11 @@ async def update_raffle(
             if getattr(payload, k) is not None:
                 raise ImmutableRaffleError(f"no se puede modificar '{k}' tras generar números")
 
-    for field, value in payload.model_dump(exclude_unset=True).items():
+    # commission_tiers se serializa explícitamente con mode='json' para que
+    # Decimal/Date se conviertan a primitivos JSON serializables (la columna
+    # commission_tiers es JSONB).
+    data = payload.model_dump(exclude_unset=True, mode="json")
+    for field, value in data.items():
         setattr(raffle, field, value)
 
     await log_action(

@@ -111,7 +111,12 @@ import { TicketActionsModalComponent } from '../seller/ticket-actions-modal.comp
 
         <!-- Comisión escalonada (si la rifa la usa) -->
         @if (r.commission_tiers && r.commission_tiers.length) {
-          <app-card title="Comisión escalonada" subtitle="Inmutable · aplica al total de boletas vendidas por cada vendedor">
+          <app-card title="Comisión escalonada" subtitle="Aplica al total de boletas vendidas por cada vendedor">
+            <div slot="actions">
+              <app-button variant="secondary" size="sm" icon="edit" (click)="openTiersModal(r)">
+                Editar tramos
+              </app-button>
+            </div>
             <div class="tiers-grid">
               @for (t of r.commission_tiers; track t.from_count) {
                 <div class="tier-pill">
@@ -131,6 +136,72 @@ import { TicketActionsModalComponent } from '../seller/ticket-actions-modal.comp
             </p>
           </app-card>
         }
+
+        <!-- Modal de edición de tramos -->
+        <app-modal
+          [open]="tiersModalOpen()"
+          title="Editar tramos de comisión"
+          subtitle="Cambia los topes y los montos por boleta. Afecta los cálculos futuros."
+          icon="stairs"
+          size="md"
+          (close)="closeTiersModal()"
+        >
+          <form class="tiers-form">
+            @for (t of tiersEdit; track $index; let i = $index; let last = $last) {
+              <div class="tier-edit-row">
+                <div class="tier-edit-range">
+                  <app-input label="Desde (boletas)" type="number" inputmode="numeric"
+                              [ngModel]="t.from_count"
+                              (ngModelChange)="updateTierFromAt(i, $event)"
+                              [name]="'tedit_from_' + i" icon="south" />
+                  @if (!last) {
+                    <app-input label="Hasta (boletas)" type="number" inputmode="numeric"
+                                [ngModel]="t.to_count"
+                                (ngModelChange)="updateTierToAt(i, $event)"
+                                [name]="'tedit_to_' + i" icon="north" />
+                  } @else {
+                    <div class="tier-edit-open">
+                      <span class="material-icons">all_inclusive</span>
+                      <span>Sin límite superior</span>
+                    </div>
+                  }
+                </div>
+                <app-input label="Pesos por boleta (COP)" type="number" inputmode="numeric"
+                            [(ngModel)]="t.amount_per_ticket"
+                            [name]="'tedit_amt_' + i" icon="payments" />
+                @if (tiersEdit.length > 1) {
+                  <button type="button" class="tier-edit-del" (click)="removeTierAt(i)" aria-label="Eliminar">
+                    <span class="material-icons">close</span>
+                  </button>
+                }
+              </div>
+            }
+            <app-button variant="secondary" size="sm" icon="add" (click)="addTierRow()">
+              Agregar tramo
+            </app-button>
+
+            @if (tiersError()) {
+              <div class="alert">
+                <span class="material-icons">error_outline</span>{{ tiersError() }}
+              </div>
+            }
+
+            <div class="tiers-warn">
+              <span class="material-icons">info</span>
+              <span>
+                Los cambios afectan los cálculos a partir del próximo pago confirmado.
+                Las comisiones ya generadas no se modifican retroactivamente.
+              </span>
+            </div>
+          </form>
+
+          <ng-container slot="footer">
+            <app-button variant="secondary" (click)="closeTiersModal()">Cancelar</app-button>
+            <app-button variant="primary" icon="check" [loading]="savingTiers()" (click)="saveTiers()">
+              {{ savingTiers() ? 'Guardando...' : 'Guardar tramos' }}
+            </app-button>
+          </ng-container>
+        </app-modal>
 
         <!-- Premios y fechas de sorteo -->
         <app-card title="Premios" [subtitle]="r.prizes.length + ' premio(s) configurados'">
@@ -515,6 +586,52 @@ import { TicketActionsModalComponent } from '../seller/ticket-actions-modal.comp
     }
     .tier-pill strong .muted { color: var(--text-muted); font-weight: 400; font-size: 12px; }
 
+    /* ===== Modal Editar tramos ===== */
+    .tiers-form { display: grid; gap: var(--s-3); }
+    .tier-edit-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr auto;
+      gap: var(--s-3);
+      align-items: end;
+      padding: var(--s-3);
+      background: var(--bg-base);
+      border: 1px solid var(--border);
+      border-radius: var(--r-md);
+    }
+    .tier-edit-range { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-3); }
+    .tier-edit-open {
+      display: flex; align-items: center; gap: 6px;
+      color: var(--text-muted); font-size: 12px;
+      padding: 0 var(--s-3);
+      height: var(--h-input);
+    }
+    .tier-edit-open .material-icons { font-size: 18px; }
+    .tier-edit-del {
+      width: 36px; height: 36px;
+      display: grid; place-items: center;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text-muted);
+      border-radius: var(--r-md);
+      cursor: pointer;
+    }
+    .tier-edit-del:hover { color: var(--danger); border-color: var(--danger); background: var(--danger-soft); }
+    .tier-edit-del .material-icons { font-size: 18px; }
+
+    .tiers-warn {
+      display: flex; gap: 8px; align-items: flex-start;
+      padding: var(--s-3);
+      background: var(--info-soft); color: var(--info);
+      border-radius: var(--r-md);
+      font-size: 13px;
+    }
+    .tiers-warn .material-icons { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+
+    @media (max-width: 540px) {
+      .tier-edit-row { grid-template-columns: 1fr; }
+      .tier-edit-range { grid-template-columns: 1fr 1fr; }
+    }
+
     .prizes-list { list-style: none; padding: 0; margin: 0; display: grid; gap: var(--s-2); }
     .prize-item {
       display: grid;
@@ -744,6 +861,12 @@ export class RaffleDetailComponent implements OnInit {
   drawing = signal(false);
   draw = { prize_id: 0, winning_number: '' };
   drawResult = signal<DrawWinnerResult | null>(null);
+
+  // Editar tramos de comisión escalonada (post-creación)
+  tiersModalOpen = signal(false);
+  savingTiers = signal(false);
+  tiersError = signal<string | null>(null);
+  tiersEdit: { from_count: number; to_count: number | null; amount_per_ticket: number }[] = [];
 
   // Editar rifa
   editOpen = signal(false);
@@ -977,6 +1100,114 @@ export class RaffleDetailComponent implements OnInit {
       error: (e) => {
         this.savingEdit.set(false);
         this.toast.error('No se pudo guardar', e?.error?.detail ?? 'Intenta de nuevo.');
+      },
+    });
+  }
+
+  // ============ Edición de tramos de comisión escalonada ============
+
+  openTiersModal(r: Raffle) {
+    // Clonamos los tramos actuales para edición; el guardado los sobreescribe.
+    this.tiersEdit = (r.commission_tiers ?? []).map((t) => ({
+      from_count: Number(t.from_count),
+      to_count: t.to_count == null ? null : Number(t.to_count),
+      amount_per_ticket: Number(t.amount_per_ticket),
+    }));
+    if (this.tiersEdit.length === 0) {
+      this.tiersEdit.push({ from_count: 1, to_count: null, amount_per_ticket: 3000 });
+    }
+    // El último tramo siempre queda abierto (to_count: null).
+    this.tiersEdit[this.tiersEdit.length - 1].to_count = null;
+    this.tiersError.set(null);
+    this.tiersModalOpen.set(true);
+  }
+
+  closeTiersModal() { this.tiersModalOpen.set(false); }
+
+  addTierRow() {
+    const last = this.tiersEdit[this.tiersEdit.length - 1];
+    if (last) {
+      const lastFrom = Number(last.from_count) || 1;
+      const lastTo = last.to_count != null ? Number(last.to_count) : lastFrom + 19;
+      last.to_count = lastTo;
+      this.tiersEdit.push({
+        from_count: lastTo + 1,
+        to_count: null,
+        amount_per_ticket: Number(last.amount_per_ticket) + 1000,
+      });
+    } else {
+      this.tiersEdit.push({ from_count: 1, to_count: null, amount_per_ticket: 3000 });
+    }
+  }
+
+  removeTierAt(i: number) {
+    this.tiersEdit.splice(i, 1);
+    if (this.tiersEdit.length) {
+      this.tiersEdit[this.tiersEdit.length - 1].to_count = null;
+    }
+  }
+
+  updateTierFromAt(i: number, value: number) {
+    this.tiersEdit[i].from_count = Number(value) || 0;
+  }
+
+  updateTierToAt(i: number, value: number | null) {
+    this.tiersEdit[i].to_count = value == null ? null : (Number(value) || 0);
+  }
+
+  private validateTiersForm(): string | null {
+    if (!this.tiersEdit.length) return 'Debe haber al menos un tramo.';
+    for (let i = 0; i < this.tiersEdit.length; i++) {
+      const t = this.tiersEdit[i];
+      if (!t.from_count || t.from_count < 1) {
+        return `Tramo ${i + 1}: "Desde" debe ser al menos 1.`;
+      }
+      if (i < this.tiersEdit.length - 1 && (t.to_count == null || t.to_count < t.from_count)) {
+        return `Tramo ${i + 1}: "Hasta" debe ser mayor o igual a "Desde".`;
+      }
+      if (!t.amount_per_ticket || t.amount_per_ticket < 0) {
+        return `Tramo ${i + 1}: el monto por boleta debe ser ≥ 0.`;
+      }
+      if (i > 0) {
+        const prev = this.tiersEdit[i - 1];
+        if (prev.to_count != null && t.from_count !== prev.to_count + 1) {
+          return `Tramo ${i + 1}: debe arrancar en ${prev.to_count + 1} para no dejar gaps.`;
+        }
+      }
+    }
+    return null;
+  }
+
+  saveTiers() {
+    const id = this.raffle()?.id;
+    if (!id) return;
+    const error = this.validateTiersForm();
+    if (error) {
+      this.tiersError.set(error);
+      return;
+    }
+    this.tiersError.set(null);
+    this.savingTiers.set(true);
+
+    const payload = {
+      commission_tiers: this.tiersEdit.map((t) => ({
+        from_count: Number(t.from_count),
+        to_count: t.to_count == null ? null : Number(t.to_count),
+        amount_per_ticket: Number(t.amount_per_ticket),
+      })),
+    };
+    this.raffleSvc.update(id, payload as any).subscribe({
+      next: (updated) => {
+        this.raffle.set(updated);
+        this.savingTiers.set(false);
+        this.tiersModalOpen.set(false);
+        this.toast.success('Tramos actualizados', 'Aplican a partir del próximo pago confirmado.');
+      },
+      error: (e) => {
+        this.savingTiers.set(false);
+        const detail = e?.error?.detail ?? 'No se pudo guardar';
+        this.tiersError.set(typeof detail === 'string' ? detail : JSON.stringify(detail));
+        this.toast.error('Error', this.tiersError() ?? '');
       },
     });
   }

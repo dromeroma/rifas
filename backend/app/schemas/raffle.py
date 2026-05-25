@@ -191,6 +191,15 @@ class RaffleUpdate(BaseModel):
     responsible_phone: Optional[str] = None
     responsible_email: Optional[str] = None
     terms: Optional[str] = None
+    commission_tiers: Optional[List[CommissionTier]] = None
+
+    @model_validator(mode="after")
+    def _validate_tiers(self):
+        # commission_tiers se valida solo si viene en el payload. Vacío explícito
+        # (lista vacía) NO se valida porque significa "quitar tramos".
+        if self.commission_tiers:
+            validate_commission_tiers(self.commission_tiers)
+        return self
 
 
 class RaffleOut(BaseModel):
