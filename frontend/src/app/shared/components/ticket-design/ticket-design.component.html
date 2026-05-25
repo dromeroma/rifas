@@ -10,6 +10,21 @@
     </div>
   </header>
 
+  <section class="ticket__owner">
+    <div class="ticket__owner-col">
+      <small class="ticket__owner-label">Comprador</small>
+      <strong class="ticket__owner-name">
+        {{ ticket().customer?.full_name || '—' }}
+      </strong>
+    </div>
+    <div class="ticket__owner-col">
+      <small class="ticket__owner-label">Vendedor</small>
+      <strong class="ticket__owner-name">
+        {{ ticket().seller?.full_name || '—' }}
+      </strong>
+    </div>
+  </section>
+
   <section class="field" aria-label="Cancha de fútbol con los 20 números">
     <!-- Líneas de la cancha -->
     <svg class="field__lines" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
