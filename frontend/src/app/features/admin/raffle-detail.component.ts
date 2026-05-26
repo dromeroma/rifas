@@ -3,6 +3,7 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 
+import { environment } from '@env/environment';
 import { Prize, Raffle, Ticket, TicketStatus } from '@core/models/raffle.model';
 import { RaffleStats } from '@core/models/stats.model';
 import { AdminService } from '@core/services/admin.service';
@@ -1218,7 +1219,7 @@ export class RaffleDetailComponent implements OnInit {
     return 'No se pudo guardar — revisa la consola del navegador (F12) para más detalles.';
   }
 
-  saveTiers() {
+  async saveTiers() {
     const id = this.raffle()?.id;
     if (!id) return;
     const error = this.validateTiersForm();
@@ -1229,6 +1230,11 @@ export class RaffleDetailComponent implements OnInit {
     this.tiersError.set(null);
     this.savingTiers.set(true);
 
+    // Despertar Render (plan free duerme tras 15 min sin uso). El primer hit
+    // tras dormir tarda 30-50s en responder; sin esto, la PATCH siguiente
+    // expira con status:0.
+    await this.wakeBackend();
+
     const payload = {
       commission_tiers: this.tiersEdit.map((t) => ({
         from_count: Number(t.from_count),
@@ -1236,14 +1242,47 @@ export class RaffleDetailComponent implements OnInit {
         amount_per_ticket: Number(t.amount_per_ticket),
       })),
     };
-    this.raffleSvc.update(id, payload as any).subscribe({
+    this.attemptSaveTiers(id, payload, 0);
+  }
+
+  /** Ping a /health antes del save para despertar Render si está dormido. */
+  private async wakeBackend(): Promise<void> {
+    try {
+      // AbortController para timeout de 60s — más que el cold start típico (30-50s).
+      const ctrl = new AbortController();
+      const timeoutId = setTimeout(() => ctrl.abort(), 60_000);
+      this.tiersError.set('Despertando servidor...');
+      await fetch(`${environment.apiUrl}/health`, {
+        method: 'GET',
+        signal: ctrl.signal,
+        cache: 'no-store',
+      });
+      clearTimeout(timeoutId);
+      this.tiersError.set(null);
+    } catch {
+      // Si /health falla, igual seguimos al PATCH — el retry logic lo cubre.
+      this.tiersError.set(null);
+    }
+  }
+
+  /** Reintenta el save hasta 3 veces con backoff si el backend no responde. */
+  private attemptSaveTiers(id: number, payload: any, attempt: number) {
+    this.raffleSvc.update(id, payload).subscribe({
       next: (updated) => {
         this.raffle.set(updated);
         this.savingTiers.set(false);
+        this.tiersError.set(null);
         this.tiersModalOpen.set(false);
         this.toast.success('Tramos actualizados', 'Aplican a partir del próximo pago confirmado.');
       },
       error: (e) => {
+        // Si es status:0 (sin conexión) y aún quedan intentos, reintenta.
+        if (e?.status === 0 && attempt < 3) {
+          const next = attempt + 1;
+          this.tiersError.set(`Servidor lento, reintentando... (${next + 1}/4)`);
+          setTimeout(() => this.attemptSaveTiers(id, payload, next), 5_000);
+          return;
+        }
         this.savingTiers.set(false);
         const msg = this.extractErrorMessage(e);
         this.tiersError.set(msg);
