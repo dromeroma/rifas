@@ -146,7 +146,7 @@ import { TicketActionsModalComponent } from '../seller/ticket-actions-modal.comp
           size="md"
           (close)="closeTiersModal()"
         >
-          <form class="tiers-form">
+          <form class="tiers-form" (ngSubmit)="$event.preventDefault(); saveTiers()">
             @for (t of tiersEdit; track $index; let i = $index; let last = $last) {
               <div class="tier-edit-row">
                 <div class="tier-edit-range">
