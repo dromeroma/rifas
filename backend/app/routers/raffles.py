@@ -177,7 +177,10 @@ async def update_raffle(
     await log_action(
         db, actor_id=actor.id, action="raffle.update",
         entity_type="raffle", entity_id=raffle.id, request=request,
-        metadata=payload.model_dump(exclude_unset=True),
+        # mode="json" → Decimal/date se serializan a primitivos JSON. Sin esto,
+        # `commission_tiers` (que tiene Decimal en amount_per_ticket) revienta
+        # al escribirse en la columna JSONB del audit log.
+        metadata=payload.model_dump(exclude_unset=True, mode="json"),
     )
     await db.commit()
     await db.refresh(raffle, attribute_names=["prizes"])
