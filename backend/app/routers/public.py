@@ -167,6 +167,78 @@ async def public_raffle_view(
     }
 
 
+@router.get("/raffles/{raffle_id}/verify")
+async def verify_within_raffle(
+    raffle_id: int,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    q: str = Query(..., min_length=1, max_length=40, description="Código global (IH3-88V-7OZ) o etiqueta corta (001)"),
+):
+    """Verifica una boleta de una rifa específica usando código completo
+    (IH3-88V-7OZ) o etiqueta corta (001 / BOL 001). La etiqueta sola no es
+    única globalmente, por eso este endpoint la resuelve dentro del raffle_id.
+
+    Devuelve la misma forma que /verify/{code} para que el frontend pueda
+    reutilizar el mismo parser.
+    """
+    raw = q.strip().upper().replace("BOL", "").replace(" ", "")
+
+    raffle = (
+        await db.execute(
+            select(Raffle).options(selectinload(Raffle.prizes)).where(Raffle.id == raffle_id)
+        )
+    ).scalar_one_or_none()
+    if not raffle:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "rifa no encontrada")
+
+    # Estrategia: si el input solo tiene dígitos lo tratamos como number_label;
+    # si trae guiones o letras lo tratamos como código global.
+    is_label = raw.isdigit()
+    base_q = (
+        select(Ticket).options(selectinload(Ticket.numbers)).where(Ticket.raffle_id == raffle_id)
+    )
+    if is_label:
+        # Acepta "1", "01", "001" → normaliza al ancho del number_label de la rifa
+        # (usualmente 3 dígitos). Probamos con varios paddings para ser tolerantes.
+        candidates = {raw, raw.zfill(3), raw.zfill(4), raw.lstrip("0") or "0"}
+        ticket = (
+            await db.execute(base_q.where(Ticket.number_label.in_(list(candidates))))
+        ).scalar_one_or_none()
+    else:
+        ticket = (
+            await db.execute(base_q.where(Ticket.code == raw))
+        ).scalar_one_or_none()
+
+    if not ticket:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "boleta no encontrada en esta rifa")
+
+    return {
+        "valid": True,
+        "raffle": {
+            "id": raffle.id,
+            "name": raffle.name,
+            "final_draw_date": raffle.final_draw_date.isoformat(),
+            "lottery_name": raffle.lottery_name,
+            "responsible_name": raffle.responsible_name,
+            "responsible_phone": raffle.responsible_phone,
+        },
+        "ticket": {
+            "label": ticket.number_label,
+            "code": ticket.code,
+            "is_paid": ticket.status in (TicketStatus.PAID, TicketStatus.WINNING),
+            "is_winner": ticket.status == TicketStatus.WINNING,
+            "numbers": sorted([n.number for n in ticket.numbers]),
+        },
+        "prizes": [
+            {
+                "name": p.name,
+                "draw_date": p.draw_date.isoformat(),
+                "winning_number": p.winning_number,
+            }
+            for p in raffle.prizes
+        ],
+    }
+
+
 def _normalize_phone(p: str) -> str:
     """Solo dígitos. Permite que el cliente escriba +57 300 123 4567 o 300-123-4567."""
     return re.sub(r"\D", "", p or "")

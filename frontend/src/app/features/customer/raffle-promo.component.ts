@@ -211,8 +211,8 @@ interface VerifyView {
           </div>
         </section>
 
-        <!-- VERIFICACIÓN (si hay ?b=) -->
-        @if (verifyResult(); as v) {
+        <!-- Auto-verify destacado (cuando viene de QR con ?b=) -->
+        @if (autoVerifyResult(); as v) {
           <section class="verify-card" [class.win]="v.is_winner">
             @if (v.found) {
               <span class="material-icons">{{ v.is_winner ? 'emoji_events' : 'verified' }}</span>
@@ -345,7 +345,7 @@ interface VerifyView {
               type="text"
               [(ngModel)]="verifyCode"
               name="code"
-              placeholder="Ej: BOL 005 o código corto X7K2"
+              placeholder="Ej: 001 o IH3-88V-7OZ"
               autocomplete="off"
               spellcheck="false"
             />
@@ -353,7 +353,30 @@ interface VerifyView {
               {{ verifying() ? 'Verificando...' : 'Verificar' }}
             </button>
           </form>
-          <small class="muted">Escribe el código que aparece en tu boleta física o digital.</small>
+          <small class="muted">Escribe el número (001) o el código completo (con guiones) de tu boleta.</small>
+
+          @if (verifyResult(); as v) {
+            <article class="verify-result" [class.verify-result--ok]="v.found" [class.verify-result--win]="v.is_winner">
+              @if (v.found) {
+                <span class="material-icons">{{ v.is_winner ? 'emoji_events' : 'verified' }}</span>
+                <div>
+                  <strong>
+                    Boleta BOL {{ v.number_label }} —
+                    {{ v.is_winner ? 'GANADORA 🎉' : (v.is_paid ? 'pagada' : 'activa') }}
+                  </strong>
+                  @if (v.numbers && v.numbers.length) {
+                    <small class="nums">Tus números: {{ v.numbers.join(' · ') }}</small>
+                  }
+                </div>
+              } @else {
+                <span class="material-icons">help_outline</span>
+                <div>
+                  <strong>No encontramos esa boleta</strong>
+                  <small>{{ v.message || 'Revisa el código o pregúntale a tu vendedor.' }}</small>
+                </div>
+              }
+            </article>
+          }
         </section>
 
         <!-- RESPONSABLE -->
@@ -735,6 +758,47 @@ interface VerifyView {
     .verify-form button:hover:not(:disabled) { background: #18b06e; }
     .verify-form button:disabled { opacity: 0.5; }
 
+    /* Resultado de verificación manual, pegado debajo del form */
+    .verify-result {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      margin-top: 14px;
+      padding: 14px 16px;
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      border-radius: 12px;
+      animation: vrFadeIn 0.25s ease-out;
+    }
+    .verify-result .material-icons {
+      font-size: 26px;
+      color: #ef4444;
+      flex-shrink: 0;
+    }
+    .verify-result div { display: flex; flex-direction: column; gap: 3px; }
+    .verify-result strong { color: #fff; font-size: 14px; }
+    .verify-result small { color: rgba(255,255,255,0.7); font-size: 12px; }
+    .verify-result .nums {
+      font-family: 'Courier New', monospace;
+      letter-spacing: 0.04em;
+      font-size: 11.5px;
+      color: rgba(255,255,255,0.85);
+    }
+    .verify-result--ok {
+      background: rgba(30, 199, 123, 0.12);
+      border-color: rgba(30, 199, 123, 0.35);
+    }
+    .verify-result--ok .material-icons { color: #1ec77b; }
+    .verify-result--win {
+      background: linear-gradient(135deg, rgba(212, 168, 87, 0.18), rgba(30, 199, 123, 0.14));
+      border-color: rgba(212, 168, 87, 0.55);
+    }
+    .verify-result--win .material-icons { color: #d4a857; }
+    @keyframes vrFadeIn {
+      from { opacity: 0; transform: translateY(-4px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
     /* Responsable */
     .resp {
       display: flex;
@@ -954,7 +1018,10 @@ export class RafflePromoComponent implements OnInit {
   readonly data = signal<PromoRaffle | null>(null);
   readonly showTerms = signal(false);
   readonly verifying = signal(false);
+  /** Resultado de la verificación manual (input + botón) — se muestra debajo del form. */
   readonly verifyResult = signal<VerifyView | null>(null);
+  /** Resultado del auto-verify cuando llega ?b=<code> del QR — se muestra arriba destacado. */
+  readonly autoVerifyResult = signal<VerifyView | null>(null);
 
   verifyCode = '';
 
@@ -985,11 +1052,10 @@ export class RafflePromoComponent implements OnInit {
         this.loading.set(false);
         this.applySEO(d);
 
-        // Auto-verifica si vino ?b=<code> en el query
+        // Auto-verifica si vino ?b=<code> en el query (escaneo de QR)
         const b = this.route.snapshot.queryParamMap.get('b');
         if (b) {
-          this.verifyCode = b;
-          this.doVerify(b);
+          this.runVerify(b, /*auto*/ true);
         }
       },
       error: (e) => {
@@ -1000,32 +1066,53 @@ export class RafflePromoComponent implements OnInit {
     });
   }
 
+  /** Disparado por el botón del formulario. Muestra resultado debajo del input. */
   doVerify(code: string) {
-    if (!code || code.trim().length < 3) return;
+    this.runVerify(code, /*auto*/ false);
+  }
+
+  /** Verificación común. Si auto=true muestra el banner destacado arriba.
+   *  Si auto=false muestra el resultado pegado debajo del input. */
+  private runVerify(code: string, auto: boolean) {
+    if (!code || code.trim().length < 1) return;
     this.verifying.set(true);
-    this.verifyResult.set(null);
-    const cleaned = code.trim().replace(/^BOL\s*/i, '').replace(/\s+/g, '');
-    this.http
-      .get<VerifyResponse>(`${environment.apiUrl}/verify/${encodeURIComponent(cleaned)}`)
-      .subscribe({
-        next: (r) => {
-          this.verifyResult.set({
-            found: r.valid,
-            number_label: r.ticket?.label,
-            numbers: r.ticket?.numbers,
-            is_paid: r.ticket?.is_paid,
-            is_winner: r.ticket?.is_winner,
-          });
-          this.verifying.set(false);
-        },
-        error: () => {
-          this.verifyResult.set({
-            found: false,
-            message: 'No encontramos esa boleta. Usa el código completo (con guiones) o el QR.',
-          });
-          this.verifying.set(false);
-        },
-      });
+    if (auto) this.autoVerifyResult.set(null);
+    else this.verifyResult.set(null);
+
+    const cleaned = code.trim();
+    const raffleId = this.data()?.id;
+    if (!raffleId) {
+      this.verifying.set(false);
+      return;
+    }
+
+    // Endpoint público scoped al raffle: acepta código completo (IH3-88V-7OZ)
+    // o etiqueta corta (001) gracias al backend que lo resuelve.
+    const url = `${environment.apiUrl}/public/raffles/${raffleId}/verify?q=${encodeURIComponent(cleaned)}`;
+
+    this.http.get<VerifyResponse>(url).subscribe({
+      next: (r) => {
+        const view: VerifyView = {
+          found: r.valid,
+          number_label: r.ticket?.label,
+          numbers: r.ticket?.numbers,
+          is_paid: r.ticket?.is_paid,
+          is_winner: r.ticket?.is_winner,
+        };
+        if (auto) this.autoVerifyResult.set(view);
+        else this.verifyResult.set(view);
+        this.verifying.set(false);
+      },
+      error: () => {
+        const view: VerifyView = {
+          found: false,
+          message: 'No encontramos esa boleta en esta rifa. Revisa el número o el código.',
+        };
+        if (auto) this.autoVerifyResult.set(view);
+        else this.verifyResult.set(view);
+        this.verifying.set(false);
+      },
+    });
   }
 
   waUrl(d: PromoRaffle): string {
