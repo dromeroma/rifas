@@ -14,10 +14,56 @@ from sqlalchemy.orm import selectinload
 
 from app.core.database import get_db
 from app.models.customer import Customer
-from app.models.raffle import Raffle
+from app.models.raffle import Raffle, RaffleStatus
 from app.models.ticket import Ticket, TicketStatus
 
 router = APIRouter(prefix="/public", tags=["public"])
+
+
+@router.get("/raffles")
+async def public_raffles_list(db: Annotated[AsyncSession, Depends(get_db)]):
+    """Listado público de rifas activas. Sirve como índice para que cualquiera
+    pueda navegar las rifas vigentes sin login. Cada card linkea a la promo
+    individual `/r/{id}`. No expone datos financieros ni de vendedores."""
+    today = date.today()
+    raffles = (
+        await db.execute(
+            select(Raffle)
+            .options(selectinload(Raffle.prizes))
+            .where(
+                Raffle.status.in_([RaffleStatus.ACTIVE, RaffleStatus.LOCKED]),
+                Raffle.final_draw_date >= today,
+            )
+            .order_by(Raffle.final_draw_date.asc(), Raffle.id.desc())
+        )
+    ).scalars().all()
+
+    items = []
+    for r in raffles:
+        prizes_sorted = sorted(r.prizes or [], key=lambda p: p.position)
+        main_prize = prizes_sorted[0] if prizes_sorted else None
+        total_prize_value = sum(
+            float(p.estimated_value or 0) for p in prizes_sorted
+        )
+        items.append({
+            "id": r.id,
+            "name": r.name,
+            "description": r.description,
+            "primary_color": r.primary_color,
+            "logo_url": r.logo_url,
+            "lottery_name": r.lottery_name,
+            "final_draw_date": r.final_draw_date.isoformat(),
+            "days_to_final_draw": max((r.final_draw_date - today).days, 0),
+            "responsible_name": r.responsible_name,
+            "prizes_count": len(prizes_sorted),
+            "total_prize_value": total_prize_value if total_prize_value > 0 else None,
+            "main_prize": {
+                "name": main_prize.name,
+                "image_url": main_prize.image_url,
+                "estimated_value": float(main_prize.estimated_value) if main_prize and main_prize.estimated_value else None,
+            } if main_prize else None,
+        })
+    return {"raffles": items, "count": len(items)}
 
 
 @router.get("/raffles/{raffle_id}")

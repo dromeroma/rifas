@@ -38,6 +38,15 @@ export const routes: Routes = [
       import('./features/customer/raffle-promo.component').then((m) => m.RafflePromoComponent),
   },
   {
+    // Índice público de todas las rifas activas en Boletera.
+    // Cada card linkea a `/r/:id`.
+    path: 'rifas',
+    loadComponent: () =>
+      import('./features/customer/raffles-public-list.component').then(
+        (m) => m.RafflesPublicListComponent,
+      ),
+  },
+  {
     path: 'mi-boleta',
     loadComponent: () =>
       import('./features/customer/my-tickets.component').then((m) => m.MyTicketsComponent),
