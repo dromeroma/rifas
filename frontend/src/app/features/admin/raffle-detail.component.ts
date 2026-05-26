@@ -1184,22 +1184,38 @@ export class RaffleDetailComponent implements OnInit {
   }
 
   /** Extrae un mensaje legible de un error HTTP que puede traer detail como
-   *  string, array (formato Pydantic 422) o estructura arbitraria. */
+   *  string, array (formato Pydantic 422) o estructura arbitraria.
+   *  Loggea a consola el error completo para facilitar diagnóstico. */
   private extractErrorMessage(e: any): string {
-    const detail = e?.error?.detail;
-    if (!detail) return 'No se pudo guardar';
-    if (typeof detail === 'string') return detail;
-    if (Array.isArray(detail)) {
-      const msgs = detail
-        .map((d: any) => {
-          const msg = d?.msg || d?.message || '';
-          // Pydantic prefija con "Value error, "; lo quitamos.
-          return String(msg).replace(/^Value error,\s*/i, '');
-        })
-        .filter(Boolean);
-      return msgs.length ? msgs.join(' · ') : 'Datos inválidos.';
+    // Log completo a consola (DevTools → Console) para diagnóstico.
+    console.error('[saveTiers] error completo:', e);
+
+    // Si no hubo respuesta del servidor (timeout, CORS, red caída).
+    if (e?.status === 0) {
+      return 'Sin conexión con el servidor. ¿Está el backend dormido o caído?';
     }
-    return 'No se pudo guardar';
+
+    const detail = e?.error?.detail;
+    if (detail) {
+      if (typeof detail === 'string') return detail;
+      if (Array.isArray(detail)) {
+        const msgs = detail
+          .map((d: any) => {
+            const msg = d?.msg || d?.message || '';
+            return String(msg).replace(/^Value error,\s*/i, '');
+          })
+          .filter(Boolean);
+        if (msgs.length) return msgs.join(' · ');
+      }
+    }
+
+    // Si no hay detail pero hay status code, indicamos qué pasó.
+    if (e?.status) {
+      const statusMsg = e?.error?.message || e?.statusText || '';
+      return `Error del servidor (HTTP ${e.status})${statusMsg ? ': ' + statusMsg : ''}`;
+    }
+
+    return 'No se pudo guardar — revisa la consola del navegador (F12) para más detalles.';
   }
 
   saveTiers() {
