@@ -96,11 +96,17 @@ interface VerifyView {
         <section class="hero">
           <div class="hero__inner">
             <div class="hero__text">
-              <small class="kicker">Vibra con la pasión mundialista</small>
+              <small class="kicker">Vive la emoción del <span class="gold">Mundial 2026</span></small>
               <h1>{{ d.name }}</h1>
+              @if (d.prizes.length > 1) {
+                <p class="opps">
+                  <strong>{{ d.prizes.length }} oportunidades</strong> de ganar
+                </p>
+              }
               @if (d.lottery_name) {
                 <p class="lottery">
-                  Sorteamos con la lotería <strong>{{ d.lottery_name }}</strong>
+                  <span class="material-icons">casino</span>
+                  Sorteamos con <strong>{{ d.lottery_name }}</strong>
                 </p>
               }
               <div class="counters">
@@ -121,28 +127,90 @@ interface VerifyView {
               </div>
             </div>
 
-            <!-- TV genérico SVG (si no hay image_url del premio principal) -->
+            <!-- TV realista con trofeo y stadium glow (si no hay foto del premio principal) -->
             <div class="hero__visual">
               @if (heroImage()) {
                 <img [src]="heroImage()" alt="{{ d.prizes[0]?.name || 'Premio' }}" />
               } @else {
-                <svg class="tv-svg" viewBox="0 0 320 220" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                  <!-- Marco -->
-                  <rect x="14" y="12" width="292" height="170" rx="10" ry="10" fill="#0a0e0c" />
-                  <rect x="20" y="18" width="280" height="158" rx="6" ry="6"
-                        fill="url(#scrGrad)" stroke="#1f2937" stroke-width="0.5" />
-                  <!-- Resplandor pantalla -->
-                  <ellipse cx="120" cy="70" rx="60" ry="30" fill="rgba(255,255,255,0.04)" />
-                  <!-- Base -->
-                  <rect x="140" y="182" width="40" height="6" fill="#0a0e0c" />
-                  <polygon points="100,196 220,196 200,206 120,206" fill="#0a0e0c" />
+                <svg class="tv-svg" viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                   <defs>
-                    <linearGradient id="scrGrad" x1="0" x2="0" y1="0" y2="1">
-                      <stop offset="0%" stop-color="#0d1b2a" />
-                      <stop offset="60%" stop-color="#070d14" />
-                      <stop offset="100%" stop-color="#020409" />
+                    <linearGradient id="tvScreen" x1="0" x2="0" y1="0" y2="1">
+                      <stop offset="0%" stop-color="#0a1a2e" />
+                      <stop offset="50%" stop-color="#050d18" />
+                      <stop offset="100%" stop-color="#02060c" />
+                    </linearGradient>
+                    <radialGradient id="stadiumGlow" cx="0.5" cy="0.35" r="0.6">
+                      <stop offset="0%" stop-color="rgba(212,168,87,0.35)" />
+                      <stop offset="40%" stop-color="rgba(212,168,87,0.08)" />
+                      <stop offset="100%" stop-color="rgba(0,0,0,0)" />
+                    </radialGradient>
+                    <linearGradient id="trophyShine" x1="0" x2="1" y1="0" y2="0">
+                      <stop offset="0%" stop-color="#8a6420" />
+                      <stop offset="40%" stop-color="#f5d57a" />
+                      <stop offset="60%" stop-color="#ffe89a" />
+                      <stop offset="100%" stop-color="#8a6420" />
+                    </linearGradient>
+                    <linearGradient id="bezelGrad" x1="0" x2="0" y1="0" y2="1">
+                      <stop offset="0%" stop-color="#1a1a1a" />
+                      <stop offset="100%" stop-color="#050505" />
                     </linearGradient>
                   </defs>
+
+                  <!-- Marco TV con sombra -->
+                  <rect x="8" y="6" width="384" height="232" rx="8" ry="8" fill="url(#bezelGrad)" />
+                  <rect x="8" y="6" width="384" height="232" rx="8" ry="8" fill="none"
+                        stroke="rgba(255,255,255,0.06)" stroke-width="0.5" />
+
+                  <!-- Pantalla -->
+                  <rect x="16" y="14" width="368" height="216" rx="3" ry="3" fill="url(#tvScreen)" />
+                  <!-- Stadium glow desde el centro-arriba -->
+                  <rect x="16" y="14" width="368" height="216" rx="3" ry="3" fill="url(#stadiumGlow)" />
+
+                  <!-- 2026 marca de agua en pantalla -->
+                  <text x="200" y="115" font-family="Inter, sans-serif" font-weight="900" font-size="78"
+                        text-anchor="middle" fill="rgba(212,168,87,0.16)" letter-spacing="0.04em">2026</text>
+
+                  <!-- Trofeo Mundial estilizado en el centro -->
+                  <g transform="translate(168, 56)">
+                    <!-- Sombra base -->
+                    <ellipse cx="32" cy="125" rx="34" ry="4" fill="rgba(0,0,0,0.55)" />
+                    <!-- Base trofeo -->
+                    <rect x="20" y="108" width="24" height="14" fill="#7a5a18" />
+                    <rect x="16" y="100" width="32" height="10" fill="#9a7320" />
+                    <rect x="22" y="92" width="20" height="10" fill="url(#trophyShine)" />
+                    <!-- Copa: forma estilizada del trofeo FIFA -->
+                    <path d="M 16 28
+                             Q 16 64 28 84
+                             Q 32 90 36 84
+                             Q 48 64 48 28
+                             L 52 22 L 52 14
+                             L 42 14 L 42 4
+                             L 22 4 L 22 14
+                             L 12 14 L 12 22 Z"
+                          fill="url(#trophyShine)"
+                          stroke="#8a6420" stroke-width="0.5" />
+                    <!-- Brillo lateral -->
+                    <path d="M 24 16 Q 24 50 30 76" stroke="rgba(255,255,255,0.45)" stroke-width="1.4" fill="none" />
+                  </g>
+
+                  <!-- Badge 4K Ultra HD -->
+                  <g transform="translate(30, 188)">
+                    <rect x="0" y="0" width="78" height="30" rx="4" fill="#0a0a0a" stroke="rgba(212,168,87,0.6)" stroke-width="1.2" />
+                    <text x="39" y="14" text-anchor="middle" font-family="Inter, sans-serif" font-size="11"
+                          font-weight="900" fill="#d4a857" letter-spacing="0.04em">4K</text>
+                    <text x="39" y="25" text-anchor="middle" font-family="Inter, sans-serif" font-size="7"
+                          font-weight="700" fill="rgba(212,168,87,0.85)" letter-spacing="0.16em">ULTRA HD</text>
+                  </g>
+
+                  <!-- Puntos de luz tipo estadio (parte superior) -->
+                  <circle cx="80" cy="32" r="1.4" fill="rgba(255,235,180,0.5)" />
+                  <circle cx="140" cy="28" r="1.2" fill="rgba(255,235,180,0.4)" />
+                  <circle cx="260" cy="28" r="1.2" fill="rgba(255,235,180,0.4)" />
+                  <circle cx="320" cy="32" r="1.4" fill="rgba(255,235,180,0.5)" />
+
+                  <!-- Base/stand del TV -->
+                  <rect x="186" y="240" width="28" height="8" fill="#0a0a0a" />
+                  <path d="M 120 264 L 280 264 L 256 280 L 144 280 Z" fill="#0a0a0a" stroke="rgba(255,255,255,0.06)" stroke-width="0.5" />
                 </svg>
               }
             </div>
@@ -175,13 +243,18 @@ interface VerifyView {
           <h2 class="block__title">Premios</h2>
           <div class="prizes">
             @for (p of d.prizes; track p.position) {
-              <article class="prize">
+              <article class="prize" [class.prize--main]="p.position === 1">
+                @if (p.position === 1) {
+                  <span class="prize__tag">
+                    <span class="material-icons">emoji_events</span> PRINCIPAL
+                  </span>
+                }
                 <div class="prize__pos">{{ p.position }}</div>
                 @if (p.image_url) {
                   <img class="prize__img" [src]="p.image_url" alt="{{ p.name }}" />
                 } @else {
                   <div class="prize__img prize__img--placeholder">
-                    <span class="material-icons">card_giftcard</span>
+                    <span class="material-icons">{{ p.position === 1 ? 'emoji_events' : 'card_giftcard' }}</span>
                   </div>
                 }
                 <div class="prize__body">
@@ -193,6 +266,45 @@ interface VerifyView {
                 </div>
               </article>
             }
+          </div>
+        </section>
+
+        <!-- ¿POR QUÉ CONFIAR? — credibilidad/trust -->
+        <section class="block">
+          <h2 class="block__title">¿Por qué participar con confianza?</h2>
+          <div class="trust-grid">
+            <article class="trust">
+              <span class="material-icons">verified</span>
+              <strong>Lotería oficial</strong>
+              <small>
+                @if (d.lottery_name) {
+                  Sorteamos con <strong>{{ d.lottery_name }}</strong>, lotería regulada por el Estado colombiano.
+                } @else {
+                  Sorteamos con una lotería oficial regulada por el Estado colombiano.
+                }
+              </small>
+            </article>
+            <article class="trust">
+              <span class="material-icons">qr_code_2</span>
+              <strong>Boleta única con QR</strong>
+              <small>Cada boleta tiene un código único e irrepetible y un QR para verificarla en línea desde tu celular.</small>
+            </article>
+            <article class="trust">
+              <span class="material-icons">manage_search</span>
+              <strong>Verificación pública</strong>
+              <small>Cualquier persona puede verificar el estado de una boleta desde este sitio, sin login. Total transparencia.</small>
+            </article>
+            <article class="trust">
+              <span class="material-icons">support_agent</span>
+              <strong>Organizador identificado</strong>
+              <small>
+                @if (d.responsible_name) {
+                  Esta rifa la respalda <strong>{{ d.responsible_name }}</strong>{{ d.responsible_phone ? ', con teléfono público de contacto.' : '.' }}
+                } @else {
+                  Esta rifa tiene un organizador con identidad pública responsable.
+                }
+              </small>
+            </article>
           </div>
         </section>
 
@@ -280,6 +392,22 @@ interface VerifyView {
             }
           </section>
         }
+
+        <!-- Trust badges row antes del footer -->
+        <section class="trust-row">
+          <div class="trust-row__item">
+            <span class="material-icons">lock</span>
+            <small>Pago seguro</small>
+          </div>
+          <div class="trust-row__item">
+            <span class="material-icons">verified_user</span>
+            <small>Verificación pública</small>
+          </div>
+          <div class="trust-row__item">
+            <span class="material-icons">confirmation_number</span>
+            <small>Boleta única con QR</small>
+          </div>
+        </section>
 
         <footer class="foot">
           <small>Plataforma de rifas profesionales <strong>Boletera</strong> · Hecho en Colombia</small>
@@ -452,11 +580,11 @@ interface VerifyView {
     }
     .hero__visual img,
     .hero__visual .tv-svg {
-      max-width: 100%;
-      max-height: 200px;
-      width: auto;
+      width: 100%;
+      max-width: 360px;
       height: auto;
-      filter: drop-shadow(0 12px 28px rgba(0,0,0,0.4));
+      filter: drop-shadow(0 16px 32px rgba(0,0,0,0.5))
+              drop-shadow(0 0 24px rgba(212, 168, 87, 0.08));
     }
 
     /* === VERIFICACIÓN === */
@@ -672,6 +800,131 @@ interface VerifyView {
       text-align: center;
       color: rgba(255,255,255,0.4);
       font-size: 11px;
+    }
+
+    /* === Mejoras hero === */
+    .gold { color: #d4a857; }
+    .opps {
+      font-size: 16px;
+      color: #fff;
+      margin: 4px 0 8px;
+    }
+    .opps strong {
+      color: #d4a857;
+      font-weight: 800;
+    }
+    .lottery {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: rgba(255,255,255,0.78);
+      margin: 0 0 16px;
+      padding: 4px 10px;
+      background: rgba(212, 168, 87, 0.08);
+      border: 1px solid rgba(212, 168, 87, 0.2);
+      border-radius: 999px;
+    }
+    .lottery .material-icons { font-size: 16px; color: #d4a857; }
+    .lottery strong { color: #d4a857; font-weight: 700; }
+
+    /* === Prize main destacado === */
+    .prize {
+      position: relative;
+    }
+    .prize--main {
+      background: linear-gradient(135deg,
+        rgba(212, 168, 87, 0.14),
+        rgba(212, 168, 87, 0.04));
+      border-color: rgba(212, 168, 87, 0.5);
+      box-shadow: 0 0 0 1px rgba(212, 168, 87, 0.25),
+                  0 8px 24px rgba(212, 168, 87, 0.08);
+    }
+    .prize--main .prize__pos {
+      background: linear-gradient(135deg, #d4a857, #b88a35);
+      color: #0a0e0c;
+      border-color: #d4a857;
+    }
+    .prize--main .prize__body strong { color: #f5e0a8; font-size: 16px; }
+    .prize__tag {
+      position: absolute;
+      top: -10px;
+      right: 14px;
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      padding: 2px 10px;
+      background: linear-gradient(135deg, #d4a857, #b88a35);
+      color: #0a0e0c;
+      font-size: 10px;
+      font-weight: 900;
+      letter-spacing: 0.1em;
+      border-radius: 999px;
+      box-shadow: 0 4px 12px rgba(212, 168, 87, 0.4);
+    }
+    .prize__tag .material-icons { font-size: 13px; }
+
+    /* === Trust grid (¿Por qué confiar?) === */
+    .trust-grid {
+      display: grid;
+      gap: 10px;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    }
+    .trust {
+      padding: 16px;
+      background: linear-gradient(135deg,
+        rgba(30, 199, 123, 0.05),
+        rgba(255, 255, 255, 0.02));
+      border: 1px solid rgba(30, 199, 123, 0.18);
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .trust > .material-icons {
+      font-size: 28px;
+      color: #1ec77b;
+      margin-bottom: 4px;
+    }
+    .trust strong {
+      color: #fff;
+      font-size: 14px;
+      font-weight: 800;
+    }
+    .trust small {
+      color: rgba(255,255,255,0.7);
+      font-size: 12.5px;
+      line-height: 1.5;
+    }
+    .trust small strong {
+      color: #1ec77b;
+      font-weight: 700;
+      font-size: 12.5px;
+    }
+
+    /* === Trust badges row (chips antes del footer) === */
+    .trust-row {
+      display: flex;
+      justify-content: center;
+      gap: 18px;
+      flex-wrap: wrap;
+      padding: 20px 12px;
+      margin-top: 28px;
+      background: rgba(255,255,255,0.02);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 14px;
+    }
+    .trust-row__item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: rgba(255,255,255,0.75);
+      font-size: 12.5px;
+      font-weight: 600;
+    }
+    .trust-row__item .material-icons {
+      font-size: 18px;
+      color: #1ec77b;
     }
 
     /* State (loading / error) */
