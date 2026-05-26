@@ -49,7 +49,9 @@ async def verify_public(code: str, db: Annotated[AsyncSession, Depends(get_db)])
             "code": ticket.code,
             "is_paid": ticket.status in (TicketStatus.PAID, TicketStatus.WINNING),
             "is_winner": ticket.status == TicketStatus.WINNING,
-            "numbers": sorted([n.number for n in ticket.numbers]),
+            # Orden por posición (NO por valor) para que la cancha 3-4-3
+            # siempre pinte cada número en su lugar fijo.
+            "numbers": [n.number for n in sorted(ticket.numbers, key=lambda x: x.position)],
         },
         "prizes": [
             {

@@ -226,7 +226,9 @@ async def verify_within_raffle(
             "code": ticket.code,
             "is_paid": ticket.status in (TicketStatus.PAID, TicketStatus.WINNING),
             "is_winner": ticket.status == TicketStatus.WINNING,
-            "numbers": sorted([n.number for n in ticket.numbers]),
+            # Orden por posición — cada número siempre cae en su lugar fijo
+            # de la cancha 3-4-3.
+            "numbers": [n.number for n in sorted(ticket.numbers, key=lambda x: x.position)],
         },
         "prizes": [
             {
@@ -311,7 +313,9 @@ async def my_tickets(
             "status": t.status.value,
             "is_paid": t.status in (TicketStatus.PAID, TicketStatus.WINNING),
             "is_winner": t.status == TicketStatus.WINNING,
-            "numbers": sorted([n.number for n in t.numbers]),
+            # Orden por posición — coherente con la boleta original que vio
+            # el cliente. La cancha 3-4-3 depende de este orden.
+            "numbers": [n.number for n in sorted(t.numbers, key=lambda x: x.position)],
             "customer_name": c.full_name if c else None,
             "raffle": {
                 "id": r.id,
