@@ -110,27 +110,37 @@ interface RenderedTicket extends PrintTicket {
 
                     <div class="raffle-name">{{ data().raffle_name }}</div>
 
-                    <!-- Cancha 3-4-3 / 3-4-3 con números -->
-                    <div class="field">
-                      <div class="field-half top">
-                        @for (row of topRows; track $index) {
-                          <div class="row" [class.r3]="row === 3" [class.r4]="row === 4">
-                            @for (n of numbersForRow(t.numbers, $index, 'top'); track $index) {
-                              <span class="num">{{ n }}</span>
-                            }
-                          </div>
-                        }
-                      </div>
-                      <div class="center-line"></div>
-                      <div class="field-half bottom">
-                        @for (row of bottomRows; track $index) {
-                          <div class="row" [class.r3]="row === 3" [class.r4]="row === 4">
-                            @for (n of numbersForRow(t.numbers, $index, 'bottom'); track $index) {
-                              <span class="num">{{ n }}</span>
-                            }
-                          </div>
-                        }
-                      </div>
+                    <!-- Cancha de fútbol vertical, mismo diseño que la app -->
+                    <div class="field" aria-label="Cancha con los 20 números">
+                      <svg class="field__lines" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                        <!-- borde exterior -->
+                        <rect x="2" y="2" width="96" height="96" fill="none"
+                              stroke="rgba(255,255,255,0.9)" stroke-width="0.6" />
+                        <!-- línea media -->
+                        <line x1="2" y1="50" x2="98" y2="50"
+                              stroke="rgba(255,255,255,0.9)" stroke-width="0.5" />
+                        <!-- círculo central -->
+                        <circle cx="50" cy="50" r="8" fill="none"
+                                stroke="rgba(255,255,255,0.9)" stroke-width="0.5" />
+                        <circle cx="50" cy="50" r="0.9" fill="rgba(255,255,255,1)" />
+                        <!-- área grande arriba -->
+                        <rect x="25" y="2" width="50" height="10" fill="none"
+                              stroke="rgba(255,255,255,0.9)" stroke-width="0.5" />
+                        <!-- área grande abajo -->
+                        <rect x="25" y="88" width="50" height="10" fill="none"
+                              stroke="rgba(255,255,255,0.9)" stroke-width="0.5" />
+                        <!-- área pequeña arriba -->
+                        <rect x="38" y="2" width="24" height="4" fill="none"
+                              stroke="rgba(255,255,255,0.9)" stroke-width="0.4" />
+                        <!-- área pequeña abajo -->
+                        <rect x="38" y="94" width="24" height="4" fill="none"
+                              stroke="rgba(255,255,255,0.9)" stroke-width="0.4" />
+                      </svg>
+                      @for (p of positionedFor(t.numbers); track $index) {
+                        <div class="player" [style.left.%]="p.x" [style.top.%]="p.y">
+                          <span class="player__chip">{{ p.number }}</span>
+                        </div>
+                      }
                     </div>
 
                     <div class="info">
@@ -376,73 +386,58 @@ interface RenderedTicket extends PrintTicket {
       border-bottom: 1px solid #e5e7eb;
     }
 
-    /* === Cancha (campo de fútbol) === */
+    /* === Cancha (campo de fútbol) — replica el diseño de la app === */
+    /* Paleta de la app: --grass #1b8b3b, stripes #16762f, border azul #0b3d91 */
     .field {
       position: relative;
       flex: 1;
-      min-height: 1.3in;
-      max-height: 1.6in;
+      aspect-ratio: 2 / 3;
+      min-height: 1.4in;
+      max-height: 2.1in;
       background:
         repeating-linear-gradient(
-          0deg,
-          rgba(30, 199, 123, 0.05) 0,
-          rgba(30, 199, 123, 0.05) 6px,
-          rgba(30, 199, 123, 0.08) 6px,
-          rgba(30, 199, 123, 0.08) 12px
+          to bottom,
+          #1b8b3b 0,
+          #1b8b3b 5%,
+          #16762f 5%,
+          #16762f 10%
         );
-      border: 1px solid #1f2937;
-      border-radius: 3px;
-      display: flex;
-      flex-direction: column;
-      padding: 0.04in 0.06in;
+      border-top: 2.5px solid #0b3d91;
+      border-bottom: 2.5px solid #0b3d91;
       overflow: hidden;
+      print-color-adjust: exact;
+      -webkit-print-color-adjust: exact;
     }
-    .field-half {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-around;
-    }
-    .field-half.top { padding-top: 0.02in; }
-    .field-half.bottom { padding-bottom: 0.02in; }
-    .center-line {
-      height: 0;
-      border-top: 1px solid #1f2937;
-      position: relative;
-      margin: 0;
-    }
-    .center-line::after {
-      content: '';
+    .field__lines {
       position: absolute;
-      left: 50%;
-      top: 50%;
-      width: 0.32in;
-      height: 0.32in;
-      border: 1px solid #1f2937;
-      border-radius: 50%;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+    .player {
+      position: absolute;
       transform: translate(-50%, -50%);
-      background: rgba(255,255,255,0.5);
     }
-    .row {
-      display: flex;
-      justify-content: space-around;
-      align-items: center;
-    }
-    .num {
+    .player__chip {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      min-width: 0.34in;
-      height: 0.24in;
-      padding: 0 4px;
-      background: #fff;
-      border: 1.2px solid #0a0e0c;
+      min-width: 0.32in;
+      height: 0.22in;
+      padding: 0 5px;
+      background: #ffffff;
+      color: #0b3d91;
+      border: 1.4px solid #0b3d91;
       border-radius: 999px;
       font-family: 'Inter', system-ui, sans-serif;
-      font-weight: 800;
-      font-size: 9pt;
-      color: #0a0e0c;
-      box-shadow: 0 1px 0 rgba(0,0,0,0.1);
+      font-weight: 700;
+      font-size: 8.5pt;
+      letter-spacing: 0.02em;
+      font-variant-numeric: tabular-nums;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.25);
+      print-color-adjust: exact;
+      -webkit-print-color-adjust: exact;
     }
 
     /* === Info de premios y responsable === */
@@ -532,9 +527,6 @@ export class TicketPrintSheetComponent implements OnInit {
   readonly loading = signal(true);
   private readonly rendered = signal<RenderedTicket[]>([]);
 
-  readonly topRows = [3, 4, 3] as const;
-  readonly bottomRows = [3, 4, 3] as const;
-
   readonly pages = computed<RenderedTicket[][]>(() => {
     const all = this.rendered();
     const out: RenderedTicket[][] = [];
@@ -587,21 +579,34 @@ export class TicketPrintSheetComponent implements OnInit {
   }
 
   /**
-   * Devuelve los números que deben ir en una fila específica de una mitad
-   * de la cancha. Formación 3-4-3 / 3-4-3, total 20 números.
-   * top:    fila0=0..2,   fila1=3..6,   fila2=7..9
-   * bottom: fila0=10..12, fila1=13..16, fila2=17..19
+   * Coordenadas en % para los 20 jugadores siguiendo la formación 3-4-3 / 3-4-3
+   * de la cancha vertical. Replica el cálculo del componente TicketDesign de la
+   * app para que las boletas impresas se vean idénticas al diseño digital.
    */
-  numbersForRow(numbers: string[], rowIndex: number, half: 'top' | 'bottom'): string[] {
-    if (!numbers || numbers.length !== 20) {
-      // Si no hay 20 números, distribuye lo que haya en orden (defensivo).
-      const chunk = 3;
-      return numbers.slice(rowIndex * chunk, rowIndex * chunk + chunk);
+  positionedFor(numbers: string[]): Array<{ number: string; x: number; y: number }> {
+    if (!numbers || numbers.length !== 20) return [];
+    const result: Array<{ number: string; x: number; y: number }> = [];
+    const rows = [3, 4, 3] as const;
+    const topYs = [38, 25, 12];        // mitad superior: del centro hacia arriba
+    const bottomYs = [62, 75, 88];     // mitad inferior: del centro hacia abajo
+
+    let i = 0;
+    for (let r = 0; r < rows.length; r++) {
+      const count = rows[r];
+      const y = topYs[r];
+      for (let k = 0; k < count; k++) {
+        const x = ((k + 1) * 100) / (count + 1);
+        result.push({ number: numbers[i++], x, y });
+      }
     }
-    const starts = half === 'top'
-      ? [0, 3, 7]      // 3 + 4 + 3 = 10
-      : [10, 13, 17];
-    const lens = [3, 4, 3];
-    return numbers.slice(starts[rowIndex], starts[rowIndex] + lens[rowIndex]);
+    for (let r = 0; r < rows.length; r++) {
+      const count = rows[r];
+      const y = bottomYs[r];
+      for (let k = 0; k < count; k++) {
+        const x = ((k + 1) * 100) / (count + 1);
+        result.push({ number: numbers[i++], x, y });
+      }
+    }
+    return result;
   }
 }
