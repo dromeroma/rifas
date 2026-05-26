@@ -8,6 +8,8 @@ import { ActivatedRoute } from '@angular/router';
 import { Meta, Title } from '@angular/platform-browser';
 
 import { environment } from '@env/environment';
+import { Prize as RafflePrize, Ticket as RaffleTicket } from '@core/models/raffle.model';
+import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-design.component';
 
 interface Prize {
   position: number;
@@ -50,6 +52,7 @@ interface VerifyResponse {
 interface VerifyView {
   found: boolean;
   number_label?: string;
+  code?: string;
   numbers?: string[];
   is_paid?: boolean;
   is_winner?: boolean;
@@ -65,7 +68,7 @@ interface VerifyView {
 @Component({
   selector: 'app-raffle-promo',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, TicketDesignComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <main class="page">
@@ -214,19 +217,31 @@ interface VerifyView {
         <!-- Auto-verify destacado (cuando viene de QR con ?b=) -->
         @if (autoVerifyResult(); as v) {
           <section class="verify-card" [class.win]="v.is_winner">
-            @if (v.found) {
-              <span class="material-icons">{{ v.is_winner ? 'emoji_events' : 'verified' }}</span>
-              <div>
-                <strong>Tu boleta BOL {{ v.number_label }} {{ v.is_winner ? 'es GANADORA 🎉' : (v.is_paid ? 'está pagada' : 'está activa') }}</strong>
-                @if (v.numbers && v.numbers.length) {
-                  <small class="nums">Números: {{ v.numbers.join(' · ') }}</small>
-                }
-              </div>
-            } @else {
-              <span class="material-icons">help_outline</span>
-              <div>
-                <strong>Boleta no encontrada</strong>
-                <small>{{ v.message || 'Verifica el código con tu vendedor.' }}</small>
+            <div class="verify-card__head">
+              @if (v.found) {
+                <span class="material-icons">{{ v.is_winner ? 'emoji_events' : 'verified' }}</span>
+                <div>
+                  <strong>Tu boleta BOL {{ v.number_label }} {{ v.is_winner ? 'es GANADORA 🎉' : (v.is_paid ? 'está pagada' : 'está activa') }}</strong>
+                  <small>Esta es tu boleta. Guarda esta página o el código.</small>
+                </div>
+              } @else {
+                <span class="material-icons">help_outline</span>
+                <div>
+                  <strong>Boleta no encontrada</strong>
+                  <small>{{ v.message || 'Verifica el código con tu vendedor.' }}</small>
+                </div>
+              }
+            </div>
+            @if (v.found && toTicket(v); as t) {
+              <div class="verify-card__ticket">
+                <app-ticket-design
+                  [ticket]="t"
+                  [raffleName]="data()?.name || ''"
+                  [prizes]="prizesForDesign()"
+                  [primaryColor]="data()?.primary_color || '#1b8b3b'"
+                  [responsibleName]="data()?.responsible_name ?? null"
+                  [responsiblePhone]="data()?.responsible_phone ?? null"
+                />
               </div>
             }
           </section>
@@ -357,22 +372,34 @@ interface VerifyView {
 
           @if (verifyResult(); as v) {
             <article class="verify-result" [class.verify-result--ok]="v.found" [class.verify-result--win]="v.is_winner">
-              @if (v.found) {
-                <span class="material-icons">{{ v.is_winner ? 'emoji_events' : 'verified' }}</span>
-                <div>
-                  <strong>
-                    Boleta BOL {{ v.number_label }} —
-                    {{ v.is_winner ? 'GANADORA 🎉' : (v.is_paid ? 'pagada' : 'activa') }}
-                  </strong>
-                  @if (v.numbers && v.numbers.length) {
-                    <small class="nums">Tus números: {{ v.numbers.join(' · ') }}</small>
-                  }
-                </div>
-              } @else {
-                <span class="material-icons">help_outline</span>
-                <div>
-                  <strong>No encontramos esa boleta</strong>
-                  <small>{{ v.message || 'Revisa el código o pregúntale a tu vendedor.' }}</small>
+              <div class="verify-result__head">
+                @if (v.found) {
+                  <span class="material-icons">{{ v.is_winner ? 'emoji_events' : 'verified' }}</span>
+                  <div>
+                    <strong>
+                      Boleta BOL {{ v.number_label }} —
+                      {{ v.is_winner ? 'GANADORA 🎉' : (v.is_paid ? 'pagada' : 'activa') }}
+                    </strong>
+                    <small>Mira tu boleta con todos los números abajo.</small>
+                  </div>
+                } @else {
+                  <span class="material-icons">help_outline</span>
+                  <div>
+                    <strong>No encontramos esa boleta</strong>
+                    <small>{{ v.message || 'Revisa el código o pregúntale a tu vendedor.' }}</small>
+                  </div>
+                }
+              </div>
+              @if (v.found && toTicket(v); as t) {
+                <div class="verify-result__ticket">
+                  <app-ticket-design
+                    [ticket]="t"
+                    [raffleName]="data()?.name || ''"
+                    [prizes]="prizesForDesign()"
+                    [primaryColor]="data()?.primary_color || '#1b8b3b'"
+                    [responsibleName]="data()?.responsible_name ?? null"
+                    [responsiblePhone]="data()?.responsible_phone ?? null"
+                  />
                 </div>
               }
             </article>
@@ -606,9 +633,6 @@ interface VerifyView {
 
     /* === VERIFICACIÓN === */
     .verify-card {
-      display: flex;
-      align-items: flex-start;
-      gap: 12px;
       padding: 16px;
       margin-top: 20px;
       background: rgba(30, 199, 123, 0.1);
@@ -619,12 +643,23 @@ interface VerifyView {
       background: linear-gradient(135deg, rgba(212, 168, 87, 0.16), rgba(30, 199, 123, 0.16));
       border-color: rgba(212, 168, 87, 0.5);
     }
-    .verify-card .material-icons { color: #1ec77b; font-size: 28px; }
+    .verify-card__head {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+    .verify-card .material-icons { color: #1ec77b; font-size: 28px; flex-shrink: 0; }
     .verify-card.win .material-icons { color: #d4a857; }
-    .verify-card div { display: flex; flex-direction: column; gap: 2px; }
+    .verify-card__head > div { display: flex; flex-direction: column; gap: 2px; }
     .verify-card strong { color: #fff; font-size: 15px; }
     .verify-card small { color: rgba(255,255,255,0.7); font-size: 12px; }
-    .verify-card .nums { font-family: 'Courier New', monospace; letter-spacing: 0.04em; }
+    .verify-card__ticket {
+      display: flex;
+      justify-content: center;
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px dashed rgba(255,255,255,0.15);
+    }
 
     /* === BLOQUES GENERALES === */
     .block {
@@ -760,9 +795,6 @@ interface VerifyView {
 
     /* Resultado de verificación manual, pegado debajo del form */
     .verify-result {
-      display: flex;
-      align-items: flex-start;
-      gap: 12px;
       margin-top: 14px;
       padding: 14px 16px;
       background: rgba(239, 68, 68, 0.1);
@@ -770,19 +802,25 @@ interface VerifyView {
       border-radius: 12px;
       animation: vrFadeIn 0.25s ease-out;
     }
+    .verify-result__head {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
     .verify-result .material-icons {
       font-size: 26px;
       color: #ef4444;
       flex-shrink: 0;
     }
-    .verify-result div { display: flex; flex-direction: column; gap: 3px; }
+    .verify-result__head > div { display: flex; flex-direction: column; gap: 3px; }
     .verify-result strong { color: #fff; font-size: 14px; }
     .verify-result small { color: rgba(255,255,255,0.7); font-size: 12px; }
-    .verify-result .nums {
-      font-family: 'Courier New', monospace;
-      letter-spacing: 0.04em;
-      font-size: 11.5px;
-      color: rgba(255,255,255,0.85);
+    .verify-result__ticket {
+      display: flex;
+      justify-content: center;
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px dashed rgba(255,255,255,0.15);
     }
     .verify-result--ok {
       background: rgba(30, 199, 123, 0.12);
@@ -1095,6 +1133,7 @@ export class RafflePromoComponent implements OnInit {
         const view: VerifyView = {
           found: r.valid,
           number_label: r.ticket?.label,
+          code: r.ticket?.code,
           numbers: r.ticket?.numbers,
           is_paid: r.ticket?.is_paid,
           is_winner: r.ticket?.is_winner,
@@ -1131,6 +1170,39 @@ export class RafflePromoComponent implements OnInit {
     const d = new Date(iso + (iso.length === 10 ? 'T12:00:00' : ''));
     if (isNaN(d.getTime())) return iso;
     return d.toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' });
+  }
+
+  /** Convierte el resultado del verify a la forma `Ticket` que necesita
+   *  TicketDesignComponent. Devuelve null si no hay resultado válido. */
+  toTicket(v: VerifyView | null): RaffleTicket | null {
+    const d = this.data();
+    if (!v || !v.found || !d || !v.numbers) return null;
+    const status = v.is_winner ? 'winning' : (v.is_paid ? 'paid' : 'available');
+    return {
+      id: 0,
+      raffle_id: d.id,
+      number_label: v.number_label ?? '',
+      code: v.code ?? '',
+      status,
+      seller_id: null,
+      customer_id: null,
+      numbers: v.numbers.map((n, i) => ({ number: n, position: i + 1 })),
+      customer: null,
+      seller: null,
+    };
+  }
+
+  /** Convierte los premios de la rifa al shape que pide TicketDesignComponent. */
+  prizesForDesign(): RafflePrize[] {
+    const d = this.data();
+    if (!d) return [];
+    return d.prizes.map((p) => ({
+      position: p.position,
+      name: p.name,
+      draw_date: p.draw_date,
+      estimated_value: p.estimated_value ?? undefined,
+      image_url: p.image_url ?? undefined,
+    }));
   }
 
   private applySEO(d: PromoRaffle) {
