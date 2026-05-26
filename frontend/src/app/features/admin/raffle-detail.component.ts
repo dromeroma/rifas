@@ -1140,6 +1140,12 @@ export class RaffleDetailComponent implements OnInit {
     this.tiersEdit[this.tiersEdit.length - 1].to_count = null;
     this.tiersError.set(null);
     this.tiersModalOpen.set(true);
+
+    // Pre-warm: dispara un ping a /health en background mientras el usuario
+    // lee/edita. Para cuando le da Guardar (10-20s típicos), Render ya está
+    // despierto y la PATCH responde rápido.
+    fetch(`${environment.apiUrl}/health`, { method: 'GET', cache: 'no-store' })
+      .catch(() => { /* fail silencioso: el retry del save lo cubre */ });
   }
 
   closeTiersModal() { this.tiersModalOpen.set(false); }
@@ -1296,10 +1302,13 @@ export class RaffleDetailComponent implements OnInit {
       },
       error: (e) => {
         // Si es status:0 (sin conexión) y aún quedan intentos, reintenta.
-        if (e?.status === 0 && attempt < 3) {
+        // 5 intentos × 10s backoff = hasta 50s de retry, además del ping
+        // inicial de wakeBackend (60s) → total ~110s para que Render
+        // termine de despertar incluso en cold start largo.
+        if (e?.status === 0 && attempt < 5) {
           const next = attempt + 1;
-          this.tiersError.set(`Servidor lento, reintentando... (${next + 1}/4)`);
-          setTimeout(() => this.attemptSaveTiers(id, payload, next), 5_000);
+          this.tiersError.set(`Servidor despertando, reintentando... (${next + 1}/6)`);
+          setTimeout(() => this.attemptSaveTiers(id, payload, next), 10_000);
           return;
         }
         this.savingTiers.set(false);
