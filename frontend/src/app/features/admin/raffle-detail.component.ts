@@ -7,6 +7,7 @@ import { environment } from '@env/environment';
 import { Prize, Raffle, Ticket, TicketStatus } from '@core/models/raffle.model';
 import { RaffleStats } from '@core/models/stats.model';
 import { AdminService } from '@core/services/admin.service';
+import { AuthService } from '@core/services/auth.service';
 import { ConfirmService } from '@core/services/confirm.service';
 import { DrawWinnerResult, OpsService } from '@core/services/ops.service';
 import { RaffleService } from '@core/services/raffle.service';
@@ -847,6 +848,7 @@ export class RaffleDetailComponent implements OnInit {
   private readonly admin = inject(AdminService);
   private readonly ops = inject(OpsService);
   private readonly toast = inject(ToastService);
+  private readonly auth = inject(AuthService);
   private readonly confirmSvc = inject(ConfirmService);
 
   raffle = signal<Raffle | null>(null);
@@ -1255,11 +1257,6 @@ export class RaffleDetailComponent implements OnInit {
     this.tiersError.set(null);
     this.savingTiers.set(true);
 
-    // Despertar Render (plan free duerme tras 15 min sin uso). El primer hit
-    // tras dormir tarda 30-50s en responder; sin esto, la PATCH siguiente
-    // expira con status:0.
-    await this.wakeBackend();
-
     const payload = {
       commission_tiers: this.tiersEdit.map((t) => ({
         from_count: Number(t.from_count),
@@ -1267,56 +1264,59 @@ export class RaffleDetailComponent implements OnInit {
         amount_per_ticket: Number(t.amount_per_ticket),
       })),
     };
-    this.attemptSaveTiers(id, payload, 0);
-  }
 
-  /** Ping a /health antes del save para despertar Render si está dormido. */
-  private async wakeBackend(): Promise<void> {
+    // Saltamos el HttpClient/interceptor de Angular y usamos fetch directo
+    // para aislar dónde está el bug. Si fetch funciona, el problema está en
+    // alguna abstracción de Angular. Si fetch también falla, vemos el error
+    // de red real con logs detallados.
+    const url = `${environment.apiUrl}/raffles/${id}`;
+    const token = this.auth.accessToken;
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    console.log('[saveTiers] PATCH', url, 'payload:', payload);
+
     try {
-      // AbortController para timeout de 60s — más que el cold start típico (30-50s).
-      const ctrl = new AbortController();
-      const timeoutId = setTimeout(() => ctrl.abort(), 60_000);
-      this.tiersError.set('Despertando servidor...');
-      await fetch(`${environment.apiUrl}/health`, {
-        method: 'GET',
-        signal: ctrl.signal,
-        cache: 'no-store',
+      const response = await fetch(url, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify(payload),
       });
-      clearTimeout(timeoutId);
-      this.tiersError.set(null);
-    } catch {
-      // Si /health falla, igual seguimos al PATCH — el retry logic lo cubre.
-      this.tiersError.set(null);
-    }
-  }
 
-  /** Reintenta el save hasta 3 veces con backoff si el backend no responde. */
-  private attemptSaveTiers(id: number, payload: any, attempt: number) {
-    this.raffleSvc.update(id, payload).subscribe({
-      next: (updated) => {
-        this.raffle.set(updated);
+      console.log('[saveTiers] response status:', response.status, response.statusText);
+
+      const rawText = await response.text();
+      console.log('[saveTiers] response body:', rawText);
+
+      if (!response.ok) {
+        let detail = rawText;
+        try {
+          const parsed = JSON.parse(rawText);
+          detail = this.extractErrorMessage({ status: response.status, error: parsed });
+        } catch { /* body wasn't JSON */ }
+        this.tiersError.set(detail);
+        this.toast.error('No se pudo guardar', detail);
         this.savingTiers.set(false);
-        this.tiersError.set(null);
-        this.tiersModalOpen.set(false);
-        this.toast.success('Tramos actualizados', 'Aplican a partir del próximo pago confirmado.');
-      },
-      error: (e) => {
-        // Si es status:0 (sin conexión) y aún quedan intentos, reintenta.
-        // 5 intentos × 10s backoff = hasta 50s de retry, además del ping
-        // inicial de wakeBackend (60s) → total ~110s para que Render
-        // termine de despertar incluso en cold start largo.
-        if (e?.status === 0 && attempt < 5) {
-          const next = attempt + 1;
-          this.tiersError.set(`Servidor despertando, reintentando... (${next + 1}/6)`);
-          setTimeout(() => this.attemptSaveTiers(id, payload, next), 10_000);
-          return;
-        }
-        this.savingTiers.set(false);
-        const msg = this.extractErrorMessage(e);
-        this.tiersError.set(msg);
-        this.toast.error('No se pudo guardar', msg);
-      },
-    });
+        return;
+      }
+
+      const updated = JSON.parse(rawText);
+      this.raffle.set(updated);
+      this.savingTiers.set(false);
+      this.tiersError.set(null);
+      this.tiersModalOpen.set(false);
+      this.toast.success('Tramos actualizados', 'Aplican a partir del próximo pago confirmado.');
+    } catch (err: unknown) {
+      // fetch failure: red caída, CORS bloqueado, DNS, timeout, etc.
+      console.error('[saveTiers] fetch falló:', err);
+      const msg = err instanceof Error ? err.message : 'Error desconocido';
+      const friendly = `No se pudo conectar al servidor. Detalle técnico: ${msg}`;
+      this.tiersError.set(friendly);
+      this.toast.error('No se pudo guardar', friendly);
+      this.savingTiers.set(false);
+    }
   }
 
   // ============ Gestión de premios ============
