@@ -42,6 +42,19 @@ interface ListResponse {
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <main class="page">
+      <!-- Gradiente SVG compartido por todas las cards (declarado una sola
+           vez para evitar IDs duplicados y para que Angular no falle al
+           interpolar IDs dinámicos en atributos SVG). -->
+      <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+        <defs>
+          <linearGradient id="tvCardGrad" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stop-color="#0d1b2a" />
+            <stop offset="60%" stop-color="#070d14" />
+            <stop offset="100%" stop-color="#020409" />
+          </linearGradient>
+        </defs>
+      </svg>
+
       <div class="hex-bg" aria-hidden="true"></div>
 
       <header class="topbar">
@@ -87,17 +100,10 @@ interface ListResponse {
                   <svg class="tv-svg" viewBox="0 0 320 220" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                     <rect x="14" y="12" width="292" height="170" rx="10" ry="10" fill="#0a0e0c" />
                     <rect x="20" y="18" width="280" height="158" rx="6" ry="6"
-                          fill="url(#gradC{{ r.id }})" stroke="#1f2937" stroke-width="0.5" />
+                          fill="url(#tvCardGrad)" stroke="#1f2937" stroke-width="0.5" />
                     <ellipse cx="120" cy="70" rx="60" ry="30" fill="rgba(255,255,255,0.04)" />
                     <rect x="140" y="182" width="40" height="6" fill="#0a0e0c" />
                     <polygon points="100,196 220,196 200,206 120,206" fill="#0a0e0c" />
-                    <defs>
-                      <linearGradient [attr.id]="'gradC' + r.id" x1="0" x2="0" y1="0" y2="1">
-                        <stop offset="0%" stop-color="#0d1b2a" />
-                        <stop offset="60%" stop-color="#070d14" />
-                        <stop offset="100%" stop-color="#020409" />
-                      </linearGradient>
-                    </defs>
                   </svg>
                 }
                 <div class="card__badge">{{ r.days_to_final_draw }}d</div>
