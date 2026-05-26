@@ -2,7 +2,7 @@
   "name": "Boletera — Plataforma profesional de rifas digitales",
   "short_name": "Boletera",
   "description": "Vende rifas con boletas únicas con QR, comisiones automáticas, pagos con comprobante y verificación pública. Hecho en Colombia.",
-  "start_url": "/",
+  "start_url": "/login",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
