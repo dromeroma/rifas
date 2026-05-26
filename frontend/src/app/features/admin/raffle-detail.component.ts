@@ -286,6 +286,7 @@ import { TicketActionsModalComponent } from '../seller/ticket-actions-modal.comp
           <!-- Leyenda de colores -->
           <div class="legend">
             <span class="legend__item"><span class="dot dot--available"></span>Disponible</span>
+            <span class="legend__item"><span class="dot dot--assigned"></span>Asignada a vendedor</span>
             <span class="legend__item"><span class="dot dot--reserved"></span>Reservada</span>
             <span class="legend__item"><span class="dot dot--pending_payment"></span>Pendiente pago</span>
             <span class="legend__item"><span class="dot dot--partially_paid"></span>Pago parcial</span>
@@ -296,7 +297,10 @@ import { TicketActionsModalComponent } from '../seller/ticket-actions-modal.comp
 
           <div class="ticket-grid">
             @for (t of filteredTickets(); track t.id) {
-              <button class="t-btn t-btn--{{ t.status }}" (click)="preview(t.id)" [title]="t.status">
+              <button class="t-btn t-btn--{{ t.status }}"
+                      [class.t-btn--assigned]="t.status === 'available' && t.seller_id"
+                      (click)="preview(t.id)"
+                      [title]="t.status === 'available' && t.seller_id ? 'Asignada a vendedor' : t.status">
                 {{ t.number_label }}
               </button>
             }
@@ -725,6 +729,7 @@ import { TicketActionsModalComponent } from '../seller/ticket-actions-modal.comp
       flex-shrink: 0;
     }
     .dot--available       { background: var(--bg-base); color: var(--text-faint); }
+    .dot--assigned        { background: #a78bfa; color: #a78bfa; border-color: #a78bfa; }
     .dot--reserved        { background: var(--warning); color: var(--warning); border-color: var(--warning); }
     .dot--pending_payment { background: repeating-linear-gradient(45deg, var(--warning) 0 4px, var(--bg-base) 4px 8px); color: var(--warning); border-color: var(--warning); }
     .dot--partially_paid  { background: var(--info); color: var(--info); border-color: var(--info); }
@@ -764,6 +769,20 @@ import { TicketActionsModalComponent } from '../seller/ticket-actions-modal.comp
       border-color: var(--border);
     }
     .t-btn--available:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* Asignada: boleta libre pero ya tiene seller_id (rango asignado).
+       Color lavanda suave para distinguirla de las totalmente libres
+       sin gritar visualmente. */
+    .t-btn--assigned {
+      background: rgba(167, 139, 250, 0.12);
+      border-color: rgba(167, 139, 250, 0.5);
+      color: #a78bfa;
+    }
+    .t-btn--assigned:hover {
+      background: rgba(167, 139, 250, 0.22);
+      border-color: #a78bfa;
+      color: #a78bfa;
+    }
 
     /* Reservada: amarillo sólido */
     .t-btn--reserved {
