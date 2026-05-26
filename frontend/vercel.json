@@ -4,6 +4,7 @@
   "outputDirectory": "dist/sistema-rifas/browser",
   "installCommand": "npm ci",
   "framework": null,
+  "cleanUrls": true,
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
   ],
