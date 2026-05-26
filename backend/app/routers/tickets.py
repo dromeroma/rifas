@@ -1,7 +1,8 @@
+from datetime import datetime, timezone
 from typing import Annotated, List
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
-from sqlalchemy import select
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -10,10 +11,11 @@ from app.core.deps import TenantScope, assert_tenant_owns, get_current_user, get
 from app.models.raffle import Raffle
 from app.models.reservation import Reservation
 from app.models.ticket import Ticket, TicketStatus
+from app.models.ticket_number import TicketNumber
 from app.models.user import User, UserRole
 from app.schemas.ticket import (
-    ExtendReservationRequest, ReservePackageRequest, ReservePackageResult,
-    ReserveRequest, TicketOut, TicketSummary,
+    ExtendReservationRequest, MarkPrintedRequest, PrintDataResponse, PrintTicketItem,
+    ReservePackageRequest, ReservePackageResult, ReserveRequest, TicketOut, TicketSummary,
 )
 from app.services.audit_service import log_action
 from app.services.image_service import build_ticket_image
@@ -411,3 +413,123 @@ async def get_image(
             "Pragma": "no-cache",
         },
     )
+
+
+# ============ Impresión física de boletas (admin only) ============
+
+def _short_code(code: str) -> str:
+    """4 chars en mayúsculas, sin guiones, derivados del `code` único. Sirve
+    como código de respaldo para escribir/leer a mano si el QR falla."""
+    return code.replace("-", "").upper()[:4]
+
+
+@router.get("/raffles/{raffle_id}/print-data", response_model=PrintDataResponse)
+async def get_print_data(
+    raffle_id: int,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    actor: Annotated[User, Depends(require_roles(UserRole.ADMIN, UserRole.SUPER_ADMIN))],
+    scope: Annotated[TenantScope, Depends(get_tenant_scope)],
+    seller_id: int = Query(..., description="vendedor cuyas boletas se van a imprimir"),
+    only_unprinted: bool = Query(False, description="solo boletas que no se han impreso aún"),
+):
+    """Devuelve todo lo necesario para imprimir las boletas asignadas a un
+    vendedor en una rifa. El admin imprime en hojas carta (4 boletas por hoja).
+    Cada boleta lleva un desprendible (talón) que se queda con el vendedor con
+    el nombre y celular del cliente."""
+    raffle = await _verify_raffle_tenancy(db, raffle_id, scope)
+
+    seller = (await db.execute(select(User).where(User.id == seller_id))).scalar_one_or_none()
+    if not seller:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "vendedor no encontrado")
+    # El vendedor debe pertenecer al mismo tenant que la rifa.
+    if scope.tenant_id is not None and seller.tenant_id != scope.tenant_id:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "el vendedor no pertenece a tu cuenta")
+    if seller.role != UserRole.SELLER:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "solo se imprimen boletas de vendedores")
+
+    q = (
+        select(Ticket)
+        .options(selectinload(Ticket.numbers))
+        .where(Ticket.raffle_id == raffle_id, Ticket.seller_id == seller_id)
+        .order_by(Ticket.number_label)
+    )
+    if only_unprinted:
+        q = q.where(Ticket.printed_at.is_(None))
+    tickets = (await db.execute(q)).scalars().all()
+
+    raffle_full = (
+        await db.execute(
+            select(Raffle).options(selectinload(Raffle.prizes)).where(Raffle.id == raffle_id)
+        )
+    ).scalar_one()
+
+    items = [
+        PrintTicketItem(
+            ticket_id=t.id,
+            number_label=t.number_label,
+            code=t.code,
+            short_code=_short_code(t.code),
+            numbers=[n.number for n in sorted(t.numbers, key=lambda x: x.position)],
+            printed_at=t.printed_at,
+        )
+        for t in tickets
+    ]
+
+    return PrintDataResponse(
+        raffle_id=raffle.id,
+        raffle_name=raffle.name,
+        final_draw_date=raffle.final_draw_date.isoformat(),
+        primary_color=raffle.primary_color,
+        logo_url=raffle.logo_url,
+        lottery_name=raffle.lottery_name,
+        responsible_name=raffle.responsible_name,
+        responsible_phone=raffle.responsible_phone,
+        seller_id=seller.id,
+        seller_name=seller.full_name,
+        seller_phone=seller.phone,
+        prizes=[
+            {
+                "position": p.position,
+                "name": p.name,
+                "draw_date": p.draw_date.isoformat(),
+                "estimated_value": float(p.estimated_value) if p.estimated_value else None,
+                "image_url": p.image_url,
+            }
+            for p in sorted(raffle_full.prizes, key=lambda x: x.position)
+        ],
+        tickets=items,
+    )
+
+
+@router.post("/raffles/{raffle_id}/mark-printed", status_code=status.HTTP_200_OK)
+async def mark_tickets_printed(
+    raffle_id: int,
+    payload: MarkPrintedRequest,
+    request: Request,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    actor: Annotated[User, Depends(require_roles(UserRole.ADMIN, UserRole.SUPER_ADMIN))],
+    scope: Annotated[TenantScope, Depends(get_tenant_scope)],
+):
+    """Marca un lote de boletas como impresas (printed_at = now). Las boletas
+    deben pertenecer a la rifa indicada. Se usa después de disparar la
+    impresión / descarga de PDF para llevar control de talones físicos."""
+    await _verify_raffle_tenancy(db, raffle_id, scope)
+
+    if not payload.ticket_ids:
+        return {"updated": 0}
+
+    now = datetime.now(timezone.utc)
+    result = await db.execute(
+        update(Ticket)
+        .where(Ticket.raffle_id == raffle_id, Ticket.id.in_(payload.ticket_ids))
+        .values(printed_at=now)
+    )
+    updated = result.rowcount or 0
+
+    await log_action(
+        db, actor_id=actor.id, action="tickets.printed",
+        entity_type="raffle", entity_id=raffle_id, request=request,
+        metadata={"count": updated, "ticket_ids": payload.ticket_ids},
+    )
+    await db.commit()
+    return {"updated": updated, "printed_at": now.isoformat()}

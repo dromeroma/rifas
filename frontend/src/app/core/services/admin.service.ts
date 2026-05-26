@@ -70,4 +70,18 @@ export class AdminService {
       quantity,
     });
   }
+
+  /** Boletas de un vendedor en una rifa, listas para imprimir en hoja física. */
+  printData(raffleId: number, sellerId: number, onlyUnprinted = false): Observable<unknown> {
+    const q = `?seller_id=${sellerId}${onlyUnprinted ? '&only_unprinted=true' : ''}`;
+    return this.http.get(`${this.api}/raffles/${raffleId}/print-data${q}`);
+  }
+
+  /** Marca un lote de boletas como impresas (printed_at = now). */
+  markPrinted(raffleId: number, ticketIds: number[]): Observable<{ updated: number; printed_at: string }> {
+    return this.http.post<{ updated: number; printed_at: string }>(
+      `${this.api}/raffles/${raffleId}/mark-printed`,
+      { ticket_ids: ticketIds },
+    );
+  }
 }

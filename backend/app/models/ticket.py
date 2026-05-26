@@ -1,7 +1,8 @@
 import enum
+from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Enum, ForeignKey, Integer, Numeric, String, UniqueConstraint
+from sqlalchemy import DateTime, Enum, ForeignKey, Integer, Numeric, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -53,6 +54,13 @@ class Ticket(Base, TimestampMixin):
     # raffle.ticket_price. Mientras tanto vive en PARTIALLY_PAID (si tiene al
     # menos un pago confirmado) o en RESERVED / PENDING_PAYMENT.
     paid_amount: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False, default=0)
+
+    # Última impresión física de la boleta (PDF / hoja carta entregada al
+    # vendedor). null = nunca se imprimió. Evita reimpresiones accidentales
+    # y detecta talones duplicados.
+    printed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
     # Relaciones
     seller_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)

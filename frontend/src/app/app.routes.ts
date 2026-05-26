@@ -31,6 +31,13 @@ export const routes: Routes = [
       import('./features/customer/public-raffle.component').then((m) => m.PublicRaffleComponent),
   },
   {
+    // Alias corto para los QR físicos de las boletas. Carga el sitio
+    // promocional premium con branding mundialista.
+    path: 'r/:id',
+    loadComponent: () =>
+      import('./features/customer/raffle-promo.component').then((m) => m.RafflePromoComponent),
+  },
+  {
     path: 'mi-boleta',
     loadComponent: () =>
       import('./features/customer/my-tickets.component').then((m) => m.MyTicketsComponent),
@@ -41,6 +48,28 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./features/subscription/subscription-expired.component').then(
         (m) => m.SubscriptionExpiredComponent,
+      ),
+  },
+
+  {
+    // Vista fullscreen sin shell para imprimir hojas de boletas físicas.
+    // Aparte del admin shell para que `window.print()` salga limpio.
+    path: 'admin/print/:raffleId/:sellerId',
+    canActivate: [authGuard, roleGuard(['super_admin', 'admin'])],
+    loadComponent: () =>
+      import('./features/admin/ticket-print-page.component').then(
+        (m) => m.TicketPrintPageComponent,
+      ),
+  },
+
+  {
+    // Atajo disparado por el QR del desprendible. El admin escanea con su
+    // celular el talón que le entrega el vendedor y aterriza acá.
+    path: 'admin/registrar-venta',
+    canActivate: [authGuard, roleGuard(['super_admin', 'admin'])],
+    loadComponent: () =>
+      import('./features/admin/register-sale-shortcut.component').then(
+        (m) => m.RegisterSaleShortcutComponent,
       ),
   },
 

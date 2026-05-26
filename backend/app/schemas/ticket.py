@@ -92,3 +92,36 @@ class ReservePackageResult(BaseModel):
     ticket_ids: list[int]
     labels: list[str]
     numbers: list[str]
+
+
+# ---------- Impresión física de boletas ----------
+
+class PrintTicketItem(BaseModel):
+    """Una boleta a imprimir en hoja física. El admin imprime un PDF de hoja
+    carta con 4 boletas por página y se las entrega al vendedor."""
+    ticket_id: int
+    number_label: str            # "001", "005"
+    code: str                    # 7Z3-4K9-PLM (único global)
+    short_code: str              # 4 chars derivados de `code` para escribir a mano
+    numbers: list[str]
+    printed_at: Optional[datetime] = None
+
+
+class PrintDataResponse(BaseModel):
+    raffle_id: int
+    raffle_name: str
+    final_draw_date: str
+    primary_color: Optional[str] = None
+    logo_url: Optional[str] = None
+    lottery_name: Optional[str] = None
+    responsible_name: Optional[str] = None
+    responsible_phone: Optional[str] = None
+    seller_id: int
+    seller_name: str
+    seller_phone: Optional[str] = None
+    prizes: list[dict]
+    tickets: list[PrintTicketItem]
+
+
+class MarkPrintedRequest(BaseModel):
+    ticket_ids: list[int]

@@ -34,6 +34,7 @@ async def verify_public(code: str, db: Annotated[AsyncSession, Depends(get_db)])
     return {
         "valid": True,
         "raffle": {
+            "id": raffle.id,
             "name": raffle.name,
             "final_draw_date": raffle.final_draw_date.isoformat(),
             "lottery_name": raffle.lottery_name,

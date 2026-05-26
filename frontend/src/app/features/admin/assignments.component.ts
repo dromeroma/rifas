@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { forkJoin } from 'rxjs';
 
 import { Raffle } from '@core/models/raffle.model';
@@ -89,6 +90,14 @@ import {
                   <small class="muted">{{ a.to_ticket - a.from_ticket + 1 }} boletas</small>
                 </div>
                 <app-chip [tone]="a.status === 'active' ? 'accent' : 'default'">{{ a.status }}</app-chip>
+                <app-button
+                  variant="secondary"
+                  size="sm"
+                  icon="print"
+                  (click)="openPrint(a)"
+                  title="Imprimir boletas físicas con desprendible">
+                  Imprimir
+                </app-button>
               </article>
             }
           </div>
@@ -139,13 +148,19 @@ import {
     .list { display: grid; gap: var(--s-2); }
     .row {
       display: grid;
-      grid-template-columns: 1fr auto auto;
+      grid-template-columns: 1fr auto auto auto;
       gap: var(--s-3);
       align-items: center;
       padding: var(--s-3);
       background: var(--bg-base);
       border: 1px solid var(--border);
       border-radius: var(--r-md);
+    }
+    @media (max-width: 640px) {
+      .row {
+        grid-template-columns: 1fr auto;
+        row-gap: var(--s-2);
+      }
     }
     .row__main { display: grid; gap: 2px; }
     .row__main strong { font-size: 14px; }
@@ -159,6 +174,7 @@ export class AssignmentsComponent implements OnInit {
   private readonly admin = inject(AdminService);
   private readonly raffleSvc = inject(RaffleService);
   private readonly toast = inject(ToastService);
+  private readonly router = inject(Router);
 
   raffles = signal<Raffle[]>([]);
   sellers = signal<SellerUser[]>([]);
@@ -212,4 +228,9 @@ export class AssignmentsComponent implements OnInit {
   raffleName(id: number) { return this.raffles().find((r) => r.id === id)?.name ?? `#${id}`; }
   sellerName(id: number) { return this.sellers().find((s) => s.id === id)?.full_name ?? `#${id}`; }
   pad(n: number) { return String(n).padStart(3, '0'); }
+
+  /** Abre la página de impresión (fuera del shell para imprimir limpio). */
+  openPrint(a: SellerAssignment) {
+    this.router.navigate(['/admin/print', a.raffle_id, a.seller_id]);
+  }
 }
