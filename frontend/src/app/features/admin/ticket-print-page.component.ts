@@ -214,12 +214,23 @@ export class TicketPrintPageComponent implements OnInit {
       return;
     }
 
+    // Filtro opcional ?ids=1,2,3 para imprimir solo una selección.
+    const idsParam = this.route.snapshot.queryParamMap.get('ids');
+    const filterIds = idsParam
+      ? new Set(idsParam.split(',').map((s) => Number(s)).filter((n) => !isNaN(n)))
+      : null;
+
     this.admin.printData(this.raffleId, this.sellerId).subscribe({
       next: (resp) => {
-        this.data.set(resp as PrintData);
+        let data = resp as PrintData;
+        if (filterIds && filterIds.size > 0) {
+          data = {
+            ...data,
+            tickets: data.tickets.filter((t) => filterIds.has(t.ticket_id)),
+          };
+        }
+        this.data.set(data);
         this.loading.set(false);
-        // Le da un breve respiro al DOM para que los QRs se rendericen antes
-        // de que el usuario dispare imprimir.
       },
       error: (e) => {
         const detail = e?.error?.detail ?? 'No se pudieron cargar las boletas';

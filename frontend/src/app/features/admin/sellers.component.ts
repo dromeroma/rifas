@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 
 import { SellerSummary } from '@core/models/stats.model';
 import { AdminService } from '@core/services/admin.service';
@@ -68,7 +69,7 @@ import {
             </thead>
             <tbody>
               @for (s of filtered(); track s.id) {
-                <tr [class.row--inactive]="!s.is_active">
+                <tr [class.row--inactive]="!s.is_active" class="row--clickable" (click)="openDetail(s.id)" [title]="'Ver boletas asignadas a ' + s.full_name">
                   <td>
                     <div class="who">
                       <app-avatar [name]="s.full_name" [size]="36" />
@@ -211,6 +212,7 @@ import {
     .table tbody tr { transition: background var(--t-fast); }
     .table tbody tr:hover { background: var(--accent-soft); }
     .table tbody tr.row--inactive { opacity: 0.55; }
+    .table tbody tr.row--clickable { cursor: pointer; }
 
     .table .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
     .table .num strong { font-size: 14px; color: var(--text); font-weight: 700; }
@@ -256,6 +258,7 @@ import {
 export class SellersComponent implements OnInit {
   private readonly admin = inject(AdminService);
   private readonly toast = inject(ToastService);
+  private readonly router = inject(Router);
 
   loading = signal(true);
   modalOpen = signal(false);
@@ -331,5 +334,9 @@ export class SellersComponent implements OnInit {
 
   fmt(v: number): string {
     return new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 }).format(v);
+  }
+
+  openDetail(sellerId: number) {
+    this.router.navigate(['/admin/sellers', sellerId]);
   }
 }

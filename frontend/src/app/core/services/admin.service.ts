@@ -12,6 +12,29 @@ import {
   SellerUser,
 } from '../models/stats.model';
 
+export interface AssignmentTicketDTO {
+  id: number;
+  number_label: string;
+  code: string;
+  status:
+    | 'available' | 'reserved' | 'pending_payment'
+    | 'partially_paid' | 'paid' | 'expired' | 'winning';
+  has_customer: boolean;
+  paid_amount: number;
+}
+
+export interface RaffleAssignmentDetail {
+  raffle_id: number;
+  raffle_name: string;
+  raffle_status: string;
+  final_draw_date: string;
+  total_tickets: number;
+  assigned_count: number;
+  removable_count: number;
+  available_pool: number;
+  tickets: AssignmentTicketDTO[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class AdminService {
   private readonly http = inject(HttpClient);
@@ -69,6 +92,37 @@ export class AdminService {
       seller_id: sellerId,
       quantity,
     });
+  }
+
+  /** Detalle de las asignaciones de un vendedor: por rifa, con todas sus boletas. */
+  sellerAssignmentsDetail(sellerId: number): Observable<RaffleAssignmentDetail[]> {
+    return this.http.get<RaffleAssignmentDetail[]>(
+      `${this.api}/assignments/seller/${sellerId}/detail`,
+    );
+  }
+
+  /** Quita boletas a un vendedor. Solo se aceptan boletas `available` sin reserva. */
+  unassignTickets(
+    raffleId: number,
+    sellerId: number,
+    body: { ticket_ids?: number[]; quantity?: number },
+  ): Observable<{ unassigned: number; ticket_ids: number[] }> {
+    return this.http.post<{ unassigned: number; ticket_ids: number[] }>(
+      `${this.api}/assignments/raffles/${raffleId}/seller/${sellerId}/unassign`,
+      body,
+    );
+  }
+
+  /** Asigna N boletas más al vendedor desde el pool disponible. */
+  assignMore(
+    raffleId: number,
+    sellerId: number,
+    quantity: number,
+  ): Observable<{ assigned: number; requested: number; labels: string[]; partial: boolean }> {
+    return this.http.post<{ assigned: number; requested: number; labels: string[]; partial: boolean }>(
+      `${this.api}/assignments/raffles/${raffleId}/seller/${sellerId}/assign-more`,
+      { quantity },
+    );
   }
 
   /** Boletas de un vendedor en una rifa, listas para imprimir en hoja física. */
