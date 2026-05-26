@@ -1,6 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "npm run build",
+  "buildCommand": "NODE_OPTIONS='--max-old-space-size=7168' npm run build",
   "outputDirectory": "dist/sistema-rifas/browser",
   "installCommand": "npm ci",
   "framework": null,
