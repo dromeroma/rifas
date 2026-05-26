@@ -1157,6 +1157,11 @@ export class RaffleDetailComponent implements OnInit {
 
   private validateTiersForm(): string | null {
     if (!this.tiersEdit.length) return 'Debe haber al menos un tramo.';
+    // Regla del backend: el primer tramo SIEMPRE arranca en 1 (cubre desde la
+    // primera boleta vendida; no puede haber huecos al inicio).
+    if (this.tiersEdit[0].from_count !== 1) {
+      return 'El primer tramo debe arrancar en "Desde = 1". No puede haber boletas sin tramo.';
+    }
     for (let i = 0; i < this.tiersEdit.length; i++) {
       const t = this.tiersEdit[i];
       if (!t.from_count || t.from_count < 1) {
@@ -1165,7 +1170,7 @@ export class RaffleDetailComponent implements OnInit {
       if (i < this.tiersEdit.length - 1 && (t.to_count == null || t.to_count < t.from_count)) {
         return `Tramo ${i + 1}: "Hasta" debe ser mayor o igual a "Desde".`;
       }
-      if (!t.amount_per_ticket || t.amount_per_ticket < 0) {
+      if (t.amount_per_ticket == null || t.amount_per_ticket < 0) {
         return `Tramo ${i + 1}: el monto por boleta debe ser ≥ 0.`;
       }
       if (i > 0) {
@@ -1176,6 +1181,25 @@ export class RaffleDetailComponent implements OnInit {
       }
     }
     return null;
+  }
+
+  /** Extrae un mensaje legible de un error HTTP que puede traer detail como
+   *  string, array (formato Pydantic 422) o estructura arbitraria. */
+  private extractErrorMessage(e: any): string {
+    const detail = e?.error?.detail;
+    if (!detail) return 'No se pudo guardar';
+    if (typeof detail === 'string') return detail;
+    if (Array.isArray(detail)) {
+      const msgs = detail
+        .map((d: any) => {
+          const msg = d?.msg || d?.message || '';
+          // Pydantic prefija con "Value error, "; lo quitamos.
+          return String(msg).replace(/^Value error,\s*/i, '');
+        })
+        .filter(Boolean);
+      return msgs.length ? msgs.join(' · ') : 'Datos inválidos.';
+    }
+    return 'No se pudo guardar';
   }
 
   saveTiers() {
@@ -1205,9 +1229,9 @@ export class RaffleDetailComponent implements OnInit {
       },
       error: (e) => {
         this.savingTiers.set(false);
-        const detail = e?.error?.detail ?? 'No se pudo guardar';
-        this.tiersError.set(typeof detail === 'string' ? detail : JSON.stringify(detail));
-        this.toast.error('Error', this.tiersError() ?? '');
+        const msg = this.extractErrorMessage(e);
+        this.tiersError.set(msg);
+        this.toast.error('No se pudo guardar', msg);
       },
     });
   }
