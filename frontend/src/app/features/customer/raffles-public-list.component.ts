@@ -128,11 +128,6 @@ interface ListResponse {
                       {{ r.prizes_count }} premios
                     </span>
                   }
-                  @if (r.total_prize_value) {
-                    <span class="chip accent">
-                      {{ '$' + fmt(r.total_prize_value) }}
-                    </span>
-                  }
                 </div>
                 @if (r.responsible_name) {
                   <small class="muted">Organiza: {{ r.responsible_name }}</small>

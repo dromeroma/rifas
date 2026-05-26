@@ -114,12 +114,6 @@ interface VerifyView {
                   <strong>{{ d.days_to_final_draw }}</strong>
                   <small>{{ d.days_to_final_draw === 1 ? 'día' : 'días' }} al sorteo</small>
                 </div>
-                @if (totalPrizeValue() > 0) {
-                  <div class="counter accent">
-                    <strong>{{ '$' + fmt(totalPrizeValue()) }}</strong>
-                    <small>en premios</small>
-                  </div>
-                }
                 <div class="counter">
                   <strong>{{ d.prizes.length }}</strong>
                   <small>{{ d.prizes.length === 1 ? 'premio' : 'premios' }}</small>
@@ -259,7 +253,7 @@ interface VerifyView {
                 }
                 <div class="prize__body">
                   <strong>{{ p.name }}</strong>
-                  @if (p.estimated_value) {
+                  @if (p.estimated_value && p.position !== 1) {
                     <small class="value">{{ '$' + fmt(p.estimated_value) }}</small>
                   }
                   <small class="date">Sorteo: {{ formatDate(p.draw_date) }}</small>
