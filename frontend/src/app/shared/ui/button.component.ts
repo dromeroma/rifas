@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, input } from '@angular/core';
 
-export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
+export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'info';
 export type ButtonSize = 'sm' | 'md' | 'lg';
 
 @Component({
@@ -72,6 +72,17 @@ export type ButtonSize = 'sm' | 'md' | 'lg';
       border-color: transparent;
     }
     .v-danger:hover:not(:disabled) { background: var(--danger); color: #fff; }
+
+    /* Variante 'info' — azul, ideal para acciones secundarias que conviene
+       que el vendedor identifique fácil (ej. crear cliente nuevo). */
+    .v-info {
+      background: var(--info);
+      color: #fff;
+      border-color: transparent;
+    }
+    .v-info:hover:not(:disabled) {
+      background: color-mix(in srgb, var(--info) 88%, #000);
+    }
 
     .s-sm { height: var(--h-button-sm); padding: 0 var(--s-3); font-size: 13px; min-width: 0; }
     .s-lg { height: 52px; padding: 0 var(--s-6); font-size: 15px; }

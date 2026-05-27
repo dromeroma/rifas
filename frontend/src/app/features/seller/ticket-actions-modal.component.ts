@@ -64,18 +64,28 @@ import { ReportPaymentModalComponent } from './report-payment-modal.component';
               <h3>Reservar para un cliente</h3>
 
               @if (!showNewCustomerForm()) {
-                <app-input
-                  placeholder="Buscar cliente..."
-                  icon="search"
-                  [(ngModel)]="search"
-                  name="search"
-                  (input)="searchCustomers()"
-                />
+                <div class="search-row">
+                  <app-input
+                    class="search-row__input"
+                    placeholder="Buscar cliente..."
+                    icon="search"
+                    [(ngModel)]="search"
+                    name="search"
+                    (input)="searchCustomers()"
+                  />
+                  <app-button
+                    variant="info"
+                    icon="person_add"
+                    (click)="toggleNewForm()"
+                    title="Si el cliente no existe, créalo aquí">
+                    Nuevo cliente
+                  </app-button>
+                </div>
                 <div class="customer-list">
                   @if (loadingCustomers()) {
                     <p class="muted">Cargando...</p>
                   } @else if (!customers().length) {
-                    <p class="muted">No hay clientes. Crea uno con el botón de abajo.</p>
+                    <p class="muted">No hay clientes con ese nombre. Crea uno con el botón "Nuevo cliente" de arriba.</p>
                   } @else {
                     @for (c of customers(); track c.id) {
                       <button class="cust" [class.cust--selected]="selectedCustomerId() === c.id" (click)="selectCustomer(c.id)">
@@ -91,9 +101,6 @@ import { ReportPaymentModalComponent } from './report-payment-modal.component';
                     }
                   }
                 </div>
-                <app-button variant="ghost" icon="person_add" (click)="toggleNewForm()">
-                  Nuevo cliente
-                </app-button>
               } @else {
                 <form class="new-form">
                   <app-input label="Nombre completo *" [(ngModel)]="newCust.full_name" name="full_name" icon="person" />
@@ -296,6 +303,21 @@ import { ReportPaymentModalComponent } from './report-payment-modal.component';
     .info-block small.muted { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; }
     .info-block strong { font-size: 14px; color: var(--text); }
     .info-block small { font-size: 12px; color: var(--text-muted); }
+
+    /* Búsqueda de cliente con botón "Nuevo cliente" pegado al lado.
+       En mobile el botón se va debajo del input por el wrap.
+       Ubicar la acción de crear cliente acá (en lugar de al pie del modal)
+       hace que el vendedor la vea ni bien busca y no la encuentra. */
+    .search-row {
+      display: flex;
+      gap: var(--s-2);
+      align-items: stretch;
+      flex-wrap: wrap;
+    }
+    .search-row__input {
+      flex: 1;
+      min-width: 200px;
+    }
 
     .customer-list {
       max-height: 260px;

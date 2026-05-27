@@ -58,14 +58,21 @@ import {
             <p class="muted hint">Busca un cliente existente o crea uno nuevo.</p>
 
             @if (!createMode()) {
-              <app-input
-                label="Buscar cliente"
-                placeholder="Nombre o teléfono"
-                icon="search"
-                [(ngModel)]="searchQuery"
-                name="search_q"
-                (ngModelChange)="onSearch()"
-              />
+              <div class="search-row">
+                <app-input
+                  class="search-row__input"
+                  label="Buscar cliente"
+                  placeholder="Nombre o teléfono"
+                  icon="search"
+                  [(ngModel)]="searchQuery"
+                  name="search_q"
+                  (ngModelChange)="onSearch()"
+                />
+                <app-button variant="info" icon="person_add" (click)="createMode.set(true)"
+                            title="Si el cliente no existe, créalo aquí">
+                  Nuevo cliente
+                </app-button>
+              </div>
               @if (searchResults().length) {
                 <ul class="customers">
                   @for (c of searchResults(); track c.id) {
@@ -80,9 +87,6 @@ import {
                   }
                 </ul>
               }
-              <app-button variant="secondary" icon="add" size="sm" (click)="createMode.set(true)">
-                Crear nuevo cliente
-              </app-button>
             } @else {
               <div class="row">
                 <app-input label="Nombre completo *" [(ngModel)]="newCustomer.full_name" name="cust_name" icon="person" />
@@ -180,6 +184,16 @@ import {
     .pkg__price { font-weight: 700; margin-top: 4px; }
     .pkg--active .pkg__size, .pkg--active .pkg__price { color: var(--accent-fg); }
     .pkg--active small { color: var(--accent-fg); }
+
+    /* Búsqueda con botón "Nuevo cliente" pegado al lado para que el vendedor
+       lo encuentre sin scrollear cuando no aparece el cliente buscado. */
+    .search-row {
+      display: flex;
+      gap: var(--s-2);
+      align-items: flex-end;
+      flex-wrap: wrap;
+    }
+    .search-row__input { flex: 1; min-width: 200px; }
 
     .customers { list-style: none; padding: 0; margin: 0; display: grid; gap: 4px; max-height: 200px; overflow-y: auto; }
     .cust {
