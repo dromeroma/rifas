@@ -65,8 +65,13 @@ export class AppComponent implements OnInit {
   private readonly confirmSvc = inject(ConfirmService);
   private readonly shortcuts = inject(ShortcutsService);
 
-  /** Visible mientras el router está en una navegación (incluye guards async). */
-  readonly navigating = signal(true);
+  /** Visible mientras el router está en una navegación (incluye guards async).
+   *  Arranca en false — si la primera navegación tarda, NavigationStart la
+   *  pone en true. Antes arrancaba en true y, si nos perdíamos NavigationEnd
+   *  (timing entre el subscribe en ngOnInit y el primer evento del router),
+   *  quedaba enganchada cubriendo todo con un overlay del color del fondo
+   *  y se veía pantalla negra al entrar directo a una ruta lazy-loaded. */
+  readonly navigating = signal(false);
   /** Segundos transcurridos desde que empezó la navegación actual. */
   readonly elapsed = signal(0);
   private intervalId: ReturnType<typeof setInterval> | null = null;
