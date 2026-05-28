@@ -35,6 +35,23 @@ export interface RaffleAssignmentDetail {
   tickets: AssignmentTicketDTO[];
 }
 
+export interface NumberSearchResult {
+  found: boolean;
+  number: string;
+  message?: string;
+  scoped_to_seller?: boolean;
+  position_in_field?: number;
+  ticket?: {
+    id: number;
+    number_label: string;
+    code: string;
+    status: string;
+    all_numbers: string[];
+    customer: { id: number; full_name: string; phone: string } | null;
+    seller: { id: number; full_name: string; phone: string | null } | null;
+  };
+}
+
 @Injectable({ providedIn: 'root' })
 export class AdminService {
   private readonly http = inject(HttpClient);
@@ -129,6 +146,14 @@ export class AdminService {
   printData(raffleId: number, sellerId: number, onlyUnprinted = false): Observable<unknown> {
     const q = `?seller_id=${sellerId}${onlyUnprinted ? '&only_unprinted=true' : ''}`;
     return this.http.get(`${this.api}/raffles/${raffleId}/print-data${q}`);
+  }
+
+  /** Busca qué boleta contiene un número específico. El backend escopa
+   *  automáticamente según rol: admin ve todo, seller solo lo suyo. */
+  searchByNumber(raffleId: number, n: string): Observable<NumberSearchResult> {
+    return this.http.get<NumberSearchResult>(
+      `${this.api}/raffles/${raffleId}/search-number?n=${encodeURIComponent(n)}`,
+    );
   }
 
   /** Marca un lote de boletas como impresas (printed_at = now). */

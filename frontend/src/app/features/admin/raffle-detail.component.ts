@@ -13,6 +13,7 @@ import { DrawWinnerResult, OpsService } from '@core/services/ops.service';
 import { RaffleService } from '@core/services/raffle.service';
 import { ToastService } from '@core/services/toast.service';
 import { CountdownComponent } from '@shared/components/countdown/countdown.component';
+import { NumberSearchComponent } from '@shared/components/number-search/number-search.component';
 import {
   ButtonComponent, CardComponent, ChipComponent, InputComponent,
   KpiComponent, ModalComponent,
@@ -23,7 +24,7 @@ import { TicketActionsModalComponent } from '../seller/ticket-actions-modal.comp
   selector: 'app-raffle-detail',
   standalone: true,
   imports: [
-    CommonModule, FormsModule, CountdownComponent,
+    CommonModule, FormsModule, CountdownComponent, NumberSearchComponent,
     ButtonComponent, CardComponent, ChipComponent, InputComponent,
     KpiComponent, ModalComponent,
     TicketActionsModalComponent,
@@ -268,6 +269,14 @@ import { TicketActionsModalComponent } from '../seller/ticket-actions-modal.comp
             (close)="closeModal()"
             (changed)="onTicketChanged($event)"
           />
+        }
+
+        @if (r.numbers_generated) {
+          <app-number-search
+            [raffleId]="r.id"
+            title="¿Qué boleta tiene un número?"
+            subtitle="Útil cuando un cliente pide una boleta con cierto número, o cuando sale el ganador.">
+          </app-number-search>
         }
 
         <app-card title="Boletas" [subtitle]="filteredTickets().length + ' resultados'">

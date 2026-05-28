@@ -8,6 +8,7 @@ import { SellerAssignment } from '@core/models/stats.model';
 import { AdminService } from '@core/services/admin.service';
 import { AuthService } from '@core/services/auth.service';
 import { RaffleService } from '@core/services/raffle.service';
+import { NumberSearchComponent } from '@shared/components/number-search/number-search.component';
 import {
   CardComponent, EmptyComponent, KpiComponent,
 } from '@shared/ui';
@@ -20,6 +21,7 @@ import { TicketActionsModalComponent } from './ticket-actions-modal.component';
   imports: [
     CommonModule, FormsModule,
     CardComponent, EmptyComponent, KpiComponent,
+    NumberSearchComponent,
     TicketActionsModalComponent, PackageSaleModalComponent,
   ],
   template: `
@@ -152,6 +154,12 @@ import { TicketActionsModalComponent } from './ticket-actions-modal.component';
               </div>
             }
           }
+
+          <app-number-search
+            [raffleId]="r.id"
+            title="¿Tengo una boleta con un número?"
+            subtitle="Si un cliente te pide una boleta con cierto número, búscalo aquí entre las tuyas.">
+          </app-number-search>
 
           <app-card title="Mis boletas" [subtitle]="filteredTickets().length + ' resultado(s)'">
             <div slot="actions">

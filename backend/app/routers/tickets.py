@@ -415,6 +415,120 @@ async def get_image(
     )
 
 
+# ============ Buscar boleta por número ============
+
+
+@router.get("/raffles/{raffle_id}/search-number")
+async def search_by_number(
+    raffle_id: int,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    actor: Annotated[User, Depends(require_roles(UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.SELLER))],
+    scope: Annotated[TenantScope, Depends(get_tenant_scope)],
+    n: str = Query(..., min_length=1, max_length=10, description="Número buscado, ej '1757'"),
+):
+    """Busca qué boleta contiene un número específico dentro de una rifa.
+
+    Scope automático según rol del actor:
+      - ADMIN / SUPER_ADMIN: busca en TODAS las boletas de la rifa
+      - SELLER: solo entre las boletas que tiene asignadas (seller_id = self.id)
+
+    Útil cuando:
+      - Un cliente pide una boleta que contenga un número específico
+      - Sale el número ganador y hay que identificar al dueño al instante
+
+    Devuelve la boleta encontrada con su estado, posición del número en la
+    cancha, cliente y vendedor. Si el seller no tiene asignada la boleta
+    con ese número, devuelve found=false con un mensaje claro (no expone
+    información de boletas ajenas).
+    """
+    raffle = await _verify_raffle_tenancy(db, raffle_id, scope)
+
+    # Normaliza al ancho del number_digits de la rifa para tolerar inputs
+    # como '57' cuando el formato es '0057'.
+    raw = n.strip()
+    if not raw.isdigit():
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            "el número solo puede contener dígitos",
+        )
+    digits = int(raffle.number_digits or 4)
+    candidates = {raw, raw.zfill(digits), raw.lstrip("0") or "0"}
+
+    tn = (
+        await db.execute(
+            select(TicketNumber).where(
+                TicketNumber.raffle_id == raffle_id,
+                TicketNumber.number.in_(list(candidates)),
+            )
+        )
+    ).scalar_one_or_none()
+
+    if not tn:
+        return {
+            "found": False,
+            "number": raw,
+            "message": f"El número {raw} no existe en esta rifa.",
+        }
+
+    # Cargar ticket + relaciones
+    ticket = (
+        await db.execute(
+            select(Ticket)
+            .options(
+                selectinload(Ticket.numbers),
+                selectinload(Ticket.customer),
+                selectinload(Ticket.seller),
+            )
+            .where(Ticket.id == tn.ticket_id)
+        )
+    ).scalar_one()
+
+    # Scope para seller: solo puede ver SUS boletas
+    if actor.role == UserRole.SELLER and ticket.seller_id != actor.id:
+        return {
+            "found": False,
+            "scoped_to_seller": True,
+            "number": tn.number,
+            "message": (
+                f"El número {tn.number} existe en esta rifa pero no está en "
+                "las boletas que tienes asignadas."
+            ),
+        }
+
+    return {
+        "found": True,
+        "number": tn.number,
+        "position_in_field": tn.position,  # 1..20, dónde aparece en la cancha
+        "ticket": {
+            "id": ticket.id,
+            "number_label": ticket.number_label,
+            "code": ticket.code,
+            "status": ticket.status.value,
+            "all_numbers": [
+                n.number for n in sorted(ticket.numbers, key=lambda x: x.position)
+            ],
+            "customer": (
+                {
+                    "id": ticket.customer.id,
+                    "full_name": ticket.customer.full_name,
+                    "phone": ticket.customer.phone,
+                }
+                if ticket.customer
+                else None
+            ),
+            "seller": (
+                {
+                    "id": ticket.seller.id,
+                    "full_name": ticket.seller.full_name,
+                    "phone": ticket.seller.phone,
+                }
+                if ticket.seller
+                else None
+            ),
+        },
+    }
+
+
 # ============ Impresión física de boletas (admin only) ============
 
 def _short_code(code: str) -> str:
