@@ -83,7 +83,7 @@ interface RenderedTicket extends PrintTicket {
                         <div class="big-label">{{ formatLabel(t.number_label) }}</div>
                         <div class="short-code">Cód: <strong>{{ t.short_code }}</strong></div>
                       </div>
-                      <img class="qr" [src]="t.qrAdmin" alt="QR admin" />
+                      <img class="qr" [src]="t.qrAdmin" alt="Escanea para verificar la boleta" />
                     </div>
                     <div class="lines">
                       <div class="line"><span>Cliente:</span></div>
@@ -105,7 +105,7 @@ interface RenderedTicket extends PrintTicket {
                         <div class="ticket-eyebrow">Boleta</div>
                         <div class="ticket-label">{{ formatLabel(t.number_label) }}</div>
                       </div>
-                      <img class="qr small" [src]="t.qrPromo" alt="QR promo" />
+                      <img class="qr small" [src]="t.qrPromo" alt="Escanea para verificar tu boleta en línea" />
                     </header>
 
                     <div class="raffle-name">{{ data().raffle_name }}</div>
@@ -115,26 +115,26 @@ interface RenderedTicket extends PrintTicket {
                       <svg class="field__lines" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
                         <!-- borde exterior -->
                         <rect x="2" y="2" width="96" height="96" fill="none"
-                              stroke="rgba(255,255,255,0.9)" stroke-width="0.6" />
+                              stroke="rgba(50,70,55,0.65)" stroke-width="0.6" />
                         <!-- línea media -->
                         <line x1="2" y1="50" x2="98" y2="50"
-                              stroke="rgba(255,255,255,0.9)" stroke-width="0.5" />
+                              stroke="rgba(50,70,55,0.65)" stroke-width="0.5" />
                         <!-- círculo central -->
                         <circle cx="50" cy="50" r="8" fill="none"
-                                stroke="rgba(255,255,255,0.9)" stroke-width="0.5" />
-                        <circle cx="50" cy="50" r="0.9" fill="rgba(255,255,255,1)" />
+                                stroke="rgba(50,70,55,0.65)" stroke-width="0.5" />
+                        <circle cx="50" cy="50" r="0.9" fill="rgba(50,70,55,0.85)" />
                         <!-- área grande arriba -->
                         <rect x="25" y="2" width="50" height="10" fill="none"
-                              stroke="rgba(255,255,255,0.9)" stroke-width="0.5" />
+                              stroke="rgba(50,70,55,0.65)" stroke-width="0.5" />
                         <!-- área grande abajo -->
                         <rect x="25" y="88" width="50" height="10" fill="none"
-                              stroke="rgba(255,255,255,0.9)" stroke-width="0.5" />
+                              stroke="rgba(50,70,55,0.65)" stroke-width="0.5" />
                         <!-- área pequeña arriba -->
                         <rect x="38" y="2" width="24" height="4" fill="none"
-                              stroke="rgba(255,255,255,0.9)" stroke-width="0.4" />
+                              stroke="rgba(50,70,55,0.65)" stroke-width="0.4" />
                         <!-- área pequeña abajo -->
                         <rect x="38" y="94" width="24" height="4" fill="none"
-                              stroke="rgba(255,255,255,0.9)" stroke-width="0.4" />
+                              stroke="rgba(50,70,55,0.65)" stroke-width="0.4" />
                       </svg>
                       @for (p of positionedFor(t.numbers); track $index) {
                         <div class="player" [style.left.%]="p.x" [style.top.%]="p.y">
@@ -419,8 +419,10 @@ interface RenderedTicket extends PrintTicket {
       border-bottom: 1px solid #e5e7eb;
     }
 
-    /* === Cancha (campo de fútbol) — replica el diseño de la app === */
-    /* Paleta de la app: --grass #1b8b3b, stripes #16762f, border azul #0b3d91 */
+    /* === Cancha (campo de fútbol) === */
+    /* Colores suavizados para que en impresión B&W salga como un gris muy
+       claro (casi blanco) y los chips se vean nítidos. En color sigue
+       leyéndose como una cancha de fútbol con stripes. */
     .field {
       position: relative;
       flex: 1;
@@ -430,13 +432,13 @@ interface RenderedTicket extends PrintTicket {
       background:
         repeating-linear-gradient(
           to bottom,
-          #1b8b3b 0,
-          #1b8b3b 5%,
-          #16762f 5%,
-          #16762f 10%
+          #c6e9d0 0,
+          #c6e9d0 5%,
+          #b3dfbf 5%,
+          #b3dfbf 10%
         );
-      border-top: 2.5px solid #0b3d91;
-      border-bottom: 2.5px solid #0b3d91;
+      border-top: 2px solid #0b3d91;
+      border-bottom: 2px solid #0b3d91;
       overflow: hidden;
       print-color-adjust: exact;
       -webkit-print-color-adjust: exact;
@@ -590,13 +592,25 @@ export class TicketPrintSheetComponent implements OnInit {
       color: { dark: color, light: '#ffffff' },
     });
 
+    // Ambos QR llevan a la misma página pública de verificación promo.
+    // No requiere login → no hay riesgo de 'pantalla oscura' por authGuard
+    // si el admin no estaba autenticado en su celular al escanear el talón.
+    //
+    // Propósito por contexto:
+    //   - QR del talón: el admin lo escanea cuando recibe el talón del
+    //     vendedor para validar que la boleta existe y ver su estado.
+    //   - QR de la boleta: el cliente lo escanea para ver su boleta
+    //     con la cancha y verificar que sigue activa.
+    //
+    // El destino es el mismo (auto-verify del código en /r/:id?b=) pero
+    // los dibujamos en colores ligeramente distintos para diferenciarlos
+    // visualmente en la hoja impresa.
     const rendered: RenderedTicket[] = [];
     for (const t of tickets) {
-      const adminUrl = `${origin}/admin/registrar-venta?code=${encodeURIComponent(t.code)}`;
-      const promoUrl = `${origin}/r/${raffleId}?b=${encodeURIComponent(t.code)}`;
+      const verifyUrl = `${origin}/r/${raffleId}?b=${encodeURIComponent(t.code)}`;
       const [qrAdmin, qrPromo] = await Promise.all([
-        QR.toDataURL(adminUrl, opts('#1f2937')),
-        QR.toDataURL(promoUrl, opts('#0a0e0c')),
+        QR.toDataURL(verifyUrl, opts('#1f2937')),
+        QR.toDataURL(verifyUrl, opts('#0a0e0c')),
       ]);
       rendered.push({ ...t, qrAdmin, qrPromo });
     }
