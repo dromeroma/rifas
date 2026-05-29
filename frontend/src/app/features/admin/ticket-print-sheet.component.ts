@@ -115,26 +115,26 @@ interface RenderedTicket extends PrintTicket {
                       <svg class="field__lines" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
                         <!-- borde exterior -->
                         <rect x="2" y="2" width="96" height="96" fill="none"
-                              stroke="rgba(50,70,55,0.65)" stroke-width="0.6" />
+                              stroke="rgba(255,255,255,0.9)" stroke-width="0.6" />
                         <!-- línea media -->
                         <line x1="2" y1="50" x2="98" y2="50"
-                              stroke="rgba(50,70,55,0.65)" stroke-width="0.5" />
+                              stroke="rgba(255,255,255,0.9)" stroke-width="0.5" />
                         <!-- círculo central -->
                         <circle cx="50" cy="50" r="8" fill="none"
-                                stroke="rgba(50,70,55,0.65)" stroke-width="0.5" />
-                        <circle cx="50" cy="50" r="0.9" fill="rgba(50,70,55,0.85)" />
+                                stroke="rgba(255,255,255,0.9)" stroke-width="0.5" />
+                        <circle cx="50" cy="50" r="0.9" fill="rgba(255,255,255,1)" />
                         <!-- área grande arriba -->
                         <rect x="25" y="2" width="50" height="10" fill="none"
-                              stroke="rgba(50,70,55,0.65)" stroke-width="0.5" />
+                              stroke="rgba(255,255,255,0.9)" stroke-width="0.5" />
                         <!-- área grande abajo -->
                         <rect x="25" y="88" width="50" height="10" fill="none"
-                              stroke="rgba(50,70,55,0.65)" stroke-width="0.5" />
+                              stroke="rgba(255,255,255,0.9)" stroke-width="0.5" />
                         <!-- área pequeña arriba -->
                         <rect x="38" y="2" width="24" height="4" fill="none"
-                              stroke="rgba(50,70,55,0.65)" stroke-width="0.4" />
+                              stroke="rgba(255,255,255,0.9)" stroke-width="0.4" />
                         <!-- área pequeña abajo -->
                         <rect x="38" y="94" width="24" height="4" fill="none"
-                              stroke="rgba(50,70,55,0.65)" stroke-width="0.4" />
+                              stroke="rgba(255,255,255,0.9)" stroke-width="0.4" />
                       </svg>
                       @for (p of positionedFor(t.numbers); track $index) {
                         <div class="player" [style.left.%]="p.x" [style.top.%]="p.y">
@@ -420,9 +420,9 @@ interface RenderedTicket extends PrintTicket {
     }
 
     /* === Cancha (campo de fútbol) === */
-    /* Colores suavizados para que en impresión B&W salga como un gris muy
-       claro (casi blanco) y los chips se vean nítidos. En color sigue
-       leyéndose como una cancha de fútbol con stripes. */
+    /* Verde medio: más vivo que el pastel anterior pero más suave que el
+       saturado original. En color se lee bien como cancha; en B&W sale
+       como un gris medio que permite a los chips destacar. */
     .field {
       position: relative;
       flex: 1;
@@ -432,10 +432,10 @@ interface RenderedTicket extends PrintTicket {
       background:
         repeating-linear-gradient(
           to bottom,
-          #c6e9d0 0,
-          #c6e9d0 5%,
-          #b3dfbf 5%,
-          #b3dfbf 10%
+          #7fc592 0,
+          #7fc592 5%,
+          #6db581 5%,
+          #6db581 10%
         );
       border-top: 2px solid #0b3d91;
       border-bottom: 2px solid #0b3d91;
