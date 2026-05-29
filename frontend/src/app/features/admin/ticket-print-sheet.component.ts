@@ -269,10 +269,10 @@ interface RenderedTicket extends PrintTicket {
     .page--six .ticket .qr.small { width: 0.5in; height: 0.5in; }
     .page--six .raffle-name { font-size: 8.5pt; }
     .page--six .player__chip {
-      min-width: 0.24in;
-      height: 0.2in;
-      padding: 0 3px;
-      font-size: 7pt;
+      min-width: 0.3in;
+      height: 0.22in;
+      padding: 0 4px;
+      font-size: 8.5pt;
       border-width: 1.2px;
     }
     .page--six .info { font-size: 7pt; }
@@ -458,16 +458,16 @@ interface RenderedTicket extends PrintTicket {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      min-width: 0.32in;
-      height: 0.22in;
-      padding: 0 5px;
+      min-width: 0.38in;
+      height: 0.26in;
+      padding: 0 6px;
       background: #ffffff;
       color: #0b3d91;
       border: 1.4px solid #0b3d91;
       border-radius: 999px;
       font-family: 'Inter', system-ui, sans-serif;
       font-weight: 700;
-      font-size: 8.5pt;
+      font-size: 10pt;
       letter-spacing: 0.02em;
       font-variant-numeric: tabular-nums;
       box-shadow: 0 1px 2px rgba(0,0,0,0.25);
