@@ -247,38 +247,39 @@ interface RenderedTicket extends PrintTicket {
       gap: 0.18in;
       flex: 1;
     }
-    /* Variante 6 boletas por hoja: 2 cols x 3 filas. Las boletas quedan
-       más bajitas, así que el talón y la cancha se compactan también. */
+    /* Variante 6 boletas por hoja: 3 cols x 2 filas. Mantiene la misma
+       altura por boleta que el modo 4 (orientación vertical: talón arriba,
+       cancha abajo), pero las boletas son más angostas — por eso solo
+       achicamos el ancho de chips y QRs, no la altura del layout. */
     .page--six .grid {
-      grid-template-rows: 1fr 1fr 1fr;
-      gap: 0.12in;
+      grid-template-columns: 1fr 1fr 1fr;
+      grid-template-rows: 1fr 1fr;
+      gap: 0.14in;
     }
-    /* En 6 por hoja achicamos padding interno y altura de talón para que
-       todo entre cómodo dentro de cada boleta. */
-    .page--six .talon { padding: 0.08in 0.1in; flex: 0 0 28%; }
-    .page--six .talon .big-label { font-size: 16pt; }
+    /* Padding lateral reducido y elementos horizontales más pequeños */
+    .page--six .talon { padding: 0.1in 0.09in; }
+    .page--six .talon .big-label { font-size: 17pt; }
     .page--six .talon .short-code { font-size: 7pt; }
-    .page--six .talon .qr { width: 0.65in; height: 0.65in; }
-    .page--six .talon .lines { gap: 0.04in; }
-    .page--six .talon .line { height: 11pt; }
-    .page--six .talon .line span { font-size: 6.5pt; }
+    .page--six .talon .qr { width: 0.6in; height: 0.6in; }
+    .page--six .talon .lines { gap: 0.05in; }
+    .page--six .talon .line span { font-size: 7pt; }
 
-    .page--six .ticket { padding: 0.08in 0.1in; gap: 0.04in; }
+    .page--six .ticket { padding: 0.1in 0.09in; }
     .page--six .ticket-label { font-size: 14pt; }
-    .page--six .ticket .qr.small { width: 0.55in; height: 0.55in; }
-    .page--six .raffle-name { font-size: 8.5pt; padding: 0.02in 0; }
-    .page--six .field { min-height: 1.1in; max-height: 1.5in; }
+    .page--six .ticket .qr.small { width: 0.5in; height: 0.5in; }
+    .page--six .raffle-name { font-size: 8.5pt; }
     .page--six .player__chip {
-      min-width: 0.26in;
-      height: 0.18in;
+      min-width: 0.24in;
+      height: 0.2in;
       padding: 0 3px;
       font-size: 7pt;
-      border-width: 1px;
+      border-width: 1.2px;
     }
-    .page--six .info { font-size: 6.5pt; }
-    .page--six .info-label { font-size: 5.5pt; }
-    .page--six .prize-row { font-size: 6pt; }
-    .page--six .verify { font-size: 5.5pt; padding-top: 0.02in; }
+    .page--six .info { font-size: 7pt; }
+    .page--six .info-label { font-size: 6pt; }
+    .page--six .prize-row { font-size: 6.5pt; }
+    .page--six .watermark { font-size: 14pt; }
+    .page--six .page-meta { font-size: 8pt; }
 
     /* === Boleta individual === */
     .boleta {

@@ -56,7 +56,7 @@ import {
               class="seg__opt"
               [class.seg__opt--on]="perPage() === 6"
               (click)="perPage.set(6)"
-              title="2 columnas x 3 filas — ahorra papel">
+              title="3 columnas x 2 filas — ahorra papel">
               6
             </button>
           </div>
