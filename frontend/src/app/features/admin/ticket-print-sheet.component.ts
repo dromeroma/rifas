@@ -59,7 +59,7 @@ interface RenderedTicket extends PrintTicket {
         <div class="loading">Preparando boletas...</div>
       } @else {
         @for (page of pages(); track $index) {
-          <section class="page">
+          <section class="page" [class.page--six]="boletasPerPage() === 6">
             <header class="page-header">
               <div class="brand">
                 <span class="dot"></span>
@@ -239,7 +239,7 @@ interface RenderedTicket extends PrintTicket {
     .muted { color: #9ca3af; }
     .page-meta { display: flex; gap: 1em; }
 
-    /* === Grilla 2x2 === */
+    /* === Grilla 2x2 (4 boletas por hoja, default) === */
     .grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -247,6 +247,38 @@ interface RenderedTicket extends PrintTicket {
       gap: 0.18in;
       flex: 1;
     }
+    /* Variante 6 boletas por hoja: 2 cols x 3 filas. Las boletas quedan
+       más bajitas, así que el talón y la cancha se compactan también. */
+    .page--six .grid {
+      grid-template-rows: 1fr 1fr 1fr;
+      gap: 0.12in;
+    }
+    /* En 6 por hoja achicamos padding interno y altura de talón para que
+       todo entre cómodo dentro de cada boleta. */
+    .page--six .talon { padding: 0.08in 0.1in; flex: 0 0 28%; }
+    .page--six .talon .big-label { font-size: 16pt; }
+    .page--six .talon .short-code { font-size: 7pt; }
+    .page--six .talon .qr { width: 0.65in; height: 0.65in; }
+    .page--six .talon .lines { gap: 0.04in; }
+    .page--six .talon .line { height: 11pt; }
+    .page--six .talon .line span { font-size: 6.5pt; }
+
+    .page--six .ticket { padding: 0.08in 0.1in; gap: 0.04in; }
+    .page--six .ticket-label { font-size: 14pt; }
+    .page--six .ticket .qr.small { width: 0.55in; height: 0.55in; }
+    .page--six .raffle-name { font-size: 8.5pt; padding: 0.02in 0; }
+    .page--six .field { min-height: 1.1in; max-height: 1.5in; }
+    .page--six .player__chip {
+      min-width: 0.26in;
+      height: 0.18in;
+      padding: 0 3px;
+      font-size: 7pt;
+      border-width: 1px;
+    }
+    .page--six .info { font-size: 6.5pt; }
+    .page--six .info-label { font-size: 5.5pt; }
+    .page--six .prize-row { font-size: 6pt; }
+    .page--six .verify { font-size: 5.5pt; padding-top: 0.02in; }
 
     /* === Boleta individual === */
     .boleta {
@@ -523,15 +555,18 @@ export class TicketPrintSheetComponent implements OnInit {
   readonly data = input.required<PrintData>();
   /** Origin del sitio (https://rifas.vercel.app). Se usa para armar las URLs de los QRs. */
   readonly origin = input<string>(typeof window !== 'undefined' ? window.location.origin : '');
+  /** Cuántas boletas caben en cada hoja carta. 4 (2x2) o 6 (2x3). */
+  readonly boletasPerPage = input<4 | 6>(4);
 
   readonly loading = signal(true);
   private readonly rendered = signal<RenderedTicket[]>([]);
 
   readonly pages = computed<RenderedTicket[][]>(() => {
     const all = this.rendered();
+    const size = this.boletasPerPage();
     const out: RenderedTicket[][] = [];
-    for (let i = 0; i < all.length; i += 4) {
-      out.push(all.slice(i, i + 4));
+    for (let i = 0; i < all.length; i += size) {
+      out.push(all.slice(i, i + size));
     }
     return out;
   });

@@ -41,6 +41,25 @@ import {
           }
         </div>
         <div class="right">
+          <div class="seg" role="group" aria-label="Boletas por hoja">
+            <span class="seg__label">Por hoja:</span>
+            <button
+              type="button"
+              class="seg__opt"
+              [class.seg__opt--on]="perPage() === 4"
+              (click)="perPage.set(4)"
+              title="2 columnas x 2 filas — tamaño cómodo">
+              4
+            </button>
+            <button
+              type="button"
+              class="seg__opt"
+              [class.seg__opt--on]="perPage() === 6"
+              (click)="perPage.set(6)"
+              title="2 columnas x 3 filas — ahorra papel">
+              6
+            </button>
+          </div>
           <button class="btn ghost" (click)="goBack()">Cancelar</button>
           <button
             class="btn primary"
@@ -72,7 +91,7 @@ import {
             <button class="btn ghost" (click)="goBack()">Volver</button>
           </div>
         } @else {
-          <app-ticket-print-sheet [data]="data()!" />
+          <app-ticket-print-sheet [data]="data()!" [boletasPerPage]="perPage()" />
         }
       }
     </div>
@@ -155,6 +174,39 @@ import {
     .btn.primary:hover:not(:disabled) { background: #18b06e; }
     .btn .material-icons { font-size: 18px; }
 
+    /* Selector 4 / 6 boletas por hoja */
+    .seg {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 6px 4px 10px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 10px;
+    }
+    .seg__label {
+      font-size: 11px;
+      color: rgba(255,255,255,0.6);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-weight: 600;
+    }
+    .seg__opt {
+      min-width: 30px;
+      padding: 6px 10px;
+      background: transparent;
+      border: 0;
+      color: rgba(255,255,255,0.65);
+      font-weight: 700;
+      font-size: 13px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+    .seg__opt:hover { background: rgba(255,255,255,0.06); color: #fff; }
+    .seg__opt--on { background: #1ec77b; color: #0a0e0c; }
+    .seg__opt--on:hover { background: #18b06e; color: #0a0e0c; }
+
     .state {
       flex: 1;
       display: flex;
@@ -198,6 +250,9 @@ export class TicketPrintPageComponent implements OnInit {
   readonly marking = signal(false);
   readonly error = signal<string | null>(null);
   readonly data = signal<PrintData | null>(null);
+  /** 4 (default, 2x2) o 6 (2x3) boletas por hoja carta. Lo controla el
+   *  toggle de la toolbar; el sheet re-renderiza en vivo al cambiarlo. */
+  readonly perPage = signal<4 | 6>(4);
 
   private raffleId = 0;
   private sellerId = 0;
