@@ -44,6 +44,14 @@ import { Toast, ToastService, ToastType } from '@core/services/toast.service';
       pointer-events: none;
     }
 
+    /* Los elementos position:fixed se repiten en CADA hoja al imprimir.
+       Si el admin imprime mientras hay un toast visible (ej. 'Marcadas
+       como impresas'), el texto aparece en todas las hojas. Lo ocultamos
+       en print para que no contamine la salida física. */
+    @media print {
+      .host { display: none !important; }
+    }
+
     .toast {
       pointer-events: auto;
       position: relative;

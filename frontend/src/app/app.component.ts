@@ -57,6 +57,13 @@ import { ConfirmHostComponent, ToastHostComponent } from '@shared/ui';
       padding: 0 var(--s-3);
     }
     @keyframes app-loader-spin { to { transform: rotate(360deg); } }
+
+    /* Position-fixed elements se repiten en cada hoja al imprimir.
+       Si el loader se queda visible cuando dispara window.print(), saldría
+       en todas las hojas. Lo ocultamos defensivamente. */
+    @media print {
+      .app-loader { display: none !important; }
+    }
   `],
 })
 export class AppComponent implements OnInit {
