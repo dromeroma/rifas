@@ -592,6 +592,7 @@ async def get_print_data(
     return PrintDataResponse(
         raffle_id=raffle.id,
         raffle_name=raffle.name,
+        ticket_price=raffle.ticket_price,
         final_draw_date=raffle.final_draw_date.isoformat(),
         primary_color=raffle.primary_color,
         logo_url=raffle.logo_url,

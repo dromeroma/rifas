@@ -110,6 +110,7 @@ class PrintTicketItem(BaseModel):
 class PrintDataResponse(BaseModel):
     raffle_id: int
     raffle_name: str
+    ticket_price: Decimal
     final_draw_date: str
     primary_color: Optional[str] = None
     logo_url: Optional[str] = None

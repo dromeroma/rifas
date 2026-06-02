@@ -134,6 +134,7 @@ async def public_raffle_view(
         "mode": getattr(raffle, "mode", "classic"),
         "package_options": raffle.package_options,
         "min_package_size": raffle.min_package_size,
+        "ticket_price": float(raffle.ticket_price),
         "lottery_name": raffle.lottery_name,
         "primary_color": raffle.primary_color,
         "logo_url": raffle.logo_url,

@@ -84,6 +84,11 @@
     <div class="ticket__summary-main">
       🎯 <strong>{{ totalOpportunities() }} oportunidades</strong> de ganar
     </div>
+    @if (formattedPrice(); as price) {
+      <div class="ticket__summary-price">
+        💵 Valor de la boleta: <strong>{{ price }}</strong>
+      </div>
+    }
     @if (responsibleName() || responsiblePhone()) {
       <div class="ticket__summary-contact">
         📞 Responsable:

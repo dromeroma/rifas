@@ -20,6 +20,7 @@ interface PrintTicket {
 export interface PrintData {
   raffle_id: number;
   raffle_name: string;
+  ticket_price: number;
   final_draw_date: string;
   primary_color: string | null;
   logo_url: string | null;
@@ -108,7 +109,10 @@ interface RenderedTicket extends PrintTicket {
                       <img class="qr small" [src]="t.qrPromo" alt="Escanea para verificar tu boleta en línea" />
                     </header>
 
-                    <div class="raffle-name">{{ data().raffle_name }}</div>
+                    <div class="raffle-name">
+                      <span class="raffle-name__txt">{{ data().raffle_name }}</span>
+                      <span class="raffle-name__price">{{ '$' + fmt(data().ticket_price) }}</span>
+                    </div>
 
                     <!-- Cancha de fútbol vertical, mismo diseño que la app -->
                     <div class="field" aria-label="Cancha con los 20 números">
@@ -268,6 +272,7 @@ interface RenderedTicket extends PrintTicket {
     .page--six .ticket-label { font-size: 14pt; }
     .page--six .ticket .qr.small { width: 0.5in; height: 0.5in; }
     .page--six .raffle-name { font-size: 8.5pt; }
+    .page--six .raffle-name__price { font-size: 7.5pt; padding: 1pt 5pt; }
     .page--six .player__chip {
       min-width: 0.3in;
       height: 0.22in;
@@ -410,13 +415,37 @@ interface RenderedTicket extends PrintTicket {
       margin-top: 0.02in;
     }
     .raffle-name {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
       font-size: 10pt;
       font-weight: 700;
       color: #0a0e0c;
-      text-align: center;
       padding: 0.04in 0;
       border-top: 1px solid #e5e7eb;
       border-bottom: 1px solid #e5e7eb;
+    }
+    .raffle-name__txt {
+      flex: 1;
+      text-align: left;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    /* Chip dorado con el valor de la boleta — visible sin saturar */
+    .raffle-name__price {
+      flex-shrink: 0;
+      padding: 1.5pt 7pt;
+      background: #fff7e0;
+      color: #8a6420;
+      border: 1px solid #d4a857;
+      border-radius: 999px;
+      font-size: 9pt;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+      print-color-adjust: exact;
+      -webkit-print-color-adjust: exact;
     }
 
     /* === Cancha (campo de fútbol) === */
@@ -620,6 +649,11 @@ export class TicketPrintSheetComponent implements OnInit {
   /** "001" → "BOL 001". Mantiene formato consistente con la app. */
   formatLabel(label: string): string {
     return `BOL ${label}`;
+  }
+
+  /** Formato COP sin decimales (20000 → "20.000"). */
+  fmt(v: number): string {
+    return new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 }).format(v);
   }
 
   formatDate(iso: string): string {

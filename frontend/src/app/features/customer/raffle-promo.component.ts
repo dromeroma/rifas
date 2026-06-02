@@ -25,6 +25,7 @@ interface PromoRaffle {
   id: number;
   name: string;
   description: string | null;
+  ticket_price: number;
   lottery_name: string | null;
   primary_color: string | null;
   logo_url: string | null;
@@ -241,6 +242,7 @@ interface VerifyView {
                   [primaryColor]="data()?.primary_color || '#1b8b3b'"
                   [responsibleName]="data()?.responsible_name ?? null"
                   [responsiblePhone]="data()?.responsible_phone ?? null"
+                  [ticketPrice]="data()?.ticket_price ?? null"
                 />
               </div>
             }
@@ -399,6 +401,7 @@ interface VerifyView {
                     [primaryColor]="data()?.primary_color || '#1b8b3b'"
                     [responsibleName]="data()?.responsible_name ?? null"
                     [responsiblePhone]="data()?.responsible_phone ?? null"
+                    [ticketPrice]="data()?.ticket_price ?? null"
                   />
                 </div>
               }

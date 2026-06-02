@@ -35,6 +35,16 @@ export class TicketDesignComponent {
   readonly responsibleName = input<string | null>(null);
   /** Teléfono del responsable de la rifa. */
   readonly responsiblePhone = input<string | null>(null);
+  /** Precio de la boleta en COP. Si se pasa, se muestra como chip dorado
+   *  prominente en el header del ticket. */
+  readonly ticketPrice = input<number | null>(null);
+
+  /** "$20.000" formateado, o null si no hay precio. */
+  readonly formattedPrice = computed<string | null>(() => {
+    const p = this.ticketPrice();
+    if (p == null || p <= 0) return null;
+    return '$' + new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 }).format(p);
+  });
 
   /** N° de sorteos × N° de números por boleta. */
   readonly totalOpportunities = computed(() => {

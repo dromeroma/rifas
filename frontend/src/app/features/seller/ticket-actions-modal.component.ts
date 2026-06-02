@@ -48,6 +48,7 @@ import { ReportPaymentModalComponent } from './report-payment-modal.component';
               [primaryColor]="raffle().primary_color || '#1e8e54'"
               [responsibleName]="raffle().responsible_name ?? null"
               [responsiblePhone]="raffle().responsible_phone ?? null"
+              [ticketPrice]="raffle().ticket_price"
               [verifyUrl]="origin + '/verify/' + t.code"
             />
             <div class="preview__status">

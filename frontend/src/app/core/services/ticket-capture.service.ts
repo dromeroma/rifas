@@ -105,6 +105,9 @@ export class TicketCaptureService {
       // ticket-design para que la imagen sea autosuficiente al compartir.
       compRef.setInput('responsibleName', raffle.responsible_name ?? null);
       compRef.setInput('responsiblePhone', raffle.responsible_phone ?? null);
+      // Precio de la boleta para que el comprador vea cuánto pagó cuando
+      // reciba la imagen por WhatsApp.
+      compRef.setInput('ticketPrice', raffle.ticket_price ?? null);
 
       this.appRef.attachView(compRef.hostView);
       compRef.changeDetectorRef.detectChanges();
