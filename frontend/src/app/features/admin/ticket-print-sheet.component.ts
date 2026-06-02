@@ -433,16 +433,19 @@ interface RenderedTicket extends PrintTicket {
       text-overflow: ellipsis;
       white-space: nowrap;
     }
-    /* Chip dorado con el valor de la boleta — visible sin saturar */
+    /* Chip del valor de la boleta — texto negro grueso sobre fondo blanco
+       con borde verde fuerte. Se ve nítido en B&W (negro + contraste alto)
+       y en color (acento verde de marca). El dorado anterior se imprimía
+       opaco. */
     .raffle-name__price {
       flex-shrink: 0;
       padding: 1.5pt 7pt;
-      background: #fff7e0;
-      color: #8a6420;
-      border: 1px solid #d4a857;
+      background: #ffffff;
+      color: #0a0e0c;
+      border: 1.5px solid #0b8a4a;
       border-radius: 999px;
-      font-size: 9pt;
-      font-weight: 800;
+      font-size: 9.5pt;
+      font-weight: 900;
       letter-spacing: 0.02em;
       print-color-adjust: exact;
       -webkit-print-color-adjust: exact;
