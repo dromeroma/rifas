@@ -365,10 +365,17 @@ export class VerifyComponent implements OnInit {
       this.showForm.set(true);
       return;
     }
-    this.verify(code);
+    // Esta ruta /verify/:code era la legacy, sin diseño de cancha. Hoy el
+    // sitio premium /r/:raffleId?b=:code muestra la boleta completa, así
+    // que redirigimos automáticamente — además resuelve el caso de pantalla
+    // en blanco si VerifyComponent fallaba al cargar por cualquier razón.
+    this.redirectToPromo(code);
   }
 
-  private verify(code: string) {
+  /** Llama al verify del backend para obtener el raffle_id y redirige
+   *  client-side a /r/:raffleId?b=:code. Si el backend dice no encontrado,
+   *  cae al estado de error como antes. */
+  private redirectToPromo(code: string) {
     this.showForm.set(false);
     this.loading.set(true);
     this.error.set(null);
@@ -376,11 +383,20 @@ export class VerifyComponent implements OnInit {
     this.data.set(null);
 
     this.http
-      .get<VerifyResponse>(`${environment.apiUrl}/verify/${encodeURIComponent(code)}`)
+      .get<VerifyResponse & { raffle: { id?: number } }>(
+        `${environment.apiUrl}/verify/${encodeURIComponent(code)}`,
+      )
       .subscribe({
         next: (d) => {
-          this.data.set(d);
-          this.loading.set(false);
+          const raffleId = (d.raffle as { id?: number }).id;
+          if (raffleId) {
+            this.router.navigate(['/r', raffleId], { queryParams: { b: code }, replaceUrl: true });
+          } else {
+            // Fallback defensivo: renderiza la vista legacy si por algún
+            // motivo el backend no devolvió raffle.id (no debería).
+            this.data.set(d);
+            this.loading.set(false);
+          }
         },
         error: (e) => {
           const detail =
@@ -403,8 +419,7 @@ export class VerifyComponent implements OnInit {
     this.formError.set(null);
     // Normaliza: a mayúsculas y quita espacios. Mantiene guiones del formato XXX-XXX-XXX.
     const code = raw.toUpperCase().replace(/\s+/g, '');
-    this.router.navigate(['/verify', code]);
-    this.verify(code);
+    this.redirectToPromo(code);
   }
 
   backToForm() {

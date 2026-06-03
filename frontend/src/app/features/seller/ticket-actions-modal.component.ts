@@ -759,7 +759,10 @@ export class TicketActionsModalComponent {
     const t = this.ticket()!;
     const r = this.raffle();
     const firstName = (t.customer?.full_name ?? '').split(' ')[0] || 'Hola';
-    const verifyUrl = `${window.location.origin}/verify/${t.code}`;
+    // URL del sitio promo con auto-verificación. Renderiza la boleta
+    // completa con cancha, premios, responsable y precio. Funciona para
+    // cualquier estado de la boleta (available / reserved / paid / winning).
+    const verifyUrl = `${window.location.origin}/r/${t.raffle_id}?b=${t.code}`;
 
     const status = t.status;
     let header = '';
