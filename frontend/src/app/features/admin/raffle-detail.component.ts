@@ -963,9 +963,18 @@ export class RaffleDetailComponent implements OnInit {
   }
 
   generate(id: number) {
+    // Lee la config REAL de la rifa para evitar mostrar valores hardcoded
+    // que engañen al admin (antes decía '500 / 20' sin importar la rifa).
+    const r = this.raffle();
+    const totalTickets = r?.total_tickets ?? 0;
+    const numbersPerTicket = r?.numbers_per_ticket ?? 0;
+    const totalNumbers = totalTickets * numbersPerTicket;
+    const ticketsFmt = new Intl.NumberFormat('es-CO').format(totalTickets);
+    const numbersFmt = new Intl.NumberFormat('es-CO').format(totalNumbers);
+
     this.confirmSvc.ask({
       title: 'Generar números',
-      message: 'Esta acción crea las 500 boletas con 20 números cada una y es IRREVERSIBLE. ¿Continuar?',
+      message: `Esta acción crea ${ticketsFmt} boletas con ${numbersPerTicket} números cada una (${numbersFmt} números únicos en total) y es IRREVERSIBLE. ¿Continuar?`,
       tone: 'warning',
       icon: 'bolt',
       confirmLabel: 'Sí, generar',
@@ -977,7 +986,10 @@ export class RaffleDetailComponent implements OnInit {
         next: () => {
           this.load(id);
           this.generating.set(false);
-          this.toast.success('Números generados', '10.000 números fueron distribuidos en 500 boletas sin repetir.');
+          this.toast.success(
+            'Números generados',
+            `${numbersFmt} números fueron distribuidos en ${ticketsFmt} boletas sin repetir.`,
+          );
         },
         error: (e) => {
           this.generating.set(false);
