@@ -65,22 +65,27 @@ export class TicketDesignComponent {
 
   /** Coordenadas (en %) para cada número.
    *
+   *  - tema 'romantic' + 10 números → los 10 corazones forman un CORAZÓN
+   *    (posiciones sobre la curva paramétrica del corazón)
    *  - 20 números → formación 3-4-3 / 3-4-3 (clásico cancha de fútbol)
-   *  - 10 números → 2 filas de 5 (compacto, queda bien para amor & amistad)
-   *  - cualquier otra cantidad → distribución uniforme automática:
-   *    se reparten en filas de ~5 columnas, espaciadas verticalmente
-   *    para llenar el área del campo sin chocarse.
+   *  - 10 números (otros temas) → 2 filas de 5 (compacto)
+   *  - cualquier otra cantidad → distribución uniforme automática
    */
   readonly positioned = computed<PositionedNumber[]>(() => {
     const nums = this.orderedNumbers();
     if (!nums.length) return [];
+
+    // Tema romántico + 10 números: forman un corazón visualmente
+    if (this.theme() === 'romantic' && nums.length === 10) {
+      return this.heartLayout(nums);
+    }
 
     // Formación clásica 3-4-3 / 3-4-3 para 20 números
     if (nums.length === 20) {
       return this.layoutByRows(nums, [3, 4, 3], [38, 25, 12], [3, 4, 3], [62, 75, 88]);
     }
 
-    // 10 números → 2 filas de 5 (mitad superior + mitad inferior, una fila c/u)
+    // 10 números (no romantic) → 2 filas de 5
     if (nums.length === 10) {
       return this.layoutByRows(nums, [5], [30], [5], [70]);
     }
@@ -104,6 +109,48 @@ export class TicketDesignComponent {
     }
     return result;
   });
+
+  /** Distribuye 10 números sobre la curva paramétrica del corazón.
+   *
+   *  Ecuación clásica:
+   *    x(t) = 16 sin³(t)
+   *    y(t) = 13 cos(t) - 5 cos(2t) - 2 cos(3t) - cos(4t)
+   *
+   *  Recorremos t en 10 pasos uniformes [0, 2π). El primer punto cae en el
+   *  hueco superior central (la "uve" del corazón) y vamos en sentido
+   *  horario por el lóbulo derecho → punta inferior → lóbulo izquierdo.
+   *
+   *  Las posiciones se escalan y centran para llenar [10%, 90%] tanto en X
+   *  como en Y dentro del field (aspect 1/1 — cuadrado — para que el
+   *  corazón se vea proporcionado, no estirado).
+   */
+  private heartLayout(nums: string[]): PositionedNumber[] {
+    // Rango de la curva (precomputado): x ∈ [-13.76, 13.76], y ∈ [-17, 10.4]
+    const xMax = 13.76;
+    const yMin = -17;
+    const yMax = 10.4;
+    const yCenter = (yMin + yMax) / 2; // -3.3
+
+    const padding = 12; // % desde cada borde, deja aire para los corazones
+    const scaleX = (100 - padding * 2) / (2 * xMax);
+    const scaleY = (100 - padding * 2) / (yMax - yMin);
+
+    const result: PositionedNumber[] = [];
+    for (let i = 0; i < 10; i++) {
+      const t = (2 * Math.PI * i) / 10;
+      const px = 16 * Math.pow(Math.sin(t), 3);
+      const py =
+        13 * Math.cos(t) -
+        5 * Math.cos(2 * t) -
+        2 * Math.cos(3 * t) -
+        Math.cos(4 * t);
+      // X centrado en 50, Y invertido (SVG y va hacia abajo) y centrado
+      const sx = 50 + px * scaleX;
+      const sy = 50 - (py - yCenter) * scaleY;
+      result.push({ number: nums[i], x: sx, y: sy });
+    }
+    return result;
+  }
 
   /** Helper: arma las posiciones para una lista de "filas" arriba + abajo. */
   private layoutByRows(

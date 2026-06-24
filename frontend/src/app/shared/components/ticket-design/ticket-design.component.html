@@ -28,86 +28,60 @@
   <section class="field" [attr.aria-label]="theme() === 'romantic' ? 'Boleta romántica con corazones' : 'Cancha de fútbol con los números'">
     @if (theme() === 'romantic') {
       <!-- ============ TEMA ROMÁNTICO PREMIUM ============ -->
+      <!-- Fondo limpio: NO ponemos un corazón watermark — los 10 corazones
+           con los números YA forman un corazón visualmente. Solo dejamos
+           silueta sutil + ornamentos dorados + sparkles para premium feel. -->
       <svg class="field__lines field__lines--romantic"
            viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
         <defs>
-          <!-- Sombra suave para la silueta principal -->
           <filter id="silhBlur" x="-10%" y="-10%" width="120%" height="120%">
-            <feGaussianBlur stdDeviation="0.6" />
+            <feGaussianBlur stdDeviation="0.4" />
           </filter>
-          <!-- Pequeño brillo para el corazón watermark -->
-          <radialGradient id="heartShine" cx="50%" cy="35%" r="60%">
-            <stop offset="0%" stop-color="rgba(255,255,255,0.55)" />
-            <stop offset="60%" stop-color="rgba(255,255,255,0.10)" />
-            <stop offset="100%" stop-color="rgba(255,255,255,0)" />
-          </radialGradient>
+          <!-- Gradiente dorado para flourishes -->
+          <linearGradient id="goldGrad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#d4a857" stop-opacity="0.85" />
+            <stop offset="50%" stop-color="#f5e0a8" stop-opacity="0.95" />
+            <stop offset="100%" stop-color="#b88a35" stop-opacity="0.85" />
+          </linearGradient>
         </defs>
 
-        <!-- Marco interior dorado tenue para toque premium -->
-        <rect x="1.5" y="1.5" width="97" height="97" rx="2.5" fill="none"
-              stroke="rgba(212, 168, 87, 0.55)" stroke-width="0.4"
-              stroke-dasharray="0.8,0.8" />
-        <rect x="3" y="3" width="94" height="94" rx="2" fill="none"
-              stroke="rgba(255,255,255,0.5)" stroke-width="0.3" />
-
-        <!-- Corazón gigante watermark al centro -->
-        <path d="M 50 76
-                 C 16 56, 16 22, 34 22
-                 C 42 22, 47 28, 50 32
-                 C 53 28, 58 22, 66 22
-                 C 84 22, 84 56, 50 76 Z"
-              fill="url(#heartShine)"
-              stroke="rgba(255,255,255,0.4)" stroke-width="0.5" />
-
-        <!-- Silueta UNA pareja, grande y centrada (más visible) -->
-        <g fill="rgba(184, 23, 77, 0.32)" filter="url(#silhBlur)">
-          <!-- Hombre (izq) -->
-          <circle cx="38" cy="46" r="4.5" />
-          <path d="M 32 51
-                   Q 31 60 32 70
-                   L 36 70
-                   L 38 60
-                   L 40 70
-                   L 44 70
-                   Q 45 60 44 51
-                   Q 41 49 38 49
-                   Q 35 49 32 51 Z" />
-          <!-- Mujer (der), con falda triangular -->
-          <circle cx="62" cy="46" r="4.2" />
-          <path d="M 56 51
-                   Q 55 58 55 62
-                   L 50 72
-                   L 54 72
-                   L 56 65
-                   L 60 72
-                   L 62 65
-                   L 64 72
-                   L 66 65
-                   L 70 72
-                   L 69 62
-                   Q 69 58 68 51
-                   Q 65 49 62 49
-                   Q 59 49 56 51 Z" />
-          <!-- Brazos enlazados al centro (corazón sale del medio) -->
-          <path d="M 42 55 Q 46 53 50 54.5 Q 54 53 58 55"
-                stroke="rgba(184,23,77,0.35)" stroke-width="1.2" fill="none" stroke-linecap="round" />
-          <!-- Corazoncito en el aire entre los dos -->
-          <path d="M 50 50
-                   C 47 47, 47 44, 49 44
-                   C 49.5 44, 50 44.5, 50 45
-                   C 50 44.5, 50.5 44, 51 44
-                   C 53 44, 53 47, 50 50 Z"
-                fill="rgba(212, 168, 87, 0.7)" />
+        <!-- Flourishes ornamentales en las 4 esquinas (estilo invitación
+             elegante). Curvas finas doradas con remates. -->
+        <g stroke="url(#goldGrad)" stroke-width="0.4" fill="none" stroke-linecap="round">
+          <!-- Esq sup-izq -->
+          <path d="M 8 5 Q 15 5 15 8 Q 15 12 12 12 Q 10 12 10 14" />
+          <circle cx="8" cy="5" r="0.6" fill="url(#goldGrad)" />
+          <!-- Esq sup-der -->
+          <path d="M 92 5 Q 85 5 85 8 Q 85 12 88 12 Q 90 12 90 14" />
+          <circle cx="92" cy="5" r="0.6" fill="url(#goldGrad)" />
+          <!-- Esq inf-izq -->
+          <path d="M 8 95 Q 15 95 15 92 Q 15 88 12 88 Q 10 88 10 86" />
+          <circle cx="8" cy="95" r="0.6" fill="url(#goldGrad)" />
+          <!-- Esq inf-der -->
+          <path d="M 92 95 Q 85 95 85 92 Q 85 88 88 88 Q 90 88 90 86" />
+          <circle cx="92" cy="95" r="0.6" fill="url(#goldGrad)" />
         </g>
 
-        <!-- Estrellitas/sparkles para premium feel -->
-        <g fill="rgba(212, 168, 87, 0.55)">
-          <circle cx="14" cy="18" r="0.6" />
-          <circle cx="86" cy="22" r="0.5" />
-          <circle cx="20" cy="40" r="0.4" />
-          <circle cx="80" cy="40" r="0.4" />
-          <circle cx="12" cy="82" r="0.5" />
-          <circle cx="88" cy="82" r="0.6" />
+        <!-- Silueta UNA pareja, MUY SUTIL en la base (no compite con los
+             10 corazones del primer plano). Estilo cake-topper de boda. -->
+        <g fill="rgba(184, 23, 77, 0.16)" filter="url(#silhBlur)">
+          <!-- Hombre (izq) -->
+          <circle cx="42" cy="91" r="2.2" />
+          <path d="M 39 93.5 Q 38.5 97 39 100 L 45 100 Q 45.5 97 45 93.5 Z" />
+          <!-- Mujer (der), con vestido triangular -->
+          <circle cx="58" cy="91" r="2" />
+          <path d="M 55.5 93.5 Q 55 96 54.5 100 L 61.5 100 Q 61 96 60.5 93.5 Z" />
+          <!-- Manos enlazadas -->
+          <line x1="45" y1="95" x2="55.5" y2="95" stroke="rgba(184,23,77,0.18)" stroke-width="0.4" />
+        </g>
+
+        <!-- Sparkles dorados premium -->
+        <g fill="url(#goldGrad)">
+          <circle cx="22" cy="22" r="0.6" />
+          <circle cx="78" cy="22" r="0.5" />
+          <circle cx="78" cy="78" r="0.5" />
+          <circle cx="22" cy="78" r="0.6" />
+          <circle cx="50" cy="7" r="0.4" opacity="0.6" />
         </g>
       </svg>
 
