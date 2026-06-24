@@ -76,17 +76,56 @@
           <circle cx="92" cy="95" r="0.6" fill="url(#goldGrad)" />
         </g>
 
-        <!-- Silueta UNA pareja, MUY SUTIL en la base (no compite con los
-             10 corazones del primer plano). Estilo cake-topper de boda. -->
-        <g fill="rgba(184, 23, 77, 0.16)" filter="url(#silhBlur)">
-          <!-- Hombre (izq) -->
-          <circle cx="42" cy="91" r="2.2" />
-          <path d="M 39 93.5 Q 38.5 97 39 100 L 45 100 Q 45.5 97 45 93.5 Z" />
-          <!-- Mujer (der), con vestido triangular -->
-          <circle cx="58" cy="91" r="2" />
-          <path d="M 55.5 93.5 Q 55 96 54.5 100 L 61.5 100 Q 61 96 60.5 93.5 Z" />
-          <!-- Manos enlazadas -->
-          <line x1="45" y1="95" x2="55.5" y2="95" stroke="rgba(184,23,77,0.18)" stroke-width="0.4" />
+        <!-- Silueta de pareja CENTRADA dentro del corazón formado por los 10
+             corazones. Más grande y visible (estilo cake-topper de boda).
+             Hombre (izq) en traje + mujer (der) con vestido y velo,
+             frente con frente. -->
+        <g fill="rgba(184, 23, 77, 0.32)" filter="url(#silhBlur)">
+          <!-- ====== HOMBRE (lado izquierdo) ====== -->
+          <!-- Cabeza -->
+          <circle cx="43" cy="44" r="3.4" />
+          <!-- Cuello -->
+          <rect x="42.2" y="46.5" width="1.6" height="1.5" />
+          <!-- Torso/chaqueta (cuerpo trapecio) -->
+          <path d="M 38 48
+                   L 48 48
+                   L 49.5 62
+                   L 36.5 62 Z" />
+          <!-- Solapa V (línea blanca-ish para sugerir traje) -->
+          <path d="M 41.5 48 L 43 53 L 44.5 48"
+                fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="0.3" />
+          <!-- Brazo derecho del hombre (abrazando a la mujer) -->
+          <path d="M 48 50 Q 51 51 53 53" stroke="rgba(184,23,77,0.32)"
+                stroke-width="1.6" fill="none" stroke-linecap="round" />
+
+          <!-- ====== MUJER (lado derecho) ====== -->
+          <!-- Cabeza -->
+          <circle cx="57" cy="44" r="3.1" />
+          <!-- Cabello/velo cayendo (forma curva detrás de la cabeza) -->
+          <path d="M 54 42 Q 53 47 53.5 52
+                   L 56 51
+                   L 57 45
+                   Q 56.5 41 54 42 Z"
+                fill="rgba(184, 23, 77, 0.22)" />
+          <!-- Cuello -->
+          <rect x="56.4" y="46.5" width="1.4" height="1.5" />
+          <!-- Vestido triangular (falda amplia hacia abajo) -->
+          <path d="M 52 48
+                   L 62 48
+                   L 65 62
+                   L 49 62 Z" />
+          <!-- Línea de cintura del vestido -->
+          <line x1="53" y1="54" x2="61" y2="54"
+                stroke="rgba(255,255,255,0.3)" stroke-width="0.3" />
+
+          <!-- ====== Detalles entre ellos ====== -->
+          <!-- Pequeño corazón dorado flotando entre las cabezas -->
+          <path d="M 50 41
+                   C 47.5 38.5, 47.5 36, 49.2 36
+                   C 49.7 36, 50 36.5, 50 37
+                   C 50 36.5, 50.3 36, 50.8 36
+                   C 52.5 36, 52.5 38.5, 50 41 Z"
+                fill="rgba(212, 168, 87, 0.85)" />
         </g>
 
         <!-- Sparkles dorados premium -->

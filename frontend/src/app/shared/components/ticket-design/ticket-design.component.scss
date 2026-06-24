@@ -201,8 +201,8 @@
 
 /* Corazón SVG envolviendo cada número — todos del MISMO tamaño */
 .ticket--romantic .player__heart {
-  width: 56px;
-  height: 52px;
+  width: 62px;
+  height: 58px;
   display: block;
   filter: drop-shadow(0 3px 6px rgba(184, 23, 77, 0.38))
           drop-shadow(0 1px 1px rgba(0, 0, 0, 0.12));
@@ -214,7 +214,7 @@
   transform: translate(-50%, -62%);
   font-family: 'Inter', system-ui, sans-serif;
   font-weight: 800;
-  font-size: 14px;
+  font-size: 15.5px;
   color: #b8174d;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.02em;
