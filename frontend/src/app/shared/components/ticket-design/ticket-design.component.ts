@@ -110,46 +110,32 @@ export class TicketDesignComponent {
     return result;
   });
 
-  /** Distribuye 10 números sobre la curva paramétrica del corazón.
+  /** Posiciones HAND-TUNED para que los 10 corazones formen claramente
+   *  un corazón visualmente. La curva paramétrica matemática quedaba
+   *  débil con solo 10 puntos (los lóbulos exteriores se veían como
+   *  "orejas" puntiagudas). Estas posiciones están tuneadas para
+   *  que el ojo las lea como un corazón sin esfuerzo, en combinación
+   *  con el outline-guía SVG que va detrás.
    *
-   *  Ecuación clásica:
-   *    x(t) = 16 sin³(t)
-   *    y(t) = 13 cos(t) - 5 cos(2t) - 2 cos(3t) - cos(4t)
-   *
-   *  Recorremos t en 10 pasos uniformes [0, 2π). El primer punto cae en el
-   *  hueco superior central (la "uve" del corazón) y vamos en sentido
-   *  horario por el lóbulo derecho → punta inferior → lóbulo izquierdo.
-   *
-   *  Las posiciones se escalan y centran para llenar [10%, 90%] tanto en X
-   *  como en Y dentro del field (aspect 1/1 — cuadrado — para que el
-   *  corazón se vea proporcionado, no estirado).
+   *  Orden: empieza arriba-centro (la "V"), va en sentido horario por
+   *  el lóbulo derecho → punta inferior → lóbulo izquierdo.
    */
   private heartLayout(nums: string[]): PositionedNumber[] {
-    // Rango de la curva (precomputado): x ∈ [-13.76, 13.76], y ∈ [-17, 10.4]
-    const xMax = 13.76;
-    const yMin = -17;
-    const yMax = 10.4;
-    const yCenter = (yMin + yMax) / 2; // -3.3
-
-    const padding = 12; // % desde cada borde, deja aire para los corazones
-    const scaleX = (100 - padding * 2) / (2 * xMax);
-    const scaleY = (100 - padding * 2) / (yMax - yMin);
-
-    const result: PositionedNumber[] = [];
-    for (let i = 0; i < 10; i++) {
-      const t = (2 * Math.PI * i) / 10;
-      const px = 16 * Math.pow(Math.sin(t), 3);
-      const py =
-        13 * Math.cos(t) -
-        5 * Math.cos(2 * t) -
-        2 * Math.cos(3 * t) -
-        Math.cos(4 * t);
-      // X centrado en 50, Y invertido (SVG y va hacia abajo) y centrado
-      const sx = 50 + px * scaleX;
-      const sy = 50 - (py - yCenter) * scaleY;
-      result.push({ number: nums[i], x: sx, y: sy });
-    }
-    return result;
+    const positions: Array<[number, number]> = [
+      [50, 26], // 0 — top center dip (la "V")
+      [68, 18], // 1 — top of right lobe peak
+      [82, 32], // 2 — outer right lobe (NO tan alto, queda redondo)
+      [78, 51], // 3 — right side mid
+      [63, 70], // 4 — lower-right curve
+      [50, 86], // 5 — bottom point
+      [37, 70], // 6 — lower-left curve
+      [22, 51], // 7 — left side mid
+      [18, 32], // 8 — outer left lobe (mirror del 2)
+      [32, 18], // 9 — top of left lobe peak
+    ];
+    return positions.slice(0, nums.length).map(([x, y], i) => ({
+      number: nums[i], x, y,
+    }));
   }
 
   /** Helper: arma las posiciones para una lista de "filas" arriba + abajo. */
