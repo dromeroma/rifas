@@ -59,6 +59,9 @@ export interface Raffle {
   numbers_generated_at?: string | null;
   logo_url?: string | null;
   primary_color?: string | null;
+  /** Diseño visual de la boleta: 'soccer' (cancha + chips) o 'romantic'
+   *  (corazones + silueta de pareja). Default 'soccer'. */
+  ticket_theme?: 'soccer' | 'romantic';
   lottery_name?: string | null;
   responsible_name?: string | null;
   responsible_phone?: string | null;

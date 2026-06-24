@@ -26,6 +26,7 @@ interface PromoRaffle {
   name: string;
   description: string | null;
   ticket_price: number;
+  ticket_theme?: 'soccer' | 'romantic';
   lottery_name: string | null;
   primary_color: string | null;
   logo_url: string | null;
@@ -243,6 +244,7 @@ interface VerifyView {
                   [responsibleName]="data()?.responsible_name ?? null"
                   [responsiblePhone]="data()?.responsible_phone ?? null"
                   [ticketPrice]="data()?.ticket_price ?? null"
+                  [theme]="data()?.ticket_theme ?? 'soccer'"
                 />
               </div>
             }
@@ -402,6 +404,7 @@ interface VerifyView {
                     [responsibleName]="data()?.responsible_name ?? null"
                     [responsiblePhone]="data()?.responsible_phone ?? null"
                     [ticketPrice]="data()?.ticket_price ?? null"
+                    [theme]="data()?.ticket_theme ?? 'soccer'"
                   />
                 </div>
               }

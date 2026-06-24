@@ -91,6 +91,11 @@ class Raffle(Base, TimestampMixin):
     logo_url: Mapped[str | None] = mapped_column(String(255), nullable=True)
     primary_color: Mapped[str | None] = mapped_column(String(20), nullable=True)
 
+    # Diseño visual de la boleta. Soportados: 'soccer' (cancha de fútbol con
+    # chips ovalados — default), 'romantic' (corazones + silueta de pareja
+    # para rifas de amor y amistad). Editable mientras la rifa esté DRAFT.
+    ticket_theme: Mapped[str] = mapped_column(String(20), nullable=False, default="soccer")
+
     # Información operativa visible al cliente (parametrizable por rifa)
     lottery_name: Mapped[str | None] = mapped_column(String(120), nullable=True)
     responsible_name: Mapped[str | None] = mapped_column(String(150), nullable=True)

@@ -133,6 +133,69 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* ============================================================
+   TEMA ROMÁNTICO (.ticket--romantic)
+   Fondo rosa con corazones SVG, números dentro de corazones,
+   silueta de pareja al fondo. Pensado para amor & amistad.
+   ============================================================ */
+.ticket--romantic {
+  --ticket-border: #b8174d;
+  --chip-bg: #ffffff;
+  --chip-fg: #b8174d;
+}
+.ticket--romantic .ticket__header {
+  background: linear-gradient(135deg, #b8174d 0%, #d63384 60%, #ec5d8b 100%);
+}
+.ticket--romantic .ticket__owner {
+  background: #fff0f5;
+  border-bottom-color: rgba(184, 23, 77, 0.2);
+}
+.ticket--romantic .ticket__owner-name { color: #b8174d; }
+.ticket--romantic .field {
+  background:
+    repeating-linear-gradient(
+      to bottom,
+      #fde4eb 0,
+      #fde4eb 5%,
+      #fbd5e2 5%,
+      #fbd5e2 10%
+    );
+  border-top-color: #b8174d;
+  border-bottom-color: #b8174d;
+}
+/* Corazón SVG envolviendo cada número */
+.ticket--romantic .player__heart {
+  width: 42px;
+  height: 40px;
+  display: block;
+  filter: drop-shadow(0 2px 4px rgba(184, 23, 77, 0.25));
+}
+.ticket--romantic .player__num {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -55%);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-weight: 800;
+  font-size: 11px;
+  color: #b8174d;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  pointer-events: none;
+}
+.ticket--romantic .ticket__footer {
+  background: #fff0f5;
+}
+.ticket--romantic .ticket__prizes h4 { color: #b8174d; }
+.ticket--romantic .ticket__qr img,
+.ticket--romantic .ticket__qr .qr-placeholder {
+  border-color: #f9c2d3;
+}
+.ticket--romantic .ticket__summary {
+  background: linear-gradient(135deg, #b8174d 0%, #d63384 100%);
+}
+.ticket--romantic .ticket__summary-main strong { color: #ffe4ec; }
+.ticket--romantic .ticket__summary-price strong { color: #ffe4ec; }
+
 .ticket__footer {
   display: grid;
   grid-template-columns: auto 1fr;

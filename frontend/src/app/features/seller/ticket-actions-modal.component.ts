@@ -49,6 +49,7 @@ import { ReportPaymentModalComponent } from './report-payment-modal.component';
               [responsibleName]="raffle().responsible_name ?? null"
               [responsiblePhone]="raffle().responsible_phone ?? null"
               [ticketPrice]="raffle().ticket_price"
+              [theme]="raffle().ticket_theme ?? 'soccer'"
               [verifyUrl]="origin + '/verify/' + t.code"
             />
             <div class="preview__status">

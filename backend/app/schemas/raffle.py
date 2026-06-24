@@ -192,6 +192,10 @@ class RaffleUpdate(BaseModel):
     responsible_email: Optional[str] = None
     terms: Optional[str] = None
     commission_tiers: Optional[List[CommissionTier]] = None
+    ticket_theme: Optional[str] = Field(
+        default=None, pattern="^(soccer|romantic)$",
+        description="Diseño visual de la boleta. 'soccer' o 'romantic'.",
+    )
 
     @model_validator(mode="after")
     def _validate_tiers(self):
@@ -224,6 +228,7 @@ class RaffleOut(BaseModel):
     numbers_generated_at: Optional[datetime]
     logo_url: Optional[str]
     primary_color: Optional[str]
+    ticket_theme: str = "soccer"
     lottery_name: Optional[str] = None
     responsible_name: Optional[str] = None
     responsible_phone: Optional[str] = None

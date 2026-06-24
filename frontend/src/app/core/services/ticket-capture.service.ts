@@ -108,6 +108,8 @@ export class TicketCaptureService {
       // Precio de la boleta para que el comprador vea cuánto pagó cuando
       // reciba la imagen por WhatsApp.
       compRef.setInput('ticketPrice', raffle.ticket_price ?? null);
+      // Diseño visual de la boleta (per-raffle): 'soccer' o 'romantic'.
+      compRef.setInput('theme', raffle.ticket_theme ?? 'soccer');
 
       this.appRef.attachView(compRef.hostView);
       compRef.changeDetectorRef.detectChanges();
