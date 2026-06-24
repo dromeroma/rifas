@@ -196,12 +196,17 @@
       <small class="ticket__code">{{ ticket().code }}</small>
     </div>
     <div class="ticket__prizes">
-      <h4>Premios</h4>
+      <h4>{{ theme() === 'romantic' ? '♥ Premios' : 'Premios' }}</h4>
       <ul>
         @for (prize of prizes(); track prize.position) {
-          <li>
-            <span class="prize__name">{{ prize.position }}. {{ prize.name }}</span>
-            <span class="prize__date">{{ prize.draw_date }}</span>
+          <li [class.prize--main]="prize.position === 1">
+            <span class="prize__dot" aria-hidden="true">
+              {{ prize.position === 1
+                  ? (theme() === 'romantic' ? '★' : '🏆')
+                  : (theme() === 'romantic' ? '♥' : '•') }}
+            </span>
+            <span class="prize__name">{{ prize.name }}</span>
+            <span class="prize__date">{{ formatPrizeDate(prize.draw_date) }}</span>
           </li>
         }
       </ul>

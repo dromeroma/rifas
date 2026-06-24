@@ -51,6 +51,18 @@ export class TicketDesignComponent {
     return '$' + new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 }).format(p);
   });
 
+  /** "2026-09-17" → "17 SEP". Para fechas en cards de premios — más
+   *  legible y compacto que el ISO crudo. Si la fecha está vacía o mal,
+   *  devuelve el string original. */
+  formatPrizeDate(iso: string): string {
+    if (!iso) return '';
+    const d = new Date(iso + (iso.length === 10 ? 'T12:00:00' : ''));
+    if (isNaN(d.getTime())) return iso;
+    const day = String(d.getDate()).padStart(2, '0');
+    const months = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
+    return `${day} ${months[d.getMonth()]}`;
+  }
+
   /** N° de sorteos × N° de números por boleta. */
   readonly totalOpportunities = computed(() => {
     const numbers = this.ticket().numbers?.length ?? 0;
