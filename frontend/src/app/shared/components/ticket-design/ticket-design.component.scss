@@ -152,35 +152,61 @@
 }
 .ticket--romantic .ticket__owner-name { color: #b8174d; }
 .ticket--romantic .field {
+  /* Más bajo que la cancha de fútbol (era 2/3 vertical). Acá lo dejamos
+     casi cuadrado para que no sobre tanto espacio con solo 10 números. */
+  aspect-ratio: 4 / 3;
   background:
-    repeating-linear-gradient(
-      to bottom,
-      #fde4eb 0,
-      #fde4eb 5%,
-      #fbd5e2 5%,
-      #fbd5e2 10%
+    /* Gradient diagonal suave (más premium que rayas planas) */
+    linear-gradient(
+      135deg,
+      #fef1f5 0%,
+      #fce0e8 45%,
+      #fad4de 100%
     );
-  border-top-color: #b8174d;
-  border-bottom-color: #b8174d;
+  border-top: 4px solid #b8174d;
+  border-bottom: 4px solid #b8174d;
+  box-shadow:
+    inset 0 0 60px rgba(184, 23, 77, 0.05),
+    inset 0 2px 0 rgba(255,255,255,0.6);
+  position: relative;
 }
-/* Corazón SVG envolviendo cada número */
+/* Esquinas decorativas con triple corazoncito (premium touch) */
+.ticket--romantic .field::before,
+.ticket--romantic .field::after {
+  content: '♥';
+  position: absolute;
+  font-size: 12px;
+  color: rgba(212, 168, 87, 0.6);
+  pointer-events: none;
+  z-index: 2;
+}
+.ticket--romantic .field::before {
+  top: 6px; left: 8px;
+}
+.ticket--romantic .field::after {
+  bottom: 6px; right: 8px;
+}
+
+/* Corazón SVG envolviendo cada número — más grande, premium */
 .ticket--romantic .player__heart {
-  width: 42px;
-  height: 40px;
+  width: 64px;
+  height: 60px;
   display: block;
-  filter: drop-shadow(0 2px 4px rgba(184, 23, 77, 0.25));
+  filter: drop-shadow(0 4px 8px rgba(184, 23, 77, 0.35))
+          drop-shadow(0 1px 2px rgba(0,0,0,0.1));
 }
 .ticket--romantic .player__num {
   position: absolute;
   top: 50%; left: 50%;
-  transform: translate(-50%, -55%);
+  transform: translate(-50%, -60%);
   font-family: 'Inter', system-ui, sans-serif;
   font-weight: 800;
-  font-size: 11px;
+  font-size: 15px;
   color: #b8174d;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.02em;
   pointer-events: none;
+  text-shadow: 0 1px 0 rgba(255,255,255,0.5);
 }
 .ticket--romantic .ticket__footer {
   background: #fff0f5;

@@ -27,58 +27,114 @@
 
   <section class="field" [attr.aria-label]="theme() === 'romantic' ? 'Boleta romántica con corazones' : 'Cancha de fútbol con los números'">
     @if (theme() === 'romantic') {
-      <!-- ============ TEMA ROMÁNTICO ============ -->
-      <!-- Silueta de pareja + corazón grande de fondo -->
+      <!-- ============ TEMA ROMÁNTICO PREMIUM ============ -->
       <svg class="field__lines field__lines--romantic"
            viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
         <defs>
-          <linearGradient id="loveGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="rgba(255,255,255,0.18)" />
+          <!-- Sombra suave para la silueta principal -->
+          <filter id="silhBlur" x="-10%" y="-10%" width="120%" height="120%">
+            <feGaussianBlur stdDeviation="0.6" />
+          </filter>
+          <!-- Pequeño brillo para el corazón watermark -->
+          <radialGradient id="heartShine" cx="50%" cy="35%" r="60%">
+            <stop offset="0%" stop-color="rgba(255,255,255,0.55)" />
+            <stop offset="60%" stop-color="rgba(255,255,255,0.10)" />
             <stop offset="100%" stop-color="rgba(255,255,255,0)" />
-          </linearGradient>
+          </radialGradient>
         </defs>
-        <!-- borde -->
-        <rect x="1.5" y="1.5" width="97" height="97" rx="3" fill="none"
-              stroke="rgba(255,255,255,0.55)" stroke-width="0.5"
-              stroke-dasharray="2,1.5" />
 
-        <!-- corazón gigante en el fondo, marca de agua -->
-        <path d="M 50 78
-                 C 18 60, 18 28, 35 28
-                 C 42 28, 47 32, 50 36
-                 C 53 32, 58 28, 65 28
-                 C 82 28, 82 60, 50 78 Z"
-              fill="rgba(255,255,255,0.08)"
-              stroke="rgba(255,255,255,0.25)" stroke-width="0.4" />
+        <!-- Marco interior dorado tenue para toque premium -->
+        <rect x="1.5" y="1.5" width="97" height="97" rx="2.5" fill="none"
+              stroke="rgba(212, 168, 87, 0.55)" stroke-width="0.4"
+              stroke-dasharray="0.8,0.8" />
+        <rect x="3" y="3" width="94" height="94" rx="2" fill="none"
+              stroke="rgba(255,255,255,0.5)" stroke-width="0.3" />
 
-        <!-- Silueta de pareja (muy estilizada): hombre izq, mujer der.
-             Posicionada en la parte inferior del fondo. -->
-        <g transform="translate(20, 70)" fill="rgba(255,255,255,0.18)">
-          <!-- Hombre -->
-          <circle cx="8" cy="6" r="3.5" />
-          <path d="M 4 11 Q 4 17 4 22 L 12 22 Q 12 17 12 11 Z" />
-          <!-- Mujer (al lado, tomada de mano) -->
-          <circle cx="22" cy="6" r="3.2" />
-          <path d="M 18 11 Q 17 16 17 22 L 20 22 L 22 14 L 24 22 L 27 22 Q 27 16 26 11 Z" />
-          <!-- Bracito uniéndolos (manos tomadas) -->
-          <line x1="12" y1="13" x2="18" y2="13" stroke="rgba(255,255,255,0.25)" stroke-width="1" />
+        <!-- Corazón gigante watermark al centro -->
+        <path d="M 50 76
+                 C 16 56, 16 22, 34 22
+                 C 42 22, 47 28, 50 32
+                 C 53 28, 58 22, 66 22
+                 C 84 22, 84 56, 50 76 Z"
+              fill="url(#heartShine)"
+              stroke="rgba(255,255,255,0.4)" stroke-width="0.5" />
+
+        <!-- Silueta UNA pareja, grande y centrada (más visible) -->
+        <g fill="rgba(184, 23, 77, 0.32)" filter="url(#silhBlur)">
+          <!-- Hombre (izq) -->
+          <circle cx="38" cy="46" r="4.5" />
+          <path d="M 32 51
+                   Q 31 60 32 70
+                   L 36 70
+                   L 38 60
+                   L 40 70
+                   L 44 70
+                   Q 45 60 44 51
+                   Q 41 49 38 49
+                   Q 35 49 32 51 Z" />
+          <!-- Mujer (der), con falda triangular -->
+          <circle cx="62" cy="46" r="4.2" />
+          <path d="M 56 51
+                   Q 55 58 55 62
+                   L 50 72
+                   L 54 72
+                   L 56 65
+                   L 60 72
+                   L 62 65
+                   L 64 72
+                   L 66 65
+                   L 70 72
+                   L 69 62
+                   Q 69 58 68 51
+                   Q 65 49 62 49
+                   Q 59 49 56 51 Z" />
+          <!-- Brazos enlazados al centro (corazón sale del medio) -->
+          <path d="M 42 55 Q 46 53 50 54.5 Q 54 53 58 55"
+                stroke="rgba(184,23,77,0.35)" stroke-width="1.2" fill="none" stroke-linecap="round" />
+          <!-- Corazoncito en el aire entre los dos -->
+          <path d="M 50 50
+                   C 47 47, 47 44, 49 44
+                   C 49.5 44, 50 44.5, 50 45
+                   C 50 44.5, 50.5 44, 51 44
+                   C 53 44, 53 47, 50 50 Z"
+                fill="rgba(212, 168, 87, 0.7)" />
         </g>
-        <g transform="translate(54, 70)" fill="rgba(255,255,255,0.14)">
-          <!-- Otra parejita, reflejo del lado derecho para balance -->
-          <circle cx="8" cy="6" r="3.5" />
-          <path d="M 4 11 Q 4 17 4 22 L 12 22 Q 12 17 12 11 Z" />
-          <circle cx="22" cy="6" r="3.2" />
-          <path d="M 18 11 Q 17 16 17 22 L 20 22 L 22 14 L 24 22 L 27 22 Q 27 16 26 11 Z" />
-          <line x1="12" y1="13" x2="18" y2="13" stroke="rgba(255,255,255,0.2)" stroke-width="1" />
+
+        <!-- Estrellitas/sparkles para premium feel -->
+        <g fill="rgba(212, 168, 87, 0.55)">
+          <circle cx="14" cy="18" r="0.6" />
+          <circle cx="86" cy="22" r="0.5" />
+          <circle cx="20" cy="40" r="0.4" />
+          <circle cx="80" cy="40" r="0.4" />
+          <circle cx="12" cy="82" r="0.5" />
+          <circle cx="88" cy="82" r="0.6" />
         </g>
       </svg>
 
-      <!-- Cada número va dentro de un corazón -->
+      <!-- Cada número va dentro de un corazón blanco premium -->
       @for (p of positioned(); track $index) {
         <div class="player" [style.left.%]="p.x" [style.top.%]="p.y" [attr.data-index]="$index + 1">
-          <svg class="player__heart" viewBox="0 0 32 30" aria-hidden="true">
-            <path d="M 16 27 C 2 19, 2 8, 9 5 C 13 4, 15 7, 16 9 C 17 7, 19 4, 23 5 C 30 8, 30 19, 16 27 Z"
-                  fill="#ffffff" stroke="#b8174d" stroke-width="1.5" stroke-linejoin="round" />
+          <svg class="player__heart" viewBox="0 0 36 34" aria-hidden="true">
+            <defs>
+              <linearGradient [attr.id]="'hp' + $index" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#ffffff" />
+                <stop offset="100%" stop-color="#fff0f5" />
+              </linearGradient>
+            </defs>
+            <path d="M 18 31
+                     C 2 22, 2 9, 10 5
+                     C 14 4, 16.5 7, 18 9
+                     C 19.5 7, 22 4, 26 5
+                     C 34 9, 34 22, 18 31 Z"
+                  [attr.fill]="'url(#hp' + $index + ')'"
+                  stroke="#b8174d" stroke-width="1.6" stroke-linejoin="round" />
+            <!-- Borde dorado interno para premium -->
+            <path d="M 18 28
+                     C 5 21, 5 11, 11 7.5
+                     C 14 6.8, 16.5 9, 18 11
+                     C 19.5 9, 22 6.8, 25 7.5
+                     C 31 11, 31 21, 18 28 Z"
+                  fill="none" stroke="rgba(212, 168, 87, 0.7)" stroke-width="0.5" stroke-linejoin="round" />
           </svg>
           <span class="player__num">{{ p.number }}</span>
         </div>
