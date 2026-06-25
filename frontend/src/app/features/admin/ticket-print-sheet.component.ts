@@ -118,11 +118,21 @@ export type PrintDesign = 'soccer' | 'professional';
                       </header>
 
                       <div class="pro-body">
-                        <!-- TV fotorrealista (SVG propio, sin foto real
-                             para evitar problemas de copyright). Bezel con
-                             reflejos, estadio con tribunas y luces, jugador
-                             con uniforme, balón, sombra de soporte. -->
+                        <!-- TV con imagen real provista por el organizador.
+                             La imagen ya incluye el texto 'TV 50"' y
+                             '+ 3 BONOS DE 200K', así que no agregamos caption
+                             debajo. Solo la enmarcamos en doble borde dorado. -->
                         <div class="pro-tv">
+                          <div class="pro-tv__frame">
+                            <img class="pro-tv__img"
+                                 src="/assets/imagen-tv-50-3-bono-200-k.png"
+                                 alt="Televisor 50 pulgadas + 3 bonos de doscientos mil pesos" />
+                          </div>
+                        </div>
+
+                        <!-- Marcador para colapsar el SVG legacy (se conserva
+                             como fallback pero no renderiza por el @if false) -->
+                        @if (false) {
                           <svg viewBox="0 0 200 130" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
                             <defs>
                               <!-- Bezel exterior: gradiente para look metálico -->
@@ -310,8 +320,7 @@ export type PrintDesign = 'soccer' | 'professional';
                             <polygon points="140,120 130,122 135,123 142,121"
                                      fill="#0a0a0a" />
                           </svg>
-                          <div class="pro-tv__caption">TELEVISOR <strong>50"</strong> · 4K ULTRA HD</div>
-                        </div>
+                        }
 
                         <!-- Lado derecho: 20 números en grilla 5x4 -->
                         <div class="pro-numbers">
@@ -972,8 +981,8 @@ export type PrintDesign = 'soccer' | 'professional';
     /* === Body: TV + números === */
     .pro-body {
       display: grid;
-      grid-template-columns: 42% 58%;
-      gap: 8pt;
+      grid-template-columns: 48% 52%;
+      gap: 10pt;
       padding: 0.12in 0.14in;
       background:
         radial-gradient(ellipse at 50% 0%, rgba(201,169,97,0.08) 0%, transparent 50%),
@@ -981,6 +990,7 @@ export type PrintDesign = 'soccer' | 'professional';
       border-bottom: 1px solid rgba(201, 169, 97, 0.45);
       position: relative;
       z-index: 1;
+      align-items: center;
     }
 
     .pro-tv {
@@ -988,28 +998,47 @@ export type PrintDesign = 'soccer' | 'professional';
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding-right: 6pt;
+      padding-right: 8pt;
       border-right: 0.5px dashed rgba(201, 169, 97, 0.5);
     }
-    .pro-tv svg {
+
+    /* Marco doble dorado premium para enmarcar la imagen del TV.
+       Outer: gradiente dorado con sombra hacia el papel.
+       Inner: doble borde con padding crema para dar el efecto
+       de cuadro/poster enmarcado. */
+    .pro-tv__frame {
+      position: relative;
       width: 100%;
-      max-width: 1.45in;
+      padding: 4pt;
+      background:
+        linear-gradient(135deg, #d4b876 0%, #c9a961 30%, #b88a35 65%, #c9a961 100%);
+      border-radius: 4pt;
+      box-shadow:
+        0 0 0 0.5pt rgba(255, 255, 255, 0.45) inset,
+        0 0 0 1pt rgba(106, 70, 18, 0.4),
+        0 3pt 6pt rgba(13, 27, 42, 0.22),
+        0 1pt 2pt rgba(13, 27, 42, 0.18);
+      print-color-adjust: exact;
+      -webkit-print-color-adjust: exact;
+    }
+    /* Anillo blanco interno entre el marco dorado y la imagen — efecto poster */
+    .pro-tv__frame::before {
+      content: '';
+      position: absolute;
+      inset: 3pt;
+      border: 0.6px solid rgba(255, 255, 255, 0.8);
+      border-radius: 2pt;
+      pointer-events: none;
+      z-index: 1;
+    }
+    .pro-tv__img {
+      display: block;
+      width: 100%;
       height: auto;
-      filter: drop-shadow(0 3pt 4pt rgba(0,0,0,0.22));
-    }
-    .pro-tv__caption {
-      margin-top: 5pt;
-      font-size: 6.5pt;
-      font-weight: 700;
-      letter-spacing: 0.1em;
-      color: #0d1b2a;
-      text-align: center;
-      text-transform: uppercase;
-    }
-    .pro-tv__caption strong {
-      font-weight: 900;
-      color: #722f37;
-      letter-spacing: 0.05em;
+      border-radius: 1.5pt;
+      background: #000;
+      position: relative;
+      z-index: 0;
     }
 
     .pro-numbers {
