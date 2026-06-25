@@ -78,7 +78,9 @@ export type PrintDesign = 'soccer' | 'professional';
             <div class="grid">
               @for (t of page; track t.ticket_id) {
                 <article class="boleta">
-                  <!-- TALÓN VENDEDOR -->
+                  <!-- TALÓN VENDEDOR — 2 campos (Nombre + Celular) con más
+                       aire y tipografía más elegante. Aplica a ambos diseños
+                       (cancha y profesional). -->
                   <div class="talon">
                     <div class="talon-head">
                       <div>
@@ -88,11 +90,9 @@ export type PrintDesign = 'soccer' | 'professional';
                       </div>
                       <img class="qr" [src]="t.qrAdmin" alt="Escanea para verificar la boleta" />
                     </div>
-                    <div class="lines">
-                      <div class="line"><span>Cliente:</span></div>
-                      <div class="line"><span>Cédula:</span></div>
+                    <div class="lines lines--two">
+                      <div class="line"><span>Nombre del cliente:</span></div>
                       <div class="line"><span>Celular:</span></div>
-                      <div class="line"><span>Firma:</span></div>
                     </div>
                   </div>
 
@@ -118,41 +118,95 @@ export type PrintDesign = 'soccer' | 'professional';
                       </header>
 
                       <div class="pro-body">
-                        <!-- Lado izquierdo: TV ilustrado sin marca -->
+                        <!-- Lado izquierdo: TV ilustrado sin marca, con escena
+                             de estadio en la pantalla (estilo Smart TV moderno) -->
                         <div class="pro-tv">
-                          <svg viewBox="0 0 130 100" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+                          <svg viewBox="0 0 160 110" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
                             <defs>
-                              <linearGradient [attr.id]="'tvScreen-' + t.ticket_id" x1="0" x2="0" y1="0" y2="1">
-                                <stop offset="0%" stop-color="#0a1a2e" />
-                                <stop offset="60%" stop-color="#050d18" />
-                                <stop offset="100%" stop-color="#02060c" />
+                              <!-- Marco metálico oscuro -->
+                              <linearGradient [attr.id]="'tvFrame-' + t.ticket_id" x1="0" x2="0" y1="0" y2="1">
+                                <stop offset="0%" stop-color="#1a1a1a" />
+                                <stop offset="50%" stop-color="#0a0a0a" />
+                                <stop offset="100%" stop-color="#000" />
                               </linearGradient>
-                              <radialGradient [attr.id]="'tvGlow-' + t.ticket_id" cx="50%" cy="40%" r="55%">
-                                <stop offset="0%" stop-color="rgba(212,168,87,0.35)" />
-                                <stop offset="100%" stop-color="rgba(212,168,87,0)" />
+                              <!-- Cielo del estadio -->
+                              <linearGradient [attr.id]="'sky-' + t.ticket_id" x1="0" x2="0" y1="0" y2="1">
+                                <stop offset="0%" stop-color="#1e3a5f" />
+                                <stop offset="60%" stop-color="#0d1b2a" />
+                                <stop offset="100%" stop-color="#1a3a2a" />
+                              </linearGradient>
+                              <!-- Brillo de cancha verde -->
+                              <radialGradient [attr.id]="'fieldGlow-' + t.ticket_id" cx="50%" cy="100%" r="60%">
+                                <stop offset="0%" stop-color="rgba(80, 180, 100, 0.55)" />
+                                <stop offset="100%" stop-color="rgba(80, 180, 100, 0)" />
                               </radialGradient>
                             </defs>
-                            <!-- Marco -->
-                            <rect x="6" y="4" width="118" height="80" rx="3" fill="#0a0a0a" />
-                            <rect x="10" y="8" width="110" height="72" rx="1.5"
-                                  [attr.fill]="'url(#tvScreen-' + t.ticket_id + ')'" />
-                            <rect x="10" y="8" width="110" height="72" rx="1.5"
-                                  [attr.fill]="'url(#tvGlow-' + t.ticket_id + ')'" />
-                            <!-- "50"" en pantalla -->
-                            <text x="65" y="48" text-anchor="middle"
-                                  font-family="Inter, sans-serif"
+
+                            <!-- Marco TV — bezel ultra delgado moderno -->
+                            <rect x="4" y="2" width="152" height="92" rx="3"
+                                  [attr.fill]="'url(#tvFrame-' + t.ticket_id + ')'" />
+                            <!-- Pantalla -->
+                            <rect x="7" y="5" width="146" height="86" rx="1.5"
+                                  [attr.fill]="'url(#sky-' + t.ticket_id + ')'" />
+
+                            <!-- Tribunas del estadio (curvas oscuras al fondo) -->
+                            <path d="M 7 5 Q 80 28 153 5 L 153 38 Q 80 50 7 38 Z"
+                                  fill="rgba(0,0,0,0.45)" />
+                            <!-- Luces del estadio (puntitos) -->
+                            <g fill="rgba(255,240,200,0.85)">
+                              <circle cx="30" cy="14" r="0.6" />
+                              <circle cx="55" cy="11" r="0.5" />
+                              <circle cx="80" cy="10" r="0.7" />
+                              <circle cx="105" cy="11" r="0.5" />
+                              <circle cx="130" cy="14" r="0.6" />
+                            </g>
+
+                            <!-- Cancha verde abajo -->
+                            <rect x="7" y="55" width="146" height="36"
+                                  [attr.fill]="'url(#fieldGlow-' + t.ticket_id + ')'" />
+                            <path d="M 7 60 L 153 60 L 153 91 L 7 91 Z"
+                                  fill="#3d8049" />
+                            <!-- Líneas de cancha sutiles -->
+                            <line x1="80" y1="60" x2="80" y2="91"
+                                  stroke="rgba(255,255,255,0.25)" stroke-width="0.4" />
+                            <circle cx="80" cy="75" r="6" fill="none"
+                                    stroke="rgba(255,255,255,0.25)" stroke-width="0.4" />
+
+                            <!-- Silueta jugador con pelota (estilo logo simple) -->
+                            <g fill="#1a1a2e">
+                              <!-- cabeza -->
+                              <circle cx="78" cy="56" r="2.2" />
+                              <!-- torso/cuerpo -->
+                              <path d="M 75 59 Q 74 65 75 72 L 81 72 Q 82 65 81 59 Z" />
+                              <!-- pierna pateando -->
+                              <path d="M 81 70 Q 85 72 88 73 L 89 75 Q 85 75 80 73 Z" />
+                            </g>
+                            <!-- Balón -->
+                            <circle cx="91" cy="76" r="2" fill="#fff"
+                                    stroke="#1a1a2e" stroke-width="0.4" />
+
+                            <!-- "50"" en blanco grande, esquina izquierda -->
+                            <text x="14" y="55" font-family="Inter, Arial, sans-serif"
                                   font-weight="900" font-size="20"
-                                  fill="rgba(212,168,87,0.55)">50"</text>
-                            <text x="65" y="62" text-anchor="middle"
-                                  font-family="Inter, sans-serif"
-                                  font-weight="700" font-size="6"
-                                  letter-spacing="2"
-                                  fill="rgba(212,168,87,0.7)">ULTRA HD</text>
-                            <!-- Base/stand -->
-                            <rect x="58" y="84" width="14" height="3" fill="#0a0a0a" />
-                            <polygon points="40,92 90,92 80,98 50,98" fill="#0a0a0a" />
+                                  fill="rgba(255,255,255,0.96)" letter-spacing="-1">50&quot;</text>
+
+                            <!-- "4K HDR / ULTRA HD" esquina derecha -->
+                            <text x="148" y="52" text-anchor="end"
+                                  font-family="Inter, Arial, sans-serif"
+                                  font-weight="900" font-size="11"
+                                  fill="rgba(255,255,255,0.96)" letter-spacing="-0.3">4K HDR</text>
+                            <text x="148" y="59" text-anchor="end"
+                                  font-family="Inter, Arial, sans-serif"
+                                  font-weight="700" font-size="5"
+                                  fill="rgba(255,255,255,0.78)" letter-spacing="0.5">ULTRA HD</text>
+
+                            <!-- Soporte central moderno -->
+                            <rect x="74" y="94" width="12" height="3" fill="#0a0a0a" />
+                            <!-- Patas en V abierta -->
+                            <polygon points="50,102 80,98 110,102 105,105 80,101 55,105"
+                                     fill="#0a0a0a" />
                           </svg>
-                          <div class="pro-tv__caption">TELEVISOR 50"</div>
+                          <div class="pro-tv__caption">TELEVISOR <strong>50"</strong> · 4K ULTRA HD</div>
                         </div>
 
                         <!-- Lado derecho: 20 números en grilla 5x4 -->
@@ -468,6 +522,42 @@ export type PrintDesign = 'soccer' | 'professional';
       font-weight: 600;
     }
 
+    /* Variante de 2 campos (Nombre + Celular): líneas más altas, label
+       en estilo elegante con punto dorado de marca, más aire vertical. */
+    .lines--two {
+      gap: 0.12in;
+      margin-top: 0.08in;
+    }
+    .lines--two .line {
+      height: 18pt;
+      border-bottom: 1.2px solid #0d1b2a;
+      padding-bottom: 2pt;
+      position: relative;
+    }
+    .lines--two .line span {
+      font-size: 7pt;
+      font-weight: 700;
+      color: #6e4a14;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    /* Pequeño punto dorado al inicio de cada línea, toque elegante */
+    .lines--two .line::before {
+      content: '';
+      position: absolute;
+      left: -3pt;
+      bottom: 4pt;
+      width: 3pt;
+      height: 3pt;
+      background: #c9a961;
+      border-radius: 50%;
+      print-color-adjust: exact;
+      -webkit-print-color-adjust: exact;
+    }
+    .page--six .talon .lines--two { gap: 0.08in; margin-top: 0.06in; }
+    .page--six .talon .lines--two .line { height: 14pt; }
+    .page--six .talon .lines--two .line span { font-size: 6.5pt; }
+
     /* === Línea de corte === */
     .cut {
       position: relative;
@@ -671,163 +761,222 @@ export type PrintDesign = 'soccer' | 'professional';
     }
 
     /* ============================================================
-       DISEÑO PROFESIONAL — boleta clásica de rifa, premium
-       Aplica solo a .ticket--pro. El talón superior se mantiene
-       idéntico al diseño soccer (mismas líneas para escribir, mismo QR).
+       DISEÑO PROFESIONAL PREMIUM — boleta clásica de rifa, elegante
+       Paleta: midnight navy #0d1b2a + champagne gold #c9a961 +
+       ivory/cream #faf4e3 + burgundy accent #722f37 para detalles
        ============================================================ */
     .ticket--pro {
-      background: #fffdf7;
+      background: #faf4e3;
       position: relative;
       padding: 0 !important;
       gap: 0 !important;
+      overflow: hidden;
       print-color-adjust: exact;
       -webkit-print-color-adjust: exact;
     }
+
+    /* Doble borde dorado interno (clásico premium) */
+    .ticket--pro::after {
+      content: '';
+      position: absolute;
+      inset: 4pt;
+      border: 0.5px solid rgba(201, 169, 97, 0.55);
+      border-radius: 2pt;
+      pointer-events: none;
+      z-index: 5;
+    }
+
+    /* === Header oscuro === */
     .ticket--pro .pro-head {
-      display: flex;
-      justify-content: space-between;
+      display: grid;
+      grid-template-columns: 1fr auto;
       align-items: center;
-      padding: 0.08in 0.12in;
-      background: linear-gradient(135deg, #1a1a2e 0%, #2a2a4a 100%);
-      color: #fff;
-      border-bottom: 2px solid #d4a857;
-      print-color-adjust: exact;
-      -webkit-print-color-adjust: exact;
+      gap: 8pt;
+      padding: 0.1in 0.14in;
+      background:
+        linear-gradient(135deg, #0d1b2a 0%, #1b2a3f 60%, #0d1b2a 100%);
+      color: #faf4e3;
+      border-bottom: 2.5px solid #c9a961;
+      box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.08);
+      position: relative;
     }
-    .pro-head__brand { flex: 1; min-width: 0; }
+    /* Borde dorado interno superior — toque premium */
+    .ticket--pro .pro-head::before {
+      content: '';
+      position: absolute;
+      inset: 2pt;
+      border: 0.4px solid rgba(201, 169, 97, 0.5);
+      border-radius: 1.5pt;
+      pointer-events: none;
+    }
+
+    .pro-head__brand {
+      min-width: 0;
+      position: relative;
+    }
     .pro-head__eyebrow {
-      font-size: 6.5pt;
-      letter-spacing: 0.18em;
-      color: #d4a857;
+      font-size: 6pt;
+      letter-spacing: 0.32em;
+      color: #c9a961;
       font-weight: 700;
+      margin-bottom: 2pt;
     }
     .pro-head__name {
       font-family: 'Inter', Georgia, serif;
       font-weight: 800;
-      font-size: 10.5pt;
-      line-height: 1.15;
-      margin-top: 1pt;
-      color: #fff;
+      font-size: 11pt;
+      line-height: 1.1;
+      color: #faf4e3;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+      letter-spacing: 0.01em;
     }
     .pro-head__label {
       display: flex;
       flex-direction: column;
-      align-items: flex-end;
+      align-items: center;
+      justify-content: center;
+      padding: 4pt 9pt;
+      background: rgba(201, 169, 97, 0.15);
+      border: 1px solid #c9a961;
+      border-radius: 3pt;
       flex-shrink: 0;
-      padding-left: 8pt;
     }
     .pro-head__label small {
-      font-size: 6pt;
-      letter-spacing: 0.16em;
-      color: #d4a857;
-      font-weight: 600;
+      font-size: 5.5pt;
+      letter-spacing: 0.22em;
+      color: #c9a961;
+      font-weight: 700;
     }
     .pro-head__label strong {
       font-family: 'Inter', sans-serif;
       font-weight: 900;
-      font-size: 16pt;
+      font-size: 15pt;
       line-height: 1;
-      color: #fff;
+      color: #faf4e3;
       font-variant-numeric: tabular-nums;
+      letter-spacing: 0.02em;
+      margin-top: 1pt;
     }
 
-    /* === Body: TV a la izquierda, números a la derecha === */
+    /* === Body: TV + números === */
     .pro-body {
       display: grid;
-      grid-template-columns: 38% 62%;
-      gap: 0;
-      padding: 0.1in 0.12in;
-      background: linear-gradient(180deg, #fffdf7 0%, #fbf6e9 100%);
-      border-bottom: 1px dashed #d4a857;
-      print-color-adjust: exact;
-      -webkit-print-color-adjust: exact;
+      grid-template-columns: 42% 58%;
+      gap: 8pt;
+      padding: 0.12in 0.14in;
+      background:
+        radial-gradient(ellipse at 50% 0%, rgba(201,169,97,0.08) 0%, transparent 50%),
+        linear-gradient(180deg, #faf4e3 0%, #f4ecd2 100%);
+      border-bottom: 1px solid rgba(201, 169, 97, 0.45);
+      position: relative;
+      z-index: 1;
     }
+
     .pro-tv {
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 4pt 4pt 4pt 0;
-      border-right: 1px dashed rgba(212,168,87,0.4);
+      padding-right: 6pt;
+      border-right: 0.5px dashed rgba(201, 169, 97, 0.5);
     }
     .pro-tv svg {
       width: 100%;
-      max-width: 1.2in;
+      max-width: 1.45in;
       height: auto;
-      filter: drop-shadow(0 2pt 3pt rgba(0,0,0,0.18));
+      filter: drop-shadow(0 3pt 4pt rgba(0,0,0,0.22));
     }
     .pro-tv__caption {
-      margin-top: 3pt;
+      margin-top: 5pt;
       font-size: 6.5pt;
-      font-weight: 800;
-      letter-spacing: 0.12em;
-      color: #1a1a2e;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      color: #0d1b2a;
       text-align: center;
+      text-transform: uppercase;
+    }
+    .pro-tv__caption strong {
+      font-weight: 900;
+      color: #722f37;
+      letter-spacing: 0.05em;
     }
 
     .pro-numbers {
-      padding: 2pt 0 2pt 8pt;
+      padding-left: 4pt;
       display: flex;
       flex-direction: column;
-      gap: 4pt;
+      gap: 5pt;
       min-height: 0;
     }
     .pro-numbers__title {
       font-size: 6.5pt;
-      letter-spacing: 0.16em;
-      color: #b88a35;
+      letter-spacing: 0.22em;
+      color: #0d1b2a;
       font-weight: 800;
       text-align: center;
-      padding-bottom: 3pt;
-      border-bottom: 1px solid rgba(212,168,87,0.45);
+      padding-bottom: 4pt;
+      border-bottom: 0.5px solid #c9a961;
+      position: relative;
+    }
+    /* Pequeños puntos dorados a los lados del título */
+    .pro-numbers__title::before,
+    .pro-numbers__title::after {
+      content: '◆';
+      color: #c9a961;
+      font-size: 5pt;
+      margin: 0 4pt;
+      vertical-align: 1pt;
     }
     .pro-numbers__grid {
       display: grid;
       grid-template-columns: repeat(5, 1fr);
-      gap: 2.5pt;
+      gap: 3pt;
     }
     .pro-num {
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 3pt 2pt;
-      background: #ffffff;
-      border: 1px solid #1a1a2e;
+      padding: 3.5pt 2pt;
+      background: linear-gradient(180deg, #ffffff 0%, #faf4e3 100%);
+      border: 1px solid #0d1b2a;
       border-radius: 2pt;
       font-family: 'Inter', sans-serif;
       font-weight: 800;
-      font-size: 8.5pt;
-      color: #1a1a2e;
+      font-size: 9pt;
+      color: #0d1b2a;
       font-variant-numeric: tabular-nums;
       letter-spacing: 0.02em;
-      box-shadow: inset 0 -1pt 0 rgba(0,0,0,0.06);
+      box-shadow:
+        inset 0 -1pt 0 rgba(13, 27, 42, 0.08),
+        0 0.5pt 0 rgba(201, 169, 97, 0.2);
       print-color-adjust: exact;
       -webkit-print-color-adjust: exact;
     }
 
     /* === Premios === */
     .pro-prizes {
-      padding: 0.06in 0.12in 0.04in;
+      padding: 0.07in 0.14in 0.05in;
       display: grid;
-      gap: 1.5pt;
-      background: #fffdf7;
+      gap: 2pt;
+      background: #faf4e3;
+      position: relative;
+      z-index: 1;
     }
     .pro-prize {
       display: grid;
       grid-template-columns: auto 1fr auto;
-      gap: 4pt;
+      gap: 5pt;
       align-items: center;
-      padding: 2pt 5pt;
+      padding: 2.5pt 6pt;
       font-size: 7pt;
-      color: #1a1a2e;
+      color: #0d1b2a;
       border-radius: 2pt;
     }
     .pro-prize__dot {
       font-size: 7pt;
-      color: #b88a35;
+      color: #c9a961;
       width: 8pt;
       text-align: center;
     }
@@ -836,26 +985,35 @@ export type PrintDesign = 'soccer' | 'professional';
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+      letter-spacing: 0.01em;
     }
     .pro-prize__date {
       font-size: 6.5pt;
       font-weight: 700;
-      letter-spacing: 0.08em;
-      color: #b88a35;
+      letter-spacing: 0.1em;
+      color: #722f37;
       font-variant-numeric: tabular-nums;
       white-space: nowrap;
     }
     .pro-prize--main {
-      background: linear-gradient(135deg, #fff3d6 0%, #ffe6b3 100%);
-      border: 1px solid #d4a857;
+      background: linear-gradient(135deg, #fbecc6 0%, #f5dca0 100%);
+      border: 1px solid #c9a961;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.4);
     }
-    .pro-prize--main .pro-prize__dot { font-size: 9pt; color: #b88a35; }
-    .pro-prize--main .pro-prize__name { font-weight: 800; color: #6e4a14; }
+    .pro-prize--main .pro-prize__dot {
+      font-size: 9pt;
+      color: #722f37;
+    }
+    .pro-prize--main .pro-prize__name {
+      font-weight: 800;
+      color: #5a3a14;
+    }
     .pro-prize--main .pro-prize__date {
-      background: #1a1a2e;
-      color: #d4a857;
-      padding: 1.5pt 5pt;
+      background: #0d1b2a;
+      color: #c9a961;
+      padding: 1.5pt 6pt;
       border-radius: 999px;
+      letter-spacing: 0.12em;
     }
 
     /* === Footer: QR + info + valor === */
@@ -863,79 +1021,91 @@ export type PrintDesign = 'soccer' | 'professional';
       display: grid;
       grid-template-columns: auto 1fr auto;
       gap: 0.1in;
-      padding: 0.08in 0.12in 0.1in;
+      padding: 0.09in 0.14in 0.1in;
       align-items: center;
-      background: linear-gradient(180deg, #fbf6e9 0%, #f6efd9 100%);
-      border-top: 1px dashed #d4a857;
+      background:
+        linear-gradient(180deg, #f4ecd2 0%, #ede1b8 100%);
+      border-top: 1px solid rgba(201, 169, 97, 0.55);
+      position: relative;
+      z-index: 1;
     }
     .pro-foot__qr {
       width: 0.7in;
       height: 0.7in;
-      border: 1.5px solid #d4a857;
+      border: 1.5px solid #c9a961;
       border-radius: 3pt;
       padding: 2pt;
       background: #fff;
       image-rendering: pixelated;
+      box-shadow:
+        0 0 0 1px rgba(13, 27, 42, 0.1),
+        0 1pt 2pt rgba(0,0,0,0.1);
     }
     .pro-foot__info {
       display: flex;
       flex-direction: column;
-      gap: 1pt;
+      gap: 1.5pt;
       min-width: 0;
       font-size: 6.5pt;
     }
     .pro-foot__line {
       display: flex;
-      gap: 3pt;
+      gap: 4pt;
       align-items: baseline;
-      color: #1a1a2e;
+      color: #0d1b2a;
     }
     .pro-foot__line small {
       font-size: 5.5pt;
-      letter-spacing: 0.08em;
-      color: #6e4a14;
-      font-weight: 700;
+      letter-spacing: 0.1em;
+      color: #722f37;
+      font-weight: 800;
       text-transform: uppercase;
     }
     .pro-foot__line strong {
       font-weight: 700;
-      color: #1a1a2e;
+      color: #0d1b2a;
     }
-    .pro-foot__phone { color: #6e4a14; font-size: 6.5pt; }
+    .pro-foot__phone { color: #5a3a14; font-size: 6.5pt; }
     .pro-foot__code {
       font-family: 'Courier New', monospace;
       font-size: 6pt;
-      letter-spacing: 0.1em;
-      color: #6e4a14;
-      padding-top: 1pt;
+      letter-spacing: 0.12em;
+      color: #722f37;
+      padding-top: 2pt;
+      font-weight: 700;
     }
     .pro-foot__price {
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 4pt 8pt;
-      background: linear-gradient(135deg, #1a1a2e 0%, #2a2a4a 100%);
-      color: #fff;
+      padding: 6pt 10pt;
+      background:
+        linear-gradient(135deg, #0d1b2a 0%, #1b2a3f 60%, #0d1b2a 100%);
+      color: #faf4e3;
       border-radius: 3pt;
-      border: 1.5px solid #d4a857;
+      border: 1.5px solid #c9a961;
       flex-shrink: 0;
+      box-shadow:
+        inset 0 0 0 1px rgba(201, 169, 97, 0.3),
+        0 1pt 3pt rgba(13, 27, 42, 0.18);
     }
     .pro-foot__price small {
       font-size: 5.5pt;
-      letter-spacing: 0.18em;
-      color: #d4a857;
+      letter-spacing: 0.24em;
+      color: #c9a961;
       font-weight: 700;
     }
     .pro-foot__price strong {
       font-family: 'Inter', sans-serif;
-      font-size: 10pt;
+      font-size: 11pt;
       font-weight: 900;
-      color: #fff;
+      color: #faf4e3;
       margin-top: 1pt;
+      letter-spacing: 0.01em;
     }
 
-    /* Watermark "RIFA OFICIAL" diagonal */
+    /* Watermark "RIFA OFICIAL" diagonal sutil */
     .pro-watermark {
       position: absolute;
       top: 50%;
@@ -943,22 +1113,29 @@ export type PrintDesign = 'soccer' | 'professional';
       transform: translate(-50%, -50%) rotate(-25deg);
       font-family: 'Inter', sans-serif;
       font-weight: 900;
-      font-size: 28pt;
-      letter-spacing: 0.1em;
-      color: rgba(212, 168, 87, 0.07);
+      font-size: 26pt;
+      letter-spacing: 0.15em;
+      color: rgba(201, 169, 97, 0.08);
       pointer-events: none;
       white-space: nowrap;
       z-index: 0;
     }
 
     /* Compactaciones del modo 6-por-hoja */
+    .page--six .ticket--pro .pro-head { padding: 0.07in 0.1in; }
     .page--six .ticket--pro .pro-head__name { font-size: 9pt; }
-    .page--six .ticket--pro .pro-head__label strong { font-size: 13pt; }
-    .page--six .ticket--pro .pro-tv svg { max-width: 0.9in; }
-    .page--six .ticket--pro .pro-num { font-size: 7pt; padding: 2pt 1pt; }
+    .page--six .ticket--pro .pro-head__label strong { font-size: 12pt; }
+    .page--six .ticket--pro .pro-body { padding: 0.08in 0.1in; gap: 5pt; }
+    .page--six .ticket--pro .pro-tv svg { max-width: 1.05in; }
+    .page--six .ticket--pro .pro-num { font-size: 7.5pt; padding: 2.5pt 1pt; }
+    .page--six .ticket--pro .pro-numbers__title { font-size: 6pt; }
+    .page--six .ticket--pro .pro-prizes { padding: 0.04in 0.1in 0.02in; }
+    .page--six .ticket--pro .pro-prize { padding: 1.5pt 4pt; font-size: 6.5pt; }
+    .page--six .ticket--pro .pro-foot { padding: 0.07in 0.1in 0.08in; }
     .page--six .ticket--pro .pro-foot__qr { width: 0.55in; height: 0.55in; }
-    .page--six .ticket--pro .pro-foot__price strong { font-size: 8.5pt; }
-    .page--six .ticket--pro .pro-watermark { font-size: 22pt; }
+    .page--six .ticket--pro .pro-foot__price { padding: 4pt 7pt; }
+    .page--six .ticket--pro .pro-foot__price strong { font-size: 9pt; }
+    .page--six .ticket--pro .pro-watermark { font-size: 20pt; }
 
     /* === Modo impresión === */
     @media print {
