@@ -570,6 +570,9 @@ export type PrintDesign = 'soccer' | 'professional';
       overflow: hidden;
       background: #fff;
       min-height: 0;
+      /* Evita que el browser corte una boleta entre páginas al imprimir */
+      page-break-inside: avoid;
+      break-inside: avoid;
     }
 
     /* === Talón (vendedor) === */
@@ -976,51 +979,49 @@ export type PrintDesign = 'soccer' | 'professional';
       margin-top: 1pt;
     }
 
-    /* === Body: grid 5 columnas x 6 filas — TV ocupa 3x3 arriba a la izq,
-       los 20 números fluyen alrededor: a la derecha del TV (cols 4-5,
-       filas 1-3 = 6 nums) y abajo del TV en 2 filas anchas (cols 1-5,
-       filas 4-5 = 10 nums). Total: 6 + 10 = 16, faltan 4 → agregamos
-       fila 6 con 4 cols = 4 nums. Total: 20 ✓ */
+    /* === Body: TV arriba full-width + 20 chips abajo en grid 5x4
+       todos del mismo tamaño, sin celdas vacías. */
     .pro-body {
       display: grid;
       grid-template-columns: repeat(5, 1fr);
-      grid-auto-rows: minmax(0, auto);
-      gap: 4pt 5pt;
-      padding: 0.12in 0.14in;
+      grid-template-rows: auto auto;
+      gap: 4pt;
+      padding: 0.1in 0.14in 0.08in;
       background:
         radial-gradient(ellipse at 50% 0%, rgba(244, 196, 48, 0.08) 0%, transparent 55%),
         linear-gradient(180deg, #fffbe9 0%, #fff3c8 100%);
       border-bottom: 1px solid rgba(212, 175, 55, 0.55);
       position: relative;
       z-index: 1;
-      align-items: stretch;
     }
 
-    /* TV ocupa grid 3 cols × 3 filas en la esquina superior izquierda.
-       Sin marco dorado — solo la imagen limpia con drop-shadow sutil. */
+    /* TV ocupa todo el ancho arriba (5 cols), centrado, sin marco —
+       la imagen limpia con drop-shadow sutil. */
     .pro-tv {
-      grid-column: 1 / 4;
-      grid-row: 1 / 4;
+      grid-column: 1 / -1;
       display: flex;
       align-items: center;
       justify-content: center;
-      padding-right: 4pt;
+      padding-bottom: 4pt;
     }
     .pro-tv__img {
       display: block;
-      width: 100%;
+      width: auto;
+      max-width: 95%;
       height: auto;
-      max-height: 1.5in;
+      max-height: 1.3in;
       object-fit: contain;
-      filter: drop-shadow(0 2pt 5pt rgba(0,0,0,0.18));
+      filter: drop-shadow(0 2pt 5pt rgba(0,0,0,0.2));
     }
 
-    /* Chips de números — paleta esmeralda/oro para look 'jackpot' */
+    /* Chips de números — todos uniformes 5 cols x 4 rows = exactamente
+       20 cells = los 20 números, sin huecos. */
     .pro-num {
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 4pt 2pt;
+      height: 18pt;
+      padding: 0 2pt;
       background: linear-gradient(180deg, #ffffff 0%, #fffbe9 100%);
       border: 1.2px solid #0a4d24;
       border-radius: 3pt;
