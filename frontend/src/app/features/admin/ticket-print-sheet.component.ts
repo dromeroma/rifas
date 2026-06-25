@@ -883,12 +883,13 @@ export type PrintDesign = 'soccer' | 'professional';
     }
 
     /* ============================================================
-       DISEÑO PROFESIONAL PREMIUM v2 — paleta de alegría/prosperidad
-       Esmeralda profundo #0e5e2e (color del dinero/billete) +
-       oro brillante #f4c430 + crema cálida #fffbe9 + acentos vinotinto
+       DISEÑO PROFESIONAL PREMIUM v3 — paleta 'invitación de lujo'
+       Deep navy #1a2942 + warm champagne #c9a96e + soft ivory
+       #f8f1e3 + wine accent #7a2f3a + charcoal text #252830
+       Sensación: caja de perfume / invitación elegante
        ============================================================ */
     .ticket--pro {
-      background: #fffbe9;
+      background: #f8f1e3;
       position: relative;
       padding: 0 !important;
       gap: 0 !important;
@@ -897,18 +898,18 @@ export type PrintDesign = 'soccer' | 'professional';
       -webkit-print-color-adjust: exact;
     }
 
-    /* Doble borde dorado interno premium */
+    /* Doble borde champagne interno premium */
     .ticket--pro::after {
       content: '';
       position: absolute;
       inset: 4pt;
-      border: 0.6px solid rgba(212, 175, 55, 0.7);
+      border: 0.6px solid rgba(201, 169, 110, 0.7);
       border-radius: 2pt;
       pointer-events: none;
       z-index: 5;
     }
 
-    /* === Header esmeralda === */
+    /* === Header navy profundo === */
     .ticket--pro .pro-head {
       display: grid;
       grid-template-columns: 1fr auto;
@@ -916,10 +917,10 @@ export type PrintDesign = 'soccer' | 'professional';
       gap: 8pt;
       padding: 0.1in 0.14in;
       background:
-        linear-gradient(135deg, #0a4d24 0%, #126b34 50%, #0a4d24 100%);
-      color: #fffbe9;
-      border-bottom: 2.5px solid #f4c430;
-      box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.1);
+        linear-gradient(135deg, #1a2942 0%, #2a3a5a 50%, #1a2942 100%);
+      color: #f8f1e3;
+      border-bottom: 2.5px solid #c9a96e;
+      box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.08);
       position: relative;
     }
     /* Borde dorado interno superior — toque premium */
@@ -939,7 +940,7 @@ export type PrintDesign = 'soccer' | 'professional';
     .pro-head__eyebrow {
       font-size: 6pt;
       letter-spacing: 0.32em;
-      color: #f4c430;
+      color: #c9a96e;
       font-weight: 700;
       margin-bottom: 2pt;
     }
@@ -948,7 +949,7 @@ export type PrintDesign = 'soccer' | 'professional';
       font-weight: 800;
       font-size: 11pt;
       line-height: 1.1;
-      color: #fffbe9;
+      color: #f8f1e3;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
@@ -960,15 +961,15 @@ export type PrintDesign = 'soccer' | 'professional';
       align-items: center;
       justify-content: center;
       padding: 4pt 9pt;
-      background: rgba(244, 196, 48, 0.18);
-      border: 1px solid #f4c430;
+      background: rgba(201, 169, 110, 0.18);
+      border: 1px solid #c9a96e;
       border-radius: 3pt;
       flex-shrink: 0;
     }
     .pro-head__label small {
       font-size: 5.5pt;
       letter-spacing: 0.22em;
-      color: #f4c430;
+      color: #c9a96e;
       font-weight: 700;
     }
     .pro-head__label strong {
@@ -976,67 +977,75 @@ export type PrintDesign = 'soccer' | 'professional';
       font-weight: 900;
       font-size: 15pt;
       line-height: 1;
-      color: #fffbe9;
+      color: #f8f1e3;
       font-variant-numeric: tabular-nums;
       letter-spacing: 0.02em;
       margin-top: 1pt;
     }
 
-    /* === Body: TV arriba full-width + 20 chips abajo en grid 5x4 === */
+    /* === Body: grid 6 cols x 6 rows.
+       TV ocupa 4 cols x 4 rows en el centro arriba.
+       4 chips a la izquierda (col 1, rows 1-4).
+       4 chips a la derecha (col 6, rows 1-4).
+       12 chips abajo en 2 filas de 6 (rows 5-6, cols 1-6).
+       Total: 8 + 12 = 20 chips perfectamente ubicados. */
     .pro-body {
       display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      grid-template-rows: auto auto;
-      gap: 3pt;
-      padding: 0.06in 0.14in 0.06in;
+      grid-template-columns: repeat(6, 1fr);
+      grid-auto-rows: auto;
+      column-gap: 4pt;
+      row-gap: 3pt;
+      padding: 0.07in 0.14in 0.06in;
       background:
-        radial-gradient(ellipse at 50% 0%, rgba(244, 196, 48, 0.08) 0%, transparent 55%),
-        linear-gradient(180deg, #fffbe9 0%, #fff3c8 100%);
-      border-bottom: 1px solid rgba(212, 175, 55, 0.55);
+        radial-gradient(ellipse at 50% 0%, rgba(201, 169, 110, 0.1) 0%, transparent 55%),
+        linear-gradient(180deg, #f8f1e3 0%, #ede2c8 100%);
+      border-bottom: 1px solid rgba(201, 169, 110, 0.55);
       position: relative;
       z-index: 1;
+      align-items: center;
     }
 
-    /* TV ocupa todo el ancho — la imagen llena 100% horizontal sin
-       espacios a los lados. mix-blend-mode: multiply hace que el borde
-       blanco del PNG se funda con el fondo crema (queda 'transparente'). */
+    /* TV grande, centrado, 4 columnas de ancho × 4 filas de alto.
+       mix-blend-mode multiply funde el blanco del PNG con el fondo. */
     .pro-tv {
-      grid-column: 1 / -1;
+      grid-column: 2 / 6;
+      grid-row: 1 / 5;
       display: flex;
       align-items: center;
       justify-content: center;
       overflow: hidden;
+      padding: 0 4pt;
     }
     .pro-tv__img {
       display: block;
       width: 100%;
       height: auto;
-      max-height: 0.95in;
+      max-height: 1.4in;
       object-fit: contain;
-      /* Funde los pixeles blancos del PNG con el fondo crema del body */
       mix-blend-mode: multiply;
-      filter: drop-shadow(0 1.5pt 3pt rgba(0,0,0,0.18));
+      filter: drop-shadow(0 1.5pt 3pt rgba(26, 41, 66, 0.18));
     }
 
-    /* Chips de números — uniformes 5 cols x 4 rows = 20 cells exactos */
+    /* Chips de números — todos uniformes, centrados en su celda */
     .pro-num {
       display: flex;
       align-items: center;
       justify-content: center;
-      height: 15pt;
+      height: 17pt;
       padding: 0 2pt;
-      background: linear-gradient(180deg, #ffffff 0%, #fffbe9 100%);
-      border: 1.2px solid #0a4d24;
+      background: linear-gradient(180deg, #ffffff 0%, #f8f1e3 100%);
+      border: 1.2px solid #1a2942;
       border-radius: 3pt;
       font-family: 'Inter', sans-serif;
       font-weight: 800;
       font-size: 9pt;
-      color: #0a4d24;
+      color: #1a2942;
       font-variant-numeric: tabular-nums;
       letter-spacing: 0.02em;
       box-shadow:
-        inset 0 -1pt 0 rgba(10, 77, 36, 0.1),
-        0 0.5pt 0 rgba(212, 175, 55, 0.35);
+        inset 0 -1pt 0 rgba(26, 41, 66, 0.08),
+        0 0.5pt 0 rgba(201, 169, 110, 0.4);
+      align-self: center;
       print-color-adjust: exact;
       -webkit-print-color-adjust: exact;
     }
@@ -1047,7 +1056,7 @@ export type PrintDesign = 'soccer' | 'professional';
       display: grid;
       gap: 1.5pt;
       background:
-        linear-gradient(180deg, #fffbe9 0%, #fff3c8 100%);
+        linear-gradient(180deg, #f8f1e3 0%, #ede2c8 100%);
       position: relative;
       z-index: 1;
     }
@@ -1058,12 +1067,12 @@ export type PrintDesign = 'soccer' | 'professional';
       gap: 8pt;
       padding-bottom: 2.5pt;
       margin-bottom: 0.5pt;
-      border-bottom: 0.5px dashed #d4af37;
+      border-bottom: 0.5px dashed #b89656;
     }
     .pro-prizes__title {
       font-size: 6.5pt;
       letter-spacing: 0.18em;
-      color: #0a4d24;
+      color: #1a2942;
       font-weight: 900;
       text-transform: uppercase;
     }
@@ -1076,7 +1085,7 @@ export type PrintDesign = 'soccer' | 'professional';
     .pro-prizes__value small {
       font-size: 5.5pt;
       letter-spacing: 0.18em;
-      color: #0a4d24;
+      color: #1a2942;
       font-weight: 800;
       text-transform: uppercase;
     }
@@ -1084,7 +1093,7 @@ export type PrintDesign = 'soccer' | 'professional';
       font-family: 'Inter', sans-serif;
       font-size: 10pt;
       font-weight: 900;
-      color: #b8252e;
+      color: #7a2f3a;
       letter-spacing: 0.01em;
     }
 
@@ -1097,17 +1106,17 @@ export type PrintDesign = 'soccer' | 'professional';
       align-items: center;
       padding: 2pt 6pt;
       font-size: 7pt;
-      color: #0d2818;
+      color: #252830;
       border-radius: 2pt;
       background: rgba(255, 255, 255, 0.45);
-      border: 0.5px solid rgba(212, 175, 55, 0.3);
+      border: 0.5px solid rgba(184, 150, 86, 0.3);
     }
     .pro-prize__date {
       font-size: 6.5pt;
       font-weight: 800;
       letter-spacing: 0.08em;
-      color: #fffbe9;
-      background: #0a4d24;
+      color: #f8f1e3;
+      background: #1a2942;
       padding: 1pt 5pt;
       border-radius: 999px;
       font-variant-numeric: tabular-nums;
@@ -1117,7 +1126,7 @@ export type PrintDesign = 'soccer' | 'professional';
     }
     .pro-prize__dot {
       font-size: 7pt;
-      color: #d4af37;
+      color: #b89656;
       width: 7pt;
       text-align: center;
     }
@@ -1131,23 +1140,23 @@ export type PrintDesign = 'soccer' | 'professional';
     /* Premio principal destacado */
     .pro-prize--main {
       background:
-        linear-gradient(135deg, #fff5c2 0%, #ffe585 100%);
-      border: 1px solid #d4af37;
+        linear-gradient(135deg, #f0e5c8 0%, #dccc9e 100%);
+      border: 1px solid #b89656;
       box-shadow:
         inset 0 0 0 1px rgba(255,255,255,0.5),
-        0 1pt 2pt rgba(212, 175, 55, 0.2);
+        0 1pt 2pt rgba(184, 150, 86, 0.2);
     }
     .pro-prize--main .pro-prize__dot {
       font-size: 9pt;
-      color: #b8252e;
+      color: #7a2f3a;
     }
     .pro-prize--main .pro-prize__name {
       font-weight: 800;
-      color: #1f4513;
+      color: #252830;
     }
     .pro-prize--main .pro-prize__date {
       background:
-        linear-gradient(135deg, #0a4d24 0%, #126b34 100%);
+        linear-gradient(135deg, #1a2942 0%, #2a3a5a 100%);
       letter-spacing: 0.1em;
     }
 
@@ -1159,8 +1168,8 @@ export type PrintDesign = 'soccer' | 'professional';
       padding: 0.05in 0.14in 0.06in;
       align-items: center;
       background:
-        linear-gradient(180deg, #fff3c8 0%, #ffe994 100%);
-      border-top: 1px solid rgba(212, 175, 55, 0.6);
+        linear-gradient(180deg, #ede2c8 0%, #d4c19a 100%);
+      border-top: 1px solid rgba(184, 150, 86, 0.6);
       position: relative;
       z-index: 1;
     }
@@ -1174,19 +1183,19 @@ export type PrintDesign = 'soccer' | 'professional';
     .pro-foot__qr {
       width: 0.6in;
       height: 0.6in;
-      border: 1px solid #d4af37;
+      border: 1px solid #b89656;
       border-radius: 2pt;
       padding: 1pt;
       background: #fff;
       image-rendering: pixelated;
       box-shadow:
-        0 0 0 1px rgba(10, 77, 36, 0.15),
+        0 0 0 1px rgba(26, 41, 66, 0.15),
         0 1pt 2pt rgba(0,0,0,0.12);
     }
     .pro-foot__qr-caption {
       font-size: 4.5pt;
       letter-spacing: 0.14em;
-      color: #0a4d24;
+      color: #1a2942;
       font-weight: 700;
       text-transform: uppercase;
     }
@@ -1208,7 +1217,7 @@ export type PrintDesign = 'soccer' | 'professional';
     .pro-foot__label {
       font-size: 5.5pt;
       letter-spacing: 0.14em;
-      color: #0a4d24;
+      color: #1a2942;
       font-weight: 800;
       text-transform: uppercase;
       white-space: nowrap;
@@ -1218,24 +1227,24 @@ export type PrintDesign = 'soccer' | 'professional';
     .pro-foot__value {
       font-size: 7pt;
       font-weight: 700;
-      color: #0d2818;
+      color: #252830;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
       min-width: 0;
     }
-    .pro-foot__value--em { font-weight: 800; color: #0a4d24; }
+    .pro-foot__value--em { font-weight: 800; color: #1a2942; }
     .pro-foot__value--mono {
       font-family: 'Courier New', monospace;
       letter-spacing: 0.12em;
-      color: #b8252e;
+      color: #7a2f3a;
       font-size: 6.5pt;
     }
     /* Separador antes del código (línea dorada sutil entre filas) */
     .pro-foot__row--code .pro-foot__label,
     .pro-foot__row--code .pro-foot__value {
       padding-top: 3pt;
-      border-top: 0.4px dashed rgba(212, 175, 55, 0.55);
+      border-top: 0.4px dashed rgba(184, 150, 86, 0.55);
       margin-top: 1pt;
     }
 
@@ -1249,7 +1258,7 @@ export type PrintDesign = 'soccer' | 'professional';
       font-weight: 900;
       font-size: 26pt;
       letter-spacing: 0.15em;
-      color: rgba(212, 175, 55, 0.1);
+      color: rgba(184, 150, 86, 0.1);
       pointer-events: none;
       white-space: nowrap;
       z-index: 0;
