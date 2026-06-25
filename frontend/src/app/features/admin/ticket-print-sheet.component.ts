@@ -109,7 +109,7 @@ export type PrintDesign = 'soccer' | 'professional';
                       <header class="pro-head">
                         <div class="pro-head__brand">
                           <div class="pro-head__eyebrow">★ GRAN RIFA ★</div>
-                          <div class="pro-head__name">{{ data().raffle_name }}</div>
+                          <div class="pro-head__name">{{ shortRaffleName() }}</div>
                         </div>
                         <div class="pro-head__label">
                           <small>BOLETA</small>
@@ -575,14 +575,17 @@ export type PrintDesign = 'soccer' | 'professional';
       break-inside: avoid;
     }
 
-    /* === Talón (vendedor) === */
+    /* === Talón (vendedor) ===
+       flex: 0 0 22% (era 30%) → menos espacio vacío debajo del campo
+       Celular, y le deja más altura al cuerpo de la boleta (TV + chips
+       + premios + footer) para que el QR no se corte. */
     .talon {
-      padding: 0.12in 0.14in;
+      padding: 0.08in 0.14in;
       background: linear-gradient(180deg, #f9fafb 0%, #fff 100%);
-      flex: 0 0 30%;
+      flex: 0 0 22%;
       display: flex;
       flex-direction: column;
-      gap: 0.06in;
+      gap: 0.04in;
     }
     .talon-head {
       display: flex;
@@ -979,14 +982,13 @@ export type PrintDesign = 'soccer' | 'professional';
       margin-top: 1pt;
     }
 
-    /* === Body: TV arriba full-width + 20 chips abajo en grid 5x4
-       todos del mismo tamaño, sin celdas vacías. */
+    /* === Body: TV arriba full-width + 20 chips abajo en grid 5x4 === */
     .pro-body {
       display: grid;
       grid-template-columns: repeat(5, 1fr);
       grid-template-rows: auto auto;
-      gap: 4pt;
-      padding: 0.1in 0.14in 0.08in;
+      gap: 3pt;
+      padding: 0.06in 0.14in 0.06in;
       background:
         radial-gradient(ellipse at 50% 0%, rgba(244, 196, 48, 0.08) 0%, transparent 55%),
         linear-gradient(180deg, #fffbe9 0%, #fff3c8 100%);
@@ -995,39 +997,40 @@ export type PrintDesign = 'soccer' | 'professional';
       z-index: 1;
     }
 
-    /* TV ocupa todo el ancho arriba (5 cols), centrado, sin marco —
-       la imagen limpia con drop-shadow sutil. */
+    /* TV ocupa todo el ancho — la imagen llena 100% horizontal sin
+       espacios a los lados. mix-blend-mode: multiply hace que el borde
+       blanco del PNG se funda con el fondo crema (queda 'transparente'). */
     .pro-tv {
       grid-column: 1 / -1;
       display: flex;
       align-items: center;
       justify-content: center;
-      padding-bottom: 4pt;
+      overflow: hidden;
     }
     .pro-tv__img {
       display: block;
-      width: auto;
-      max-width: 95%;
+      width: 100%;
       height: auto;
-      max-height: 1.3in;
+      max-height: 0.95in;
       object-fit: contain;
-      filter: drop-shadow(0 2pt 5pt rgba(0,0,0,0.2));
+      /* Funde los pixeles blancos del PNG con el fondo crema del body */
+      mix-blend-mode: multiply;
+      filter: drop-shadow(0 1.5pt 3pt rgba(0,0,0,0.18));
     }
 
-    /* Chips de números — todos uniformes 5 cols x 4 rows = exactamente
-       20 cells = los 20 números, sin huecos. */
+    /* Chips de números — uniformes 5 cols x 4 rows = 20 cells exactos */
     .pro-num {
       display: flex;
       align-items: center;
       justify-content: center;
-      height: 18pt;
+      height: 15pt;
       padding: 0 2pt;
       background: linear-gradient(180deg, #ffffff 0%, #fffbe9 100%);
       border: 1.2px solid #0a4d24;
       border-radius: 3pt;
       font-family: 'Inter', sans-serif;
       font-weight: 800;
-      font-size: 9.5pt;
+      font-size: 9pt;
       color: #0a4d24;
       font-variant-numeric: tabular-nums;
       letter-spacing: 0.02em;
@@ -1038,11 +1041,11 @@ export type PrintDesign = 'soccer' | 'professional';
       -webkit-print-color-adjust: exact;
     }
 
-    /* === Premios: header con título + chip VALOR + filas con fecha-izq === */
+    /* === Premios compactos + VALOR sutil + fila con bg lleno === */
     .pro-prizes {
-      padding: 0.07in 0.14in 0.06in;
+      padding: 0.05in 0.14in 0.04in;
       display: grid;
-      gap: 2.5pt;
+      gap: 1.5pt;
       background:
         linear-gradient(180deg, #fffbe9 0%, #fff3c8 100%);
       position: relative;
@@ -1050,67 +1053,62 @@ export type PrintDesign = 'soccer' | 'professional';
     }
     .pro-prizes__head {
       display: flex;
-      align-items: center;
+      align-items: baseline;
       justify-content: space-between;
-      padding-bottom: 4pt;
-      margin-bottom: 1pt;
-      border-bottom: 0.6px dashed #d4af37;
+      gap: 8pt;
+      padding-bottom: 2.5pt;
+      margin-bottom: 0.5pt;
+      border-bottom: 0.5px dashed #d4af37;
     }
     .pro-prizes__title {
-      font-size: 7pt;
-      letter-spacing: 0.22em;
+      font-size: 6.5pt;
+      letter-spacing: 0.18em;
       color: #0a4d24;
       font-weight: 900;
       text-transform: uppercase;
     }
-    /* Chip VALOR — el cash dorado/verde que reemplaza al pill del footer */
+    /* VALOR ahora es texto inline elegante en vez de chip pesado */
     .pro-prizes__value {
       display: inline-flex;
-      align-items: center;
-      gap: 6pt;
-      padding: 3pt 9pt;
-      background:
-        linear-gradient(135deg, #0a4d24 0%, #126b34 50%, #0a4d24 100%);
-      border: 1.2px solid #f4c430;
-      border-radius: 3pt;
-      box-shadow:
-        inset 0 0 0 1px rgba(244, 196, 48, 0.4),
-        0 1pt 2pt rgba(10, 77, 36, 0.25);
-      print-color-adjust: exact;
-      -webkit-print-color-adjust: exact;
+      align-items: baseline;
+      gap: 4pt;
     }
     .pro-prizes__value small {
       font-size: 5.5pt;
-      letter-spacing: 0.24em;
-      color: #f4c430;
+      letter-spacing: 0.18em;
+      color: #0a4d24;
       font-weight: 800;
+      text-transform: uppercase;
     }
     .pro-prizes__value strong {
       font-family: 'Inter', sans-serif;
-      font-size: 11pt;
+      font-size: 10pt;
       font-weight: 900;
-      color: #fffbe9;
+      color: #b8252e;
       letter-spacing: 0.01em;
     }
 
-    /* Fila de premio: [FECHA] [dot] [nombre] — fecha pegada a la izq */
+    /* Fila de premio: el name ocupa todo el espacio restante (no se ven
+       huecos a la derecha), todas con bg sutil para look de card */
     .pro-prize {
       display: grid;
       grid-template-columns: auto auto 1fr;
-      gap: 6pt;
+      gap: 5pt;
       align-items: center;
-      padding: 2.5pt 6pt;
+      padding: 2pt 6pt;
       font-size: 7pt;
       color: #0d2818;
       border-radius: 2pt;
+      background: rgba(255, 255, 255, 0.45);
+      border: 0.5px solid rgba(212, 175, 55, 0.3);
     }
     .pro-prize__date {
       font-size: 6.5pt;
       font-weight: 800;
-      letter-spacing: 0.1em;
+      letter-spacing: 0.08em;
       color: #fffbe9;
       background: #0a4d24;
-      padding: 1.5pt 6pt;
+      padding: 1pt 5pt;
       border-radius: 999px;
       font-variant-numeric: tabular-nums;
       white-space: nowrap;
@@ -1118,9 +1116,9 @@ export type PrintDesign = 'soccer' | 'professional';
       -webkit-print-color-adjust: exact;
     }
     .pro-prize__dot {
-      font-size: 8pt;
+      font-size: 7pt;
       color: #d4af37;
-      width: 8pt;
+      width: 7pt;
       text-align: center;
     }
     .pro-prize__name {
@@ -1130,17 +1128,17 @@ export type PrintDesign = 'soccer' | 'professional';
       white-space: nowrap;
       letter-spacing: 0.01em;
     }
-    /* Premio principal: fondo dorado glow, fecha en verde profundo brillante */
+    /* Premio principal destacado */
     .pro-prize--main {
       background:
         linear-gradient(135deg, #fff5c2 0%, #ffe585 100%);
-      border: 1.2px solid #d4af37;
+      border: 1px solid #d4af37;
       box-shadow:
         inset 0 0 0 1px rgba(255,255,255,0.5),
         0 1pt 2pt rgba(212, 175, 55, 0.2);
     }
     .pro-prize--main .pro-prize__dot {
-      font-size: 10pt;
+      font-size: 9pt;
       color: #b8252e;
     }
     .pro-prize--main .pro-prize__name {
@@ -1150,15 +1148,15 @@ export type PrintDesign = 'soccer' | 'professional';
     .pro-prize--main .pro-prize__date {
       background:
         linear-gradient(135deg, #0a4d24 0%, #126b34 100%);
-      letter-spacing: 0.12em;
+      letter-spacing: 0.1em;
     }
 
-    /* === Footer: QR + info en grid de 2 cols (sin VALOR — está arriba) === */
+    /* === Footer compacto: QR + info, sin VALOR (está arriba) === */
     .pro-foot {
       display: grid;
       grid-template-columns: auto 1fr;
-      column-gap: 0.18in;
-      padding: 0.1in 0.14in 0.11in;
+      column-gap: 0.14in;
+      padding: 0.05in 0.14in 0.06in;
       align-items: center;
       background:
         linear-gradient(180deg, #fff3c8 0%, #ffe994 100%);
@@ -1171,14 +1169,14 @@ export type PrintDesign = 'soccer' | 'professional';
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 2pt;
+      gap: 1pt;
     }
     .pro-foot__qr {
-      width: 0.78in;
-      height: 0.78in;
-      border: 1.5px solid #d4af37;
-      border-radius: 3pt;
-      padding: 2pt;
+      width: 0.6in;
+      height: 0.6in;
+      border: 1px solid #d4af37;
+      border-radius: 2pt;
+      padding: 1pt;
       background: #fff;
       image-rendering: pixelated;
       box-shadow:
@@ -1186,8 +1184,8 @@ export type PrintDesign = 'soccer' | 'professional';
         0 1pt 2pt rgba(0,0,0,0.12);
     }
     .pro-foot__qr-caption {
-      font-size: 5pt;
-      letter-spacing: 0.16em;
+      font-size: 4.5pt;
+      letter-spacing: 0.14em;
       color: #0a4d24;
       font-weight: 700;
       text-transform: uppercase;
@@ -1258,25 +1256,26 @@ export type PrintDesign = 'soccer' | 'professional';
     }
 
     /* Compactaciones del modo 6-por-hoja */
-    .page--six .ticket--pro .pro-head { padding: 0.07in 0.1in; }
-    .page--six .ticket--pro .pro-head__name { font-size: 9pt; }
-    .page--six .ticket--pro .pro-head__label strong { font-size: 12pt; }
-    .page--six .ticket--pro .pro-body { padding: 0.08in 0.1in; gap: 3pt 4pt; }
-    .page--six .ticket--pro .pro-tv__img { max-height: 1.1in; }
-    .page--six .ticket--pro .pro-num { font-size: 8pt; padding: 3pt 1pt; }
-    .page--six .ticket--pro .pro-prizes { padding: 0.05in 0.1in 0.04in; }
-    .page--six .ticket--pro .pro-prizes__title { font-size: 6pt; }
-    .page--six .ticket--pro .pro-prizes__value strong { font-size: 9pt; }
+    .page--six .ticket--pro .pro-head { padding: 0.05in 0.08in; }
+    .page--six .ticket--pro .pro-head__name { font-size: 8.5pt; }
+    .page--six .ticket--pro .pro-head__label { padding: 3pt 7pt; }
+    .page--six .ticket--pro .pro-head__label strong { font-size: 11pt; }
+    .page--six .ticket--pro .pro-body { padding: 0.04in 0.1in 0.04in; gap: 2pt; }
+    .page--six .ticket--pro .pro-tv__img { max-height: 0.75in; }
+    .page--six .ticket--pro .pro-num { height: 12pt; font-size: 7.5pt; }
+    .page--six .ticket--pro .pro-prizes { padding: 0.03in 0.1in 0.03in; gap: 1pt; }
+    .page--six .ticket--pro .pro-prizes__title { font-size: 5.5pt; }
+    .page--six .ticket--pro .pro-prizes__value strong { font-size: 8.5pt; }
     .page--six .ticket--pro .pro-prizes__value small { font-size: 4.5pt; }
     .page--six .ticket--pro .pro-prize { padding: 1.5pt 4pt; font-size: 6.5pt; }
-    .page--six .ticket--pro .pro-prize__date { font-size: 5.5pt; padding: 1pt 4pt; }
-    .page--six .ticket--pro .pro-foot { padding: 0.07in 0.1in 0.08in; }
-    .page--six .ticket--pro .pro-foot__qr { width: 0.6in; height: 0.6in; }
-    .page--six .ticket--pro .pro-foot__qr-caption { font-size: 4.5pt; }
-    .page--six .ticket--pro .pro-foot__info { font-size: 6pt; row-gap: 1.5pt; }
-    .page--six .ticket--pro .pro-foot__label { font-size: 5pt; }
-    .page--six .ticket--pro .pro-foot__value { font-size: 6pt; }
-    .page--six .ticket--pro .pro-watermark { font-size: 20pt; }
+    .page--six .ticket--pro .pro-prize__date { font-size: 5.5pt; padding: 0.5pt 4pt; }
+    .page--six .ticket--pro .pro-foot { padding: 0.03in 0.08in 0.04in; }
+    .page--six .ticket--pro .pro-foot__qr { width: 0.5in; height: 0.5in; }
+    .page--six .ticket--pro .pro-foot__qr-caption { font-size: 4pt; }
+    .page--six .ticket--pro .pro-foot__info { font-size: 5.5pt; row-gap: 1pt; }
+    .page--six .ticket--pro .pro-foot__label { font-size: 4.5pt; }
+    .page--six .ticket--pro .pro-foot__value { font-size: 5.5pt; }
+    .page--six .ticket--pro .pro-watermark { font-size: 18pt; }
 
     /* === Modo impresión === */
     @media print {
@@ -1374,6 +1373,20 @@ export class TicketPrintSheetComponent implements OnInit {
   /** Formato COP sin decimales (20000 → "20.000"). */
   fmt(v: number): string {
     return new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 }).format(v);
+  }
+
+  /** Versión abreviada del nombre de la rifa para el header del diseño
+   *  profesional, donde el espacio es limitado y nombres largos como
+   *  "Televisor de 50\" + 3 bonos de 200k" se cortaban con ellipsis.
+   *  Aplica reglas comunes: 'Televisor de' → 'TV', '200000' → '200K', etc. */
+  shortRaffleName(): string {
+    const raw = this.data()?.raffle_name ?? '';
+    return raw
+      .replace(/Televisores?\s+de\s+(\d+)["']?/i, 'TV $1"')
+      .replace(/Televisores?\s+(\d+)["']?/i, 'TV $1"')
+      .replace(/(\d+)\.000(?!\d)/g, '$1K')
+      .replace(/\s+/g, ' ')
+      .trim();
   }
 
   formatDate(iso: string): string {
