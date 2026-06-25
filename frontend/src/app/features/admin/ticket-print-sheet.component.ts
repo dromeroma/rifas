@@ -118,92 +118,196 @@ export type PrintDesign = 'soccer' | 'professional';
                       </header>
 
                       <div class="pro-body">
-                        <!-- Lado izquierdo: TV ilustrado sin marca, con escena
-                             de estadio en la pantalla (estilo Smart TV moderno) -->
+                        <!-- TV fotorrealista (SVG propio, sin foto real
+                             para evitar problemas de copyright). Bezel con
+                             reflejos, estadio con tribunas y luces, jugador
+                             con uniforme, balón, sombra de soporte. -->
                         <div class="pro-tv">
-                          <svg viewBox="0 0 160 110" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+                          <svg viewBox="0 0 200 130" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
                             <defs>
-                              <!-- Marco metálico oscuro -->
-                              <linearGradient [attr.id]="'tvFrame-' + t.ticket_id" x1="0" x2="0" y1="0" y2="1">
-                                <stop offset="0%" stop-color="#1a1a1a" />
+                              <!-- Bezel exterior: gradiente para look metálico -->
+                              <linearGradient [attr.id]="'bzl-' + t.ticket_id" x1="0" x2="0" y1="0" y2="1">
+                                <stop offset="0%" stop-color="#2a2a2a" />
                                 <stop offset="50%" stop-color="#0a0a0a" />
-                                <stop offset="100%" stop-color="#000" />
+                                <stop offset="100%" stop-color="#1a1a1a" />
                               </linearGradient>
-                              <!-- Cielo del estadio -->
+                              <!-- Cielo de estadio nocturno -->
                               <linearGradient [attr.id]="'sky-' + t.ticket_id" x1="0" x2="0" y1="0" y2="1">
-                                <stop offset="0%" stop-color="#1e3a5f" />
-                                <stop offset="60%" stop-color="#0d1b2a" />
-                                <stop offset="100%" stop-color="#1a3a2a" />
+                                <stop offset="0%" stop-color="#2a4a78" />
+                                <stop offset="50%" stop-color="#1a2a4a" />
+                                <stop offset="100%" stop-color="#0d1b2a" />
                               </linearGradient>
-                              <!-- Brillo de cancha verde -->
-                              <radialGradient [attr.id]="'fieldGlow-' + t.ticket_id" cx="50%" cy="100%" r="60%">
-                                <stop offset="0%" stop-color="rgba(80, 180, 100, 0.55)" />
-                                <stop offset="100%" stop-color="rgba(80, 180, 100, 0)" />
+                              <!-- Reflejo glass del bezel -->
+                              <linearGradient [attr.id]="'sheen-' + t.ticket_id" x1="0" x2="1" y1="0" y2="0">
+                                <stop offset="0%" stop-color="rgba(255,255,255,0)" />
+                                <stop offset="50%" stop-color="rgba(255,255,255,0.12)" />
+                                <stop offset="100%" stop-color="rgba(255,255,255,0)" />
+                              </linearGradient>
+                              <!-- Halo cálido de las luces del estadio -->
+                              <radialGradient [attr.id]="'haze-' + t.ticket_id" cx="50%" cy="20%" r="70%">
+                                <stop offset="0%" stop-color="rgba(255,220,150,0.32)" />
+                                <stop offset="100%" stop-color="rgba(255,220,150,0)" />
+                              </radialGradient>
+                              <!-- Gradiente césped -->
+                              <linearGradient [attr.id]="'grass-' + t.ticket_id" x1="0" x2="0" y1="0" y2="1">
+                                <stop offset="0%" stop-color="#4ca25a" />
+                                <stop offset="100%" stop-color="#2d6b3a" />
+                              </linearGradient>
+                              <!-- Sombra realista bajo el TV -->
+                              <radialGradient [attr.id]="'tvShadow-' + t.ticket_id" cx="50%" cy="50%" r="50%">
+                                <stop offset="0%" stop-color="rgba(0,0,0,0.4)" />
+                                <stop offset="100%" stop-color="rgba(0,0,0,0)" />
                               </radialGradient>
                             </defs>
 
-                            <!-- Marco TV — bezel ultra delgado moderno -->
-                            <rect x="4" y="2" width="152" height="92" rx="3"
-                                  [attr.fill]="'url(#tvFrame-' + t.ticket_id + ')'" />
-                            <!-- Pantalla -->
-                            <rect x="7" y="5" width="146" height="86" rx="1.5"
+                            <!-- Sombra base bajo el TV -->
+                            <ellipse cx="100" cy="124" rx="80" ry="3"
+                                     [attr.fill]="'url(#tvShadow-' + t.ticket_id + ')'" />
+
+                            <!-- BEZEL exterior (marco del TV) -->
+                            <rect x="2" y="2" width="196" height="110" rx="4"
+                                  [attr.fill]="'url(#bzl-' + t.ticket_id + ')'" />
+                            <!-- Borde interno fino -->
+                            <rect x="5" y="5" width="190" height="104" rx="2"
+                                  fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="0.5" />
+
+                            <!-- PANTALLA -->
+                            <rect x="6" y="6" width="188" height="102" rx="2"
                                   [attr.fill]="'url(#sky-' + t.ticket_id + ')'" />
 
-                            <!-- Tribunas del estadio (curvas oscuras al fondo) -->
-                            <path d="M 7 5 Q 80 28 153 5 L 153 38 Q 80 50 7 38 Z"
-                                  fill="rgba(0,0,0,0.45)" />
-                            <!-- Luces del estadio (puntitos) -->
-                            <g fill="rgba(255,240,200,0.85)">
-                              <circle cx="30" cy="14" r="0.6" />
-                              <circle cx="55" cy="11" r="0.5" />
-                              <circle cx="80" cy="10" r="0.7" />
-                              <circle cx="105" cy="11" r="0.5" />
-                              <circle cx="130" cy="14" r="0.6" />
+                            <!-- Tribunas curvas del estadio (silueta oscura) -->
+                            <path d="M 6 6 Q 100 38 194 6 L 194 48 Q 100 60 6 48 Z"
+                                  fill="rgba(0,0,0,0.55)" />
+                            <!-- Detalle de gradas (líneas horizontales sutiles) -->
+                            <g stroke="rgba(255,255,255,0.06)" stroke-width="0.3">
+                              <line x1="6" y1="22" x2="194" y2="22" />
+                              <line x1="6" y1="30" x2="194" y2="30" />
+                              <line x1="6" y1="38" x2="194" y2="38" />
                             </g>
 
-                            <!-- Cancha verde abajo -->
-                            <rect x="7" y="55" width="146" height="36"
-                                  [attr.fill]="'url(#fieldGlow-' + t.ticket_id + ')'" />
-                            <path d="M 7 60 L 153 60 L 153 91 L 7 91 Z"
-                                  fill="#3d8049" />
-                            <!-- Líneas de cancha sutiles -->
-                            <line x1="80" y1="60" x2="80" y2="91"
-                                  stroke="rgba(255,255,255,0.25)" stroke-width="0.4" />
-                            <circle cx="80" cy="75" r="6" fill="none"
-                                    stroke="rgba(255,255,255,0.25)" stroke-width="0.4" />
+                            <!-- Estructura del estadio (techo arqueado a los lados) -->
+                            <path d="M 6 6 L 6 16 Q 30 4 60 8 L 60 6 Z"
+                                  fill="rgba(0,0,0,0.65)" />
+                            <path d="M 194 6 L 194 16 Q 170 4 140 8 L 140 6 Z"
+                                  fill="rgba(0,0,0,0.65)" />
 
-                            <!-- Silueta jugador con pelota (estilo logo simple) -->
-                            <g fill="#1a1a2e">
-                              <!-- cabeza -->
-                              <circle cx="78" cy="56" r="2.2" />
-                              <!-- torso/cuerpo -->
-                              <path d="M 75 59 Q 74 65 75 72 L 81 72 Q 82 65 81 59 Z" />
-                              <!-- pierna pateando -->
-                              <path d="M 81 70 Q 85 72 88 73 L 89 75 Q 85 75 80 73 Z" />
+                            <!-- Luces del estadio (reflectores) -->
+                            <g fill="rgba(255,240,180,0.95)">
+                              <circle cx="30" cy="14" r="0.9" />
+                              <circle cx="60" cy="10" r="0.7" />
+                              <circle cx="90" cy="9" r="1" />
+                              <circle cx="110" cy="9" r="1" />
+                              <circle cx="140" cy="10" r="0.7" />
+                              <circle cx="170" cy="14" r="0.9" />
                             </g>
-                            <!-- Balón -->
-                            <circle cx="91" cy="76" r="2" fill="#fff"
-                                    stroke="#1a1a2e" stroke-width="0.4" />
+                            <!-- Halo cálido sobre las luces -->
+                            <rect x="6" y="6" width="188" height="50"
+                                  [attr.fill]="'url(#haze-' + t.ticket_id + ')'" />
 
-                            <!-- "50"" en blanco grande, esquina izquierda -->
-                            <text x="14" y="55" font-family="Inter, Arial, sans-serif"
-                                  font-weight="900" font-size="20"
-                                  fill="rgba(255,255,255,0.96)" letter-spacing="-1">50&quot;</text>
+                            <!-- Pequeños puntos de público en gradas -->
+                            <g fill="rgba(255,150,80,0.35)">
+                              <circle cx="20" cy="32" r="0.3" />
+                              <circle cx="40" cy="36" r="0.3" />
+                              <circle cx="70" cy="38" r="0.3" />
+                              <circle cx="130" cy="38" r="0.3" />
+                              <circle cx="160" cy="36" r="0.3" />
+                              <circle cx="180" cy="32" r="0.3" />
+                            </g>
 
-                            <!-- "4K HDR / ULTRA HD" esquina derecha -->
-                            <text x="148" y="52" text-anchor="end"
+                            <!-- CANCHA verde con perspectiva -->
+                            <rect x="6" y="60" width="188" height="48"
+                                  [attr.fill]="'url(#grass-' + t.ticket_id + ')'" />
+                            <!-- Líneas de cancha en perspectiva sutil -->
+                            <g stroke="rgba(255,255,255,0.4)" stroke-width="0.4" fill="none">
+                              <line x1="100" y1="60" x2="100" y2="108" />
+                              <circle cx="100" cy="84" r="9" />
+                              <line x1="6" y1="84" x2="194" y2="84" />
+                            </g>
+                            <!-- Brillo sutil del césped -->
+                            <ellipse cx="100" cy="100" rx="80" ry="10"
+                                     fill="rgba(255,255,255,0.06)" />
+
+                            <!-- JUGADOR pateando (silueta detallada) -->
+                            <g>
+                              <!-- Sombra del jugador en el césped -->
+                              <ellipse cx="96" cy="98" rx="9" ry="1.6" fill="rgba(0,0,0,0.4)" />
+                              <!-- Cabeza con cabello -->
+                              <circle cx="95" cy="55" r="2.6" fill="#3a2818" />
+                              <circle cx="95" cy="55.5" r="2.3" fill="#cba07a" />
+                              <!-- Cuello -->
+                              <rect x="94" y="57.5" width="2" height="1.2" fill="#cba07a" />
+                              <!-- Camiseta amarilla -->
+                              <path d="M 90 59
+                                       Q 89 65 90 72
+                                       L 100 72
+                                       Q 101 65 100 59
+                                       Q 97 58 95 58
+                                       Q 93 58 90 59 Z"
+                                    fill="#f5c842" />
+                              <!-- Brazos -->
+                              <path d="M 90 60 Q 86 64 84 70" stroke="#cba07a"
+                                    stroke-width="1.4" fill="none" stroke-linecap="round" />
+                              <path d="M 100 60 Q 105 62 107 65" stroke="#cba07a"
+                                    stroke-width="1.4" fill="none" stroke-linecap="round" />
+                              <!-- Short azul -->
+                              <path d="M 90 72 L 100 72 L 101 79 L 89 79 Z"
+                                    fill="#1e3a78" />
+                              <!-- Pierna de apoyo (izquierda) -->
+                              <path d="M 91 79 Q 91 88 90 94 L 93 94 Q 94 88 94 79 Z"
+                                    fill="#cba07a" />
+                              <!-- Media roja pierna apoyo -->
+                              <rect x="89.5" y="93" width="4" height="3" fill="#c62828" />
+                              <!-- Bota -->
+                              <ellipse cx="91.5" cy="97" rx="2.5" ry="1.2" fill="#1a1a1a" />
+                              <!-- Pierna pateando (derecha extendida) -->
+                              <path d="M 98 79 Q 102 82 107 84 L 109 86 Q 105 86 99 83 Z"
+                                    fill="#cba07a" />
+                              <rect x="106" y="83" width="4" height="2.5"
+                                    fill="#c62828" transform="rotate(20, 108, 84)" />
+                              <ellipse cx="111" cy="86" rx="2.5" ry="1.2"
+                                       fill="#1a1a1a" transform="rotate(20, 111, 86)" />
+                            </g>
+
+                            <!-- BALÓN clásico (blanco y negro) -->
+                            <g>
+                              <ellipse cx="115" cy="90" rx="3" ry="1" fill="rgba(0,0,0,0.5)" />
+                              <circle cx="115" cy="87" r="2.6" fill="#ffffff"
+                                      stroke="#1a1a1a" stroke-width="0.4" />
+                              <!-- Pentágonos negros del balón -->
+                              <polygon points="115,86 116.3,86.6 115.8,88 114.2,88 113.7,86.6"
+                                       fill="#1a1a1a" />
+                            </g>
+
+                            <!-- TEXTO "50"" en blanco grande, esquina izquierda -->
+                            <text x="14" y="76" font-family="Inter, Arial, sans-serif"
+                                  font-weight="900" font-size="22"
+                                  fill="rgba(255,255,255,0.97)" letter-spacing="-1.5">50&quot;</text>
+
+                            <!-- TEXTO "4K HDR" + "ULTRA HD" esquina derecha -->
+                            <text x="188" y="72" text-anchor="end"
                                   font-family="Inter, Arial, sans-serif"
-                                  font-weight="900" font-size="11"
-                                  fill="rgba(255,255,255,0.96)" letter-spacing="-0.3">4K HDR</text>
-                            <text x="148" y="59" text-anchor="end"
+                                  font-weight="900" font-size="12"
+                                  fill="rgba(255,255,255,0.97)" letter-spacing="-0.5">4K HDR</text>
+                            <text x="188" y="80" text-anchor="end"
                                   font-family="Inter, Arial, sans-serif"
-                                  font-weight="700" font-size="5"
-                                  fill="rgba(255,255,255,0.78)" letter-spacing="0.5">ULTRA HD</text>
+                                  font-weight="700" font-size="5.5"
+                                  fill="rgba(255,255,255,0.85)" letter-spacing="1">ULTRA HD</text>
 
-                            <!-- Soporte central moderno -->
-                            <rect x="74" y="94" width="12" height="3" fill="#0a0a0a" />
-                            <!-- Patas en V abierta -->
-                            <polygon points="50,102 80,98 110,102 105,105 80,101 55,105"
+                            <!-- Reflejo glass sutil sobre la pantalla -->
+                            <rect x="6" y="6" width="188" height="102" rx="2"
+                                  [attr.fill]="'url(#sheen-' + t.ticket_id + ')'" opacity="0.6" />
+
+                            <!-- LED indicador inferior centrado -->
+                            <circle cx="100" cy="110.5" r="0.5" fill="rgba(220,180,80,0.6)" />
+
+                            <!-- SOPORTE central -->
+                            <rect x="94" y="112" width="12" height="4" fill="#0a0a0a" />
+                            <!-- Patas anchas en V (estilo TV moderno) -->
+                            <polygon points="60,120 100,114 140,120 130,122 100,116 70,122"
+                                     fill="#1a1a1a" />
+                            <polygon points="60,120 70,122 65,123 58,121"
+                                     fill="#0a0a0a" />
+                            <polygon points="140,120 130,122 135,123 142,121"
                                      fill="#0a0a0a" />
                           </svg>
                           <div class="pro-tv__caption">TELEVISOR <strong>50"</strong> · 4K ULTRA HD</div>
@@ -231,30 +335,35 @@ export type PrintDesign = 'soccer' | 'professional';
                         }
                       </div>
 
-                      <!-- Footer: QR + responsable + valor -->
+                      <!-- Footer: QR + info estructurada en filas + valor -->
                       <footer class="pro-foot">
-                        <img class="pro-foot__qr" [src]="t.qrPromo" alt="Verifica tu boleta en línea" />
+                        <div class="pro-foot__qr-box">
+                          <img class="pro-foot__qr" [src]="t.qrPromo" alt="Verifica tu boleta en línea" />
+                          <small class="pro-foot__qr-caption">Verifica en línea</small>
+                        </div>
                         <div class="pro-foot__info">
                           @if (data().lottery_name) {
-                            <div class="pro-foot__line">
-                              <small>Juega con:</small>
-                              <strong>{{ data().lottery_name }}</strong>
+                            <div class="pro-foot__row">
+                              <span class="pro-foot__label">Juega con</span>
+                              <span class="pro-foot__value">{{ data().lottery_name }}</span>
                             </div>
                           }
                           @if (data().responsible_name) {
-                            <div class="pro-foot__line">
-                              <small>Responsable:</small>
-                              <strong>{{ data().responsible_name }}</strong>
-                              @if (data().responsible_phone) {
-                                <span class="pro-foot__phone">· {{ data().responsible_phone }}</span>
-                              }
+                            <div class="pro-foot__row">
+                              <span class="pro-foot__label">Responsable</span>
+                              <span class="pro-foot__value">
+                                {{ data().responsible_name }}@if (data().responsible_phone) { · {{ data().responsible_phone }} }
+                              </span>
                             </div>
                           }
-                          <div class="pro-foot__line">
-                            <small>Sorteo final:</small>
-                            <strong>{{ formatDate(data().final_draw_date) }}</strong>
+                          <div class="pro-foot__row">
+                            <span class="pro-foot__label">Sorteo final</span>
+                            <span class="pro-foot__value pro-foot__value--em">{{ formatDate(data().final_draw_date) }}</span>
                           </div>
-                          <div class="pro-foot__code">Cód: {{ t.short_code }}</div>
+                          <div class="pro-foot__row pro-foot__row--code">
+                            <span class="pro-foot__label">Código</span>
+                            <span class="pro-foot__value pro-foot__value--mono">{{ t.short_code }}</span>
+                          </div>
                         </div>
                         <div class="pro-foot__price">
                           <small>VALOR</small>
@@ -1016,12 +1125,12 @@ export type PrintDesign = 'soccer' | 'professional';
       letter-spacing: 0.12em;
     }
 
-    /* === Footer: QR + info + valor === */
+    /* === Footer premium: 3 columnas estrictas, info en grid de 2 cols === */
     .pro-foot {
       display: grid;
       grid-template-columns: auto 1fr auto;
-      gap: 0.1in;
-      padding: 0.09in 0.14in 0.1in;
+      column-gap: 0.14in;
+      padding: 0.1in 0.14in 0.11in;
       align-items: center;
       background:
         linear-gradient(180deg, #f4ecd2 0%, #ede1b8 100%);
@@ -1029,9 +1138,16 @@ export type PrintDesign = 'soccer' | 'professional';
       position: relative;
       z-index: 1;
     }
+    /* Caja del QR con caption */
+    .pro-foot__qr-box {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2pt;
+    }
     .pro-foot__qr {
-      width: 0.7in;
-      height: 0.7in;
+      width: 0.72in;
+      height: 0.72in;
       border: 1.5px solid #c9a961;
       border-radius: 3pt;
       padding: 2pt;
@@ -1041,38 +1157,60 @@ export type PrintDesign = 'soccer' | 'professional';
         0 0 0 1px rgba(13, 27, 42, 0.1),
         0 1pt 2pt rgba(0,0,0,0.1);
     }
+    .pro-foot__qr-caption {
+      font-size: 5pt;
+      letter-spacing: 0.16em;
+      color: #722f37;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    /* Info en grid de 2 columnas (label fijo + valor flex) — todo
+       perfectamente alineado verticalmente sin importar el largo del valor */
     .pro-foot__info {
-      display: flex;
-      flex-direction: column;
-      gap: 1.5pt;
+      display: grid;
+      grid-template-columns: auto 1fr;
+      column-gap: 8pt;
+      row-gap: 2.5pt;
+      align-items: baseline;
       min-width: 0;
       font-size: 6.5pt;
     }
-    .pro-foot__line {
-      display: flex;
-      gap: 4pt;
-      align-items: baseline;
-      color: #0d1b2a;
+    .pro-foot__row {
+      display: contents; /* permite que label+value compartan la misma row del parent grid */
     }
-    .pro-foot__line small {
+    .pro-foot__label {
       font-size: 5.5pt;
-      letter-spacing: 0.1em;
+      letter-spacing: 0.14em;
       color: #722f37;
       font-weight: 800;
       text-transform: uppercase;
+      white-space: nowrap;
+      text-align: right;
+      padding-top: 1pt;
     }
-    .pro-foot__line strong {
+    .pro-foot__value {
+      font-size: 6.8pt;
       font-weight: 700;
       color: #0d1b2a;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      min-width: 0;
     }
-    .pro-foot__phone { color: #5a3a14; font-size: 6.5pt; }
-    .pro-foot__code {
+    .pro-foot__value--em { font-weight: 800; }
+    .pro-foot__value--mono {
       font-family: 'Courier New', monospace;
-      font-size: 6pt;
       letter-spacing: 0.12em;
       color: #722f37;
-      padding-top: 2pt;
-      font-weight: 700;
+      font-size: 6.5pt;
+    }
+    /* Separador antes del código (línea dorada sutil entre filas) */
+    .pro-foot__row--code .pro-foot__label,
+    .pro-foot__row--code .pro-foot__value {
+      padding-top: 3pt;
+      border-top: 0.4px dashed rgba(201, 169, 97, 0.5);
+      margin-top: 1pt;
     }
     .pro-foot__price {
       display: flex;
@@ -1126,13 +1264,17 @@ export type PrintDesign = 'soccer' | 'professional';
     .page--six .ticket--pro .pro-head__name { font-size: 9pt; }
     .page--six .ticket--pro .pro-head__label strong { font-size: 12pt; }
     .page--six .ticket--pro .pro-body { padding: 0.08in 0.1in; gap: 5pt; }
-    .page--six .ticket--pro .pro-tv svg { max-width: 1.05in; }
+    .page--six .ticket--pro .pro-tv svg { max-width: 1.15in; }
     .page--six .ticket--pro .pro-num { font-size: 7.5pt; padding: 2.5pt 1pt; }
     .page--six .ticket--pro .pro-numbers__title { font-size: 6pt; }
     .page--six .ticket--pro .pro-prizes { padding: 0.04in 0.1in 0.02in; }
     .page--six .ticket--pro .pro-prize { padding: 1.5pt 4pt; font-size: 6.5pt; }
     .page--six .ticket--pro .pro-foot { padding: 0.07in 0.1in 0.08in; }
     .page--six .ticket--pro .pro-foot__qr { width: 0.55in; height: 0.55in; }
+    .page--six .ticket--pro .pro-foot__qr-caption { font-size: 4.5pt; }
+    .page--six .ticket--pro .pro-foot__info { font-size: 6pt; row-gap: 1.5pt; }
+    .page--six .ticket--pro .pro-foot__label { font-size: 5pt; }
+    .page--six .ticket--pro .pro-foot__value { font-size: 6pt; }
     .page--six .ticket--pro .pro-foot__price { padding: 4pt 7pt; }
     .page--six .ticket--pro .pro-foot__price strong { font-size: 9pt; }
     .page--six .ticket--pro .pro-watermark { font-size: 20pt; }
