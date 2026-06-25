@@ -118,16 +118,14 @@ export type PrintDesign = 'soccer' | 'professional';
                       </header>
 
                       <div class="pro-body">
-                        <!-- TV con imagen real provista por el organizador.
-                             La imagen ya incluye el texto 'TV 50"' y
-                             '+ 3 BONOS DE 200K', así que no agregamos caption
-                             debajo. Solo la enmarcamos en doble borde dorado. -->
+                        <!-- TV con imagen del organizador. Sin marco —
+                             la imagen habla por sí sola. Solo drop-shadow sutil.
+                             Los 20 números fluyen alrededor: a la derecha del
+                             TV y luego en filas debajo (layout en L). -->
                         <div class="pro-tv">
-                          <div class="pro-tv__frame">
-                            <img class="pro-tv__img"
-                                 src="/assets/imagen-tv-50-3-bono-200-k.png"
-                                 alt="Televisor 50 pulgadas + 3 bonos de doscientos mil pesos" />
-                          </div>
+                          <img class="pro-tv__img"
+                               src="/assets/imagen-tv-50-3-bono-200-k.png"
+                               alt="Televisor 50 pulgadas + 3 bonos de doscientos mil pesos" />
                         </div>
 
                         <!-- Marcador para colapsar el SVG legacy (se conserva
@@ -322,29 +320,33 @@ export type PrintDesign = 'soccer' | 'professional';
                           </svg>
                         }
 
-                        <!-- Lado derecho: 20 números en grilla 5x4 -->
-                        <div class="pro-numbers">
-                          <div class="pro-numbers__title">TUS NÚMEROS</div>
-                          <div class="pro-numbers__grid">
-                            @for (n of t.numbers; track $index) {
-                              <span class="pro-num">{{ n }}</span>
-                            }
-                          </div>
-                        </div>
+                        <!-- 20 números fluyen como cells del grid del body,
+                             rodeando al TV en L (derecha del TV + debajo) -->
+                        @for (n of t.numbers; track $index) {
+                          <span class="pro-num">{{ n }}</span>
+                        }
                       </div>
 
-                      <!-- Info: premios -->
+                      <!-- Premios: header con título + chip VALOR; cada fila
+                           tiene fecha a la izquierda + dot + nombre -->
                       <div class="pro-prizes">
+                        <div class="pro-prizes__head">
+                          <span class="pro-prizes__title">PREMIOS Y SORTEOS</span>
+                          <span class="pro-prizes__value">
+                            <small>VALOR</small>
+                            <strong>{{ '$' + fmt(data().ticket_price) }}</strong>
+                          </span>
+                        </div>
                         @for (p of data().prizes; track p.position) {
                           <div class="pro-prize" [class.pro-prize--main]="p.position === 1">
+                            <span class="pro-prize__date">{{ formatShortDate(p.draw_date) }}</span>
                             <span class="pro-prize__dot">{{ p.position === 1 ? '★' : '•' }}</span>
                             <span class="pro-prize__name">{{ p.name }}</span>
-                            <span class="pro-prize__date">{{ formatShortDate(p.draw_date) }}</span>
                           </div>
                         }
                       </div>
 
-                      <!-- Footer: QR + info estructurada en filas + valor -->
+                      <!-- Footer: QR + info (sin valor, ya fue arriba) -->
                       <footer class="pro-foot">
                         <div class="pro-foot__qr-box">
                           <img class="pro-foot__qr" [src]="t.qrPromo" alt="Verifica tu boleta en línea" />
@@ -373,10 +375,6 @@ export type PrintDesign = 'soccer' | 'professional';
                             <span class="pro-foot__label">Código</span>
                             <span class="pro-foot__value pro-foot__value--mono">{{ t.short_code }}</span>
                           </div>
-                        </div>
-                        <div class="pro-foot__price">
-                          <small>VALOR</small>
-                          <strong>{{ '$' + fmt(data().ticket_price) }}</strong>
                         </div>
                       </footer>
 
@@ -879,12 +877,12 @@ export type PrintDesign = 'soccer' | 'professional';
     }
 
     /* ============================================================
-       DISEÑO PROFESIONAL PREMIUM — boleta clásica de rifa, elegante
-       Paleta: midnight navy #0d1b2a + champagne gold #c9a961 +
-       ivory/cream #faf4e3 + burgundy accent #722f37 para detalles
+       DISEÑO PROFESIONAL PREMIUM v2 — paleta de alegría/prosperidad
+       Esmeralda profundo #0e5e2e (color del dinero/billete) +
+       oro brillante #f4c430 + crema cálida #fffbe9 + acentos vinotinto
        ============================================================ */
     .ticket--pro {
-      background: #faf4e3;
+      background: #fffbe9;
       position: relative;
       padding: 0 !important;
       gap: 0 !important;
@@ -893,18 +891,18 @@ export type PrintDesign = 'soccer' | 'professional';
       -webkit-print-color-adjust: exact;
     }
 
-    /* Doble borde dorado interno (clásico premium) */
+    /* Doble borde dorado interno premium */
     .ticket--pro::after {
       content: '';
       position: absolute;
       inset: 4pt;
-      border: 0.5px solid rgba(201, 169, 97, 0.55);
+      border: 0.6px solid rgba(212, 175, 55, 0.7);
       border-radius: 2pt;
       pointer-events: none;
       z-index: 5;
     }
 
-    /* === Header oscuro === */
+    /* === Header esmeralda === */
     .ticket--pro .pro-head {
       display: grid;
       grid-template-columns: 1fr auto;
@@ -912,10 +910,10 @@ export type PrintDesign = 'soccer' | 'professional';
       gap: 8pt;
       padding: 0.1in 0.14in;
       background:
-        linear-gradient(135deg, #0d1b2a 0%, #1b2a3f 60%, #0d1b2a 100%);
-      color: #faf4e3;
-      border-bottom: 2.5px solid #c9a961;
-      box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.08);
+        linear-gradient(135deg, #0a4d24 0%, #126b34 50%, #0a4d24 100%);
+      color: #fffbe9;
+      border-bottom: 2.5px solid #f4c430;
+      box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.1);
       position: relative;
     }
     /* Borde dorado interno superior — toque premium */
@@ -935,7 +933,7 @@ export type PrintDesign = 'soccer' | 'professional';
     .pro-head__eyebrow {
       font-size: 6pt;
       letter-spacing: 0.32em;
-      color: #c9a961;
+      color: #f4c430;
       font-weight: 700;
       margin-bottom: 2pt;
     }
@@ -944,7 +942,7 @@ export type PrintDesign = 'soccer' | 'professional';
       font-weight: 800;
       font-size: 11pt;
       line-height: 1.1;
-      color: #faf4e3;
+      color: #fffbe9;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
@@ -956,15 +954,15 @@ export type PrintDesign = 'soccer' | 'professional';
       align-items: center;
       justify-content: center;
       padding: 4pt 9pt;
-      background: rgba(201, 169, 97, 0.15);
-      border: 1px solid #c9a961;
+      background: rgba(244, 196, 48, 0.18);
+      border: 1px solid #f4c430;
       border-radius: 3pt;
       flex-shrink: 0;
     }
     .pro-head__label small {
       font-size: 5.5pt;
       letter-spacing: 0.22em;
-      color: #c9a961;
+      color: #f4c430;
       font-weight: 700;
     }
     .pro-head__label strong {
@@ -972,149 +970,155 @@ export type PrintDesign = 'soccer' | 'professional';
       font-weight: 900;
       font-size: 15pt;
       line-height: 1;
-      color: #faf4e3;
+      color: #fffbe9;
       font-variant-numeric: tabular-nums;
       letter-spacing: 0.02em;
       margin-top: 1pt;
     }
 
-    /* === Body: TV + números === */
+    /* === Body: grid 5 columnas x 6 filas — TV ocupa 3x3 arriba a la izq,
+       los 20 números fluyen alrededor: a la derecha del TV (cols 4-5,
+       filas 1-3 = 6 nums) y abajo del TV en 2 filas anchas (cols 1-5,
+       filas 4-5 = 10 nums). Total: 6 + 10 = 16, faltan 4 → agregamos
+       fila 6 con 4 cols = 4 nums. Total: 20 ✓ */
     .pro-body {
       display: grid;
-      grid-template-columns: 48% 52%;
-      gap: 10pt;
+      grid-template-columns: repeat(5, 1fr);
+      grid-auto-rows: minmax(0, auto);
+      gap: 4pt 5pt;
       padding: 0.12in 0.14in;
       background:
-        radial-gradient(ellipse at 50% 0%, rgba(201,169,97,0.08) 0%, transparent 50%),
-        linear-gradient(180deg, #faf4e3 0%, #f4ecd2 100%);
-      border-bottom: 1px solid rgba(201, 169, 97, 0.45);
+        radial-gradient(ellipse at 50% 0%, rgba(244, 196, 48, 0.08) 0%, transparent 55%),
+        linear-gradient(180deg, #fffbe9 0%, #fff3c8 100%);
+      border-bottom: 1px solid rgba(212, 175, 55, 0.55);
       position: relative;
       z-index: 1;
-      align-items: center;
+      align-items: stretch;
     }
 
+    /* TV ocupa grid 3 cols × 3 filas en la esquina superior izquierda.
+       Sin marco dorado — solo la imagen limpia con drop-shadow sutil. */
     .pro-tv {
+      grid-column: 1 / 4;
+      grid-row: 1 / 4;
       display: flex;
-      flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding-right: 8pt;
-      border-right: 0.5px dashed rgba(201, 169, 97, 0.5);
-    }
-
-    /* Marco doble dorado premium para enmarcar la imagen del TV.
-       Outer: gradiente dorado con sombra hacia el papel.
-       Inner: doble borde con padding crema para dar el efecto
-       de cuadro/poster enmarcado. */
-    .pro-tv__frame {
-      position: relative;
-      width: 100%;
-      padding: 4pt;
-      background:
-        linear-gradient(135deg, #d4b876 0%, #c9a961 30%, #b88a35 65%, #c9a961 100%);
-      border-radius: 4pt;
-      box-shadow:
-        0 0 0 0.5pt rgba(255, 255, 255, 0.45) inset,
-        0 0 0 1pt rgba(106, 70, 18, 0.4),
-        0 3pt 6pt rgba(13, 27, 42, 0.22),
-        0 1pt 2pt rgba(13, 27, 42, 0.18);
-      print-color-adjust: exact;
-      -webkit-print-color-adjust: exact;
-    }
-    /* Anillo blanco interno entre el marco dorado y la imagen — efecto poster */
-    .pro-tv__frame::before {
-      content: '';
-      position: absolute;
-      inset: 3pt;
-      border: 0.6px solid rgba(255, 255, 255, 0.8);
-      border-radius: 2pt;
-      pointer-events: none;
-      z-index: 1;
+      padding-right: 4pt;
     }
     .pro-tv__img {
       display: block;
       width: 100%;
       height: auto;
-      border-radius: 1.5pt;
-      background: #000;
-      position: relative;
-      z-index: 0;
+      max-height: 1.5in;
+      object-fit: contain;
+      filter: drop-shadow(0 2pt 5pt rgba(0,0,0,0.18));
     }
 
-    .pro-numbers {
-      padding-left: 4pt;
-      display: flex;
-      flex-direction: column;
-      gap: 5pt;
-      min-height: 0;
-    }
-    .pro-numbers__title {
-      font-size: 6.5pt;
-      letter-spacing: 0.22em;
-      color: #0d1b2a;
-      font-weight: 800;
-      text-align: center;
-      padding-bottom: 4pt;
-      border-bottom: 0.5px solid #c9a961;
-      position: relative;
-    }
-    /* Pequeños puntos dorados a los lados del título */
-    .pro-numbers__title::before,
-    .pro-numbers__title::after {
-      content: '◆';
-      color: #c9a961;
-      font-size: 5pt;
-      margin: 0 4pt;
-      vertical-align: 1pt;
-    }
-    .pro-numbers__grid {
-      display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: 3pt;
-    }
+    /* Chips de números — paleta esmeralda/oro para look 'jackpot' */
     .pro-num {
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 3.5pt 2pt;
-      background: linear-gradient(180deg, #ffffff 0%, #faf4e3 100%);
-      border: 1px solid #0d1b2a;
-      border-radius: 2pt;
+      padding: 4pt 2pt;
+      background: linear-gradient(180deg, #ffffff 0%, #fffbe9 100%);
+      border: 1.2px solid #0a4d24;
+      border-radius: 3pt;
       font-family: 'Inter', sans-serif;
       font-weight: 800;
-      font-size: 9pt;
-      color: #0d1b2a;
+      font-size: 9.5pt;
+      color: #0a4d24;
       font-variant-numeric: tabular-nums;
       letter-spacing: 0.02em;
       box-shadow:
-        inset 0 -1pt 0 rgba(13, 27, 42, 0.08),
-        0 0.5pt 0 rgba(201, 169, 97, 0.2);
+        inset 0 -1pt 0 rgba(10, 77, 36, 0.1),
+        0 0.5pt 0 rgba(212, 175, 55, 0.35);
       print-color-adjust: exact;
       -webkit-print-color-adjust: exact;
     }
 
-    /* === Premios === */
+    /* === Premios: header con título + chip VALOR + filas con fecha-izq === */
     .pro-prizes {
-      padding: 0.07in 0.14in 0.05in;
+      padding: 0.07in 0.14in 0.06in;
       display: grid;
-      gap: 2pt;
-      background: #faf4e3;
+      gap: 2.5pt;
+      background:
+        linear-gradient(180deg, #fffbe9 0%, #fff3c8 100%);
       position: relative;
       z-index: 1;
     }
+    .pro-prizes__head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: 4pt;
+      margin-bottom: 1pt;
+      border-bottom: 0.6px dashed #d4af37;
+    }
+    .pro-prizes__title {
+      font-size: 7pt;
+      letter-spacing: 0.22em;
+      color: #0a4d24;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+    /* Chip VALOR — el cash dorado/verde que reemplaza al pill del footer */
+    .pro-prizes__value {
+      display: inline-flex;
+      align-items: center;
+      gap: 6pt;
+      padding: 3pt 9pt;
+      background:
+        linear-gradient(135deg, #0a4d24 0%, #126b34 50%, #0a4d24 100%);
+      border: 1.2px solid #f4c430;
+      border-radius: 3pt;
+      box-shadow:
+        inset 0 0 0 1px rgba(244, 196, 48, 0.4),
+        0 1pt 2pt rgba(10, 77, 36, 0.25);
+      print-color-adjust: exact;
+      -webkit-print-color-adjust: exact;
+    }
+    .pro-prizes__value small {
+      font-size: 5.5pt;
+      letter-spacing: 0.24em;
+      color: #f4c430;
+      font-weight: 800;
+    }
+    .pro-prizes__value strong {
+      font-family: 'Inter', sans-serif;
+      font-size: 11pt;
+      font-weight: 900;
+      color: #fffbe9;
+      letter-spacing: 0.01em;
+    }
+
+    /* Fila de premio: [FECHA] [dot] [nombre] — fecha pegada a la izq */
     .pro-prize {
       display: grid;
-      grid-template-columns: auto 1fr auto;
-      gap: 5pt;
+      grid-template-columns: auto auto 1fr;
+      gap: 6pt;
       align-items: center;
       padding: 2.5pt 6pt;
       font-size: 7pt;
-      color: #0d1b2a;
+      color: #0d2818;
       border-radius: 2pt;
     }
+    .pro-prize__date {
+      font-size: 6.5pt;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      color: #fffbe9;
+      background: #0a4d24;
+      padding: 1.5pt 6pt;
+      border-radius: 999px;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+      print-color-adjust: exact;
+      -webkit-print-color-adjust: exact;
+    }
     .pro-prize__dot {
-      font-size: 7pt;
-      color: #c9a961;
+      font-size: 8pt;
+      color: #d4af37;
       width: 8pt;
       text-align: center;
     }
@@ -1125,45 +1129,39 @@ export type PrintDesign = 'soccer' | 'professional';
       white-space: nowrap;
       letter-spacing: 0.01em;
     }
-    .pro-prize__date {
-      font-size: 6.5pt;
-      font-weight: 700;
-      letter-spacing: 0.1em;
-      color: #722f37;
-      font-variant-numeric: tabular-nums;
-      white-space: nowrap;
-    }
+    /* Premio principal: fondo dorado glow, fecha en verde profundo brillante */
     .pro-prize--main {
-      background: linear-gradient(135deg, #fbecc6 0%, #f5dca0 100%);
-      border: 1px solid #c9a961;
-      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.4);
+      background:
+        linear-gradient(135deg, #fff5c2 0%, #ffe585 100%);
+      border: 1.2px solid #d4af37;
+      box-shadow:
+        inset 0 0 0 1px rgba(255,255,255,0.5),
+        0 1pt 2pt rgba(212, 175, 55, 0.2);
     }
     .pro-prize--main .pro-prize__dot {
-      font-size: 9pt;
-      color: #722f37;
+      font-size: 10pt;
+      color: #b8252e;
     }
     .pro-prize--main .pro-prize__name {
       font-weight: 800;
-      color: #5a3a14;
+      color: #1f4513;
     }
     .pro-prize--main .pro-prize__date {
-      background: #0d1b2a;
-      color: #c9a961;
-      padding: 1.5pt 6pt;
-      border-radius: 999px;
+      background:
+        linear-gradient(135deg, #0a4d24 0%, #126b34 100%);
       letter-spacing: 0.12em;
     }
 
-    /* === Footer premium: 3 columnas estrictas, info en grid de 2 cols === */
+    /* === Footer: QR + info en grid de 2 cols (sin VALOR — está arriba) === */
     .pro-foot {
       display: grid;
-      grid-template-columns: auto 1fr auto;
-      column-gap: 0.14in;
+      grid-template-columns: auto 1fr;
+      column-gap: 0.18in;
       padding: 0.1in 0.14in 0.11in;
       align-items: center;
       background:
-        linear-gradient(180deg, #f4ecd2 0%, #ede1b8 100%);
-      border-top: 1px solid rgba(201, 169, 97, 0.55);
+        linear-gradient(180deg, #fff3c8 0%, #ffe994 100%);
+      border-top: 1px solid rgba(212, 175, 55, 0.6);
       position: relative;
       z-index: 1;
     }
@@ -1175,21 +1173,21 @@ export type PrintDesign = 'soccer' | 'professional';
       gap: 2pt;
     }
     .pro-foot__qr {
-      width: 0.72in;
-      height: 0.72in;
-      border: 1.5px solid #c9a961;
+      width: 0.78in;
+      height: 0.78in;
+      border: 1.5px solid #d4af37;
       border-radius: 3pt;
       padding: 2pt;
       background: #fff;
       image-rendering: pixelated;
       box-shadow:
-        0 0 0 1px rgba(13, 27, 42, 0.1),
-        0 1pt 2pt rgba(0,0,0,0.1);
+        0 0 0 1px rgba(10, 77, 36, 0.15),
+        0 1pt 2pt rgba(0,0,0,0.12);
     }
     .pro-foot__qr-caption {
       font-size: 5pt;
       letter-spacing: 0.16em;
-      color: #722f37;
+      color: #0a4d24;
       font-weight: 700;
       text-transform: uppercase;
     }
@@ -1211,7 +1209,7 @@ export type PrintDesign = 'soccer' | 'professional';
     .pro-foot__label {
       font-size: 5.5pt;
       letter-spacing: 0.14em;
-      color: #722f37;
+      color: #0a4d24;
       font-weight: 800;
       text-transform: uppercase;
       white-space: nowrap;
@@ -1219,57 +1217,27 @@ export type PrintDesign = 'soccer' | 'professional';
       padding-top: 1pt;
     }
     .pro-foot__value {
-      font-size: 6.8pt;
+      font-size: 7pt;
       font-weight: 700;
-      color: #0d1b2a;
+      color: #0d2818;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
       min-width: 0;
     }
-    .pro-foot__value--em { font-weight: 800; }
+    .pro-foot__value--em { font-weight: 800; color: #0a4d24; }
     .pro-foot__value--mono {
       font-family: 'Courier New', monospace;
       letter-spacing: 0.12em;
-      color: #722f37;
+      color: #b8252e;
       font-size: 6.5pt;
     }
     /* Separador antes del código (línea dorada sutil entre filas) */
     .pro-foot__row--code .pro-foot__label,
     .pro-foot__row--code .pro-foot__value {
       padding-top: 3pt;
-      border-top: 0.4px dashed rgba(201, 169, 97, 0.5);
+      border-top: 0.4px dashed rgba(212, 175, 55, 0.55);
       margin-top: 1pt;
-    }
-    .pro-foot__price {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 6pt 10pt;
-      background:
-        linear-gradient(135deg, #0d1b2a 0%, #1b2a3f 60%, #0d1b2a 100%);
-      color: #faf4e3;
-      border-radius: 3pt;
-      border: 1.5px solid #c9a961;
-      flex-shrink: 0;
-      box-shadow:
-        inset 0 0 0 1px rgba(201, 169, 97, 0.3),
-        0 1pt 3pt rgba(13, 27, 42, 0.18);
-    }
-    .pro-foot__price small {
-      font-size: 5.5pt;
-      letter-spacing: 0.24em;
-      color: #c9a961;
-      font-weight: 700;
-    }
-    .pro-foot__price strong {
-      font-family: 'Inter', sans-serif;
-      font-size: 11pt;
-      font-weight: 900;
-      color: #faf4e3;
-      margin-top: 1pt;
-      letter-spacing: 0.01em;
     }
 
     /* Watermark "RIFA OFICIAL" diagonal sutil */
@@ -1282,7 +1250,7 @@ export type PrintDesign = 'soccer' | 'professional';
       font-weight: 900;
       font-size: 26pt;
       letter-spacing: 0.15em;
-      color: rgba(201, 169, 97, 0.08);
+      color: rgba(212, 175, 55, 0.1);
       pointer-events: none;
       white-space: nowrap;
       z-index: 0;
@@ -1292,20 +1260,21 @@ export type PrintDesign = 'soccer' | 'professional';
     .page--six .ticket--pro .pro-head { padding: 0.07in 0.1in; }
     .page--six .ticket--pro .pro-head__name { font-size: 9pt; }
     .page--six .ticket--pro .pro-head__label strong { font-size: 12pt; }
-    .page--six .ticket--pro .pro-body { padding: 0.08in 0.1in; gap: 5pt; }
-    .page--six .ticket--pro .pro-tv svg { max-width: 1.15in; }
-    .page--six .ticket--pro .pro-num { font-size: 7.5pt; padding: 2.5pt 1pt; }
-    .page--six .ticket--pro .pro-numbers__title { font-size: 6pt; }
-    .page--six .ticket--pro .pro-prizes { padding: 0.04in 0.1in 0.02in; }
+    .page--six .ticket--pro .pro-body { padding: 0.08in 0.1in; gap: 3pt 4pt; }
+    .page--six .ticket--pro .pro-tv__img { max-height: 1.1in; }
+    .page--six .ticket--pro .pro-num { font-size: 8pt; padding: 3pt 1pt; }
+    .page--six .ticket--pro .pro-prizes { padding: 0.05in 0.1in 0.04in; }
+    .page--six .ticket--pro .pro-prizes__title { font-size: 6pt; }
+    .page--six .ticket--pro .pro-prizes__value strong { font-size: 9pt; }
+    .page--six .ticket--pro .pro-prizes__value small { font-size: 4.5pt; }
     .page--six .ticket--pro .pro-prize { padding: 1.5pt 4pt; font-size: 6.5pt; }
+    .page--six .ticket--pro .pro-prize__date { font-size: 5.5pt; padding: 1pt 4pt; }
     .page--six .ticket--pro .pro-foot { padding: 0.07in 0.1in 0.08in; }
-    .page--six .ticket--pro .pro-foot__qr { width: 0.55in; height: 0.55in; }
+    .page--six .ticket--pro .pro-foot__qr { width: 0.6in; height: 0.6in; }
     .page--six .ticket--pro .pro-foot__qr-caption { font-size: 4.5pt; }
     .page--six .ticket--pro .pro-foot__info { font-size: 6pt; row-gap: 1.5pt; }
     .page--six .ticket--pro .pro-foot__label { font-size: 5pt; }
     .page--six .ticket--pro .pro-foot__value { font-size: 6pt; }
-    .page--six .ticket--pro .pro-foot__price { padding: 4pt 7pt; }
-    .page--six .ticket--pro .pro-foot__price strong { font-size: 9pt; }
     .page--six .ticket--pro .pro-watermark { font-size: 20pt; }
 
     /* === Modo impresión === */
