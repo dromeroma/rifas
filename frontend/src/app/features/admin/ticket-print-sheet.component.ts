@@ -49,6 +49,8 @@ interface RenderedTicket extends PrintTicket {
  *
  * @media print: márgenes 0, fondos limpios, sin chrome de la app.
  */
+export type PrintDesign = 'soccer' | 'professional';
+
 @Component({
   selector: 'app-ticket-print-sheet',
   standalone: true,
@@ -99,90 +101,192 @@ interface RenderedTicket extends PrintTicket {
                     <span class="scissor" aria-hidden="true">✂</span>
                   </div>
 
-                  <!-- BOLETA CLIENTE -->
-                  <div class="ticket">
-                    <header class="ticket-head">
-                      <div>
-                        <div class="ticket-eyebrow">Boleta</div>
-                        <div class="ticket-label">{{ formatLabel(t.number_label) }}</div>
-                      </div>
-                      <img class="qr small" [src]="t.qrPromo" alt="Escanea para verificar tu boleta en línea" />
-                    </header>
+                  <!-- BOLETA CLIENTE — diseño según printDesign() -->
+                  <div class="ticket" [class.ticket--pro]="printDesign() === 'professional'">
 
-                    <div class="raffle-name">
-                      <span class="raffle-name__txt">{{ data().raffle_name }}</span>
-                      <span class="raffle-name__price">{{ '$' + fmt(data().ticket_price) }}</span>
-                    </div>
-
-                    <!-- Cancha de fútbol vertical, mismo diseño que la app -->
-                    <div class="field" aria-label="Cancha con los 20 números">
-                      <svg class="field__lines" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-                        <!-- borde exterior -->
-                        <rect x="2" y="2" width="96" height="96" fill="none"
-                              stroke="rgba(255,255,255,0.9)" stroke-width="0.6" />
-                        <!-- línea media -->
-                        <line x1="2" y1="50" x2="98" y2="50"
-                              stroke="rgba(255,255,255,0.9)" stroke-width="0.5" />
-                        <!-- círculo central -->
-                        <circle cx="50" cy="50" r="8" fill="none"
-                                stroke="rgba(255,255,255,0.9)" stroke-width="0.5" />
-                        <circle cx="50" cy="50" r="0.9" fill="rgba(255,255,255,1)" />
-                        <!-- área grande arriba -->
-                        <rect x="25" y="2" width="50" height="10" fill="none"
-                              stroke="rgba(255,255,255,0.9)" stroke-width="0.5" />
-                        <!-- área grande abajo -->
-                        <rect x="25" y="88" width="50" height="10" fill="none"
-                              stroke="rgba(255,255,255,0.9)" stroke-width="0.5" />
-                        <!-- área pequeña arriba -->
-                        <rect x="38" y="2" width="24" height="4" fill="none"
-                              stroke="rgba(255,255,255,0.9)" stroke-width="0.4" />
-                        <!-- área pequeña abajo -->
-                        <rect x="38" y="94" width="24" height="4" fill="none"
-                              stroke="rgba(255,255,255,0.9)" stroke-width="0.4" />
-                      </svg>
-                      @for (p of positionedFor(t.numbers); track $index) {
-                        <div class="player" [style.left.%]="p.x" [style.top.%]="p.y">
-                          <span class="player__chip">{{ p.number }}</span>
+                    @if (printDesign() === 'professional') {
+                      <!-- ========== DISEÑO PROFESIONAL ========== -->
+                      <header class="pro-head">
+                        <div class="pro-head__brand">
+                          <div class="pro-head__eyebrow">★ GRAN RIFA ★</div>
+                          <div class="pro-head__name">{{ data().raffle_name }}</div>
                         </div>
-                      }
-                    </div>
-
-                    <div class="info">
-                      <div class="info-row">
-                        <span class="info-label">Sorteo final:</span>
-                        <strong>{{ formatDate(data().final_draw_date) }}</strong>
-                      </div>
-                      @if (data().lottery_name) {
-                        <div class="info-row">
-                          <span class="info-label">Lotería:</span>
-                          <strong>{{ data().lottery_name }}</strong>
+                        <div class="pro-head__label">
+                          <small>BOLETA</small>
+                          <strong>{{ t.number_label }}</strong>
                         </div>
-                      }
-                      @if (data().prizes.length) {
-                        <div class="prizes">
-                          <div class="info-label">Premios:</div>
-                          @for (p of data().prizes; track p.position) {
-                            <div class="prize-row">
-                              <span>{{ p.position }}. {{ p.name }}</span>
-                              <span class="muted">{{ formatDate(p.draw_date) }}</span>
+                      </header>
+
+                      <div class="pro-body">
+                        <!-- Lado izquierdo: TV ilustrado sin marca -->
+                        <div class="pro-tv">
+                          <svg viewBox="0 0 130 100" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+                            <defs>
+                              <linearGradient [attr.id]="'tvScreen-' + t.ticket_id" x1="0" x2="0" y1="0" y2="1">
+                                <stop offset="0%" stop-color="#0a1a2e" />
+                                <stop offset="60%" stop-color="#050d18" />
+                                <stop offset="100%" stop-color="#02060c" />
+                              </linearGradient>
+                              <radialGradient [attr.id]="'tvGlow-' + t.ticket_id" cx="50%" cy="40%" r="55%">
+                                <stop offset="0%" stop-color="rgba(212,168,87,0.35)" />
+                                <stop offset="100%" stop-color="rgba(212,168,87,0)" />
+                              </radialGradient>
+                            </defs>
+                            <!-- Marco -->
+                            <rect x="6" y="4" width="118" height="80" rx="3" fill="#0a0a0a" />
+                            <rect x="10" y="8" width="110" height="72" rx="1.5"
+                                  [attr.fill]="'url(#tvScreen-' + t.ticket_id + ')'" />
+                            <rect x="10" y="8" width="110" height="72" rx="1.5"
+                                  [attr.fill]="'url(#tvGlow-' + t.ticket_id + ')'" />
+                            <!-- "50"" en pantalla -->
+                            <text x="65" y="48" text-anchor="middle"
+                                  font-family="Inter, sans-serif"
+                                  font-weight="900" font-size="20"
+                                  fill="rgba(212,168,87,0.55)">50"</text>
+                            <text x="65" y="62" text-anchor="middle"
+                                  font-family="Inter, sans-serif"
+                                  font-weight="700" font-size="6"
+                                  letter-spacing="2"
+                                  fill="rgba(212,168,87,0.7)">ULTRA HD</text>
+                            <!-- Base/stand -->
+                            <rect x="58" y="84" width="14" height="3" fill="#0a0a0a" />
+                            <polygon points="40,92 90,92 80,98 50,98" fill="#0a0a0a" />
+                          </svg>
+                          <div class="pro-tv__caption">TELEVISOR 50"</div>
+                        </div>
+
+                        <!-- Lado derecho: 20 números en grilla 5x4 -->
+                        <div class="pro-numbers">
+                          <div class="pro-numbers__title">TUS NÚMEROS</div>
+                          <div class="pro-numbers__grid">
+                            @for (n of t.numbers; track $index) {
+                              <span class="pro-num">{{ n }}</span>
+                            }
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Info: premios -->
+                      <div class="pro-prizes">
+                        @for (p of data().prizes; track p.position) {
+                          <div class="pro-prize" [class.pro-prize--main]="p.position === 1">
+                            <span class="pro-prize__dot">{{ p.position === 1 ? '★' : '•' }}</span>
+                            <span class="pro-prize__name">{{ p.name }}</span>
+                            <span class="pro-prize__date">{{ formatShortDate(p.draw_date) }}</span>
+                          </div>
+                        }
+                      </div>
+
+                      <!-- Footer: QR + responsable + valor -->
+                      <footer class="pro-foot">
+                        <img class="pro-foot__qr" [src]="t.qrPromo" alt="Verifica tu boleta en línea" />
+                        <div class="pro-foot__info">
+                          @if (data().lottery_name) {
+                            <div class="pro-foot__line">
+                              <small>Juega con:</small>
+                              <strong>{{ data().lottery_name }}</strong>
                             </div>
                           }
-                        </div>
-                      }
-                      @if (data().responsible_name) {
-                        <div class="info-row resp">
-                          <span class="info-label">Responsable:</span>
-                          <strong>{{ data().responsible_name }}</strong>
-                          @if (data().responsible_phone) {
-                            <span> · {{ data().responsible_phone }}</span>
+                          @if (data().responsible_name) {
+                            <div class="pro-foot__line">
+                              <small>Responsable:</small>
+                              <strong>{{ data().responsible_name }}</strong>
+                              @if (data().responsible_phone) {
+                                <span class="pro-foot__phone">· {{ data().responsible_phone }}</span>
+                              }
+                            </div>
                           }
+                          <div class="pro-foot__line">
+                            <small>Sorteo final:</small>
+                            <strong>{{ formatDate(data().final_draw_date) }}</strong>
+                          </div>
+                          <div class="pro-foot__code">Cód: {{ t.short_code }}</div>
                         </div>
-                      }
-                      <div class="verify">Verifica en línea escaneando el QR</div>
-                    </div>
+                        <div class="pro-foot__price">
+                          <small>VALOR</small>
+                          <strong>{{ '$' + fmt(data().ticket_price) }}</strong>
+                        </div>
+                      </footer>
 
-                    <!-- Watermark sutil -->
-                    <div class="watermark" aria-hidden="true">{{ data().raffle_name }}</div>
+                      <!-- Watermark "RIFA OFICIAL" -->
+                      <div class="pro-watermark" aria-hidden="true">RIFA OFICIAL</div>
+
+                    } @else {
+                      <!-- ========== DISEÑO SOCCER (default) ========== -->
+                      <header class="ticket-head">
+                        <div>
+                          <div class="ticket-eyebrow">Boleta</div>
+                          <div class="ticket-label">{{ formatLabel(t.number_label) }}</div>
+                        </div>
+                        <img class="qr small" [src]="t.qrPromo" alt="Escanea para verificar tu boleta en línea" />
+                      </header>
+
+                      <div class="raffle-name">
+                        <span class="raffle-name__txt">{{ data().raffle_name }}</span>
+                        <span class="raffle-name__price">{{ '$' + fmt(data().ticket_price) }}</span>
+                      </div>
+
+                      <div class="field" aria-label="Cancha con los 20 números">
+                        <svg class="field__lines" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                          <rect x="2" y="2" width="96" height="96" fill="none"
+                                stroke="rgba(255,255,255,0.9)" stroke-width="0.6" />
+                          <line x1="2" y1="50" x2="98" y2="50"
+                                stroke="rgba(255,255,255,0.9)" stroke-width="0.5" />
+                          <circle cx="50" cy="50" r="8" fill="none"
+                                  stroke="rgba(255,255,255,0.9)" stroke-width="0.5" />
+                          <circle cx="50" cy="50" r="0.9" fill="rgba(255,255,255,1)" />
+                          <rect x="25" y="2" width="50" height="10" fill="none"
+                                stroke="rgba(255,255,255,0.9)" stroke-width="0.5" />
+                          <rect x="25" y="88" width="50" height="10" fill="none"
+                                stroke="rgba(255,255,255,0.9)" stroke-width="0.5" />
+                          <rect x="38" y="2" width="24" height="4" fill="none"
+                                stroke="rgba(255,255,255,0.9)" stroke-width="0.4" />
+                          <rect x="38" y="94" width="24" height="4" fill="none"
+                                stroke="rgba(255,255,255,0.9)" stroke-width="0.4" />
+                        </svg>
+                        @for (p of positionedFor(t.numbers); track $index) {
+                          <div class="player" [style.left.%]="p.x" [style.top.%]="p.y">
+                            <span class="player__chip">{{ p.number }}</span>
+                          </div>
+                        }
+                      </div>
+
+                      <div class="info">
+                        <div class="info-row">
+                          <span class="info-label">Sorteo final:</span>
+                          <strong>{{ formatDate(data().final_draw_date) }}</strong>
+                        </div>
+                        @if (data().lottery_name) {
+                          <div class="info-row">
+                            <span class="info-label">Lotería:</span>
+                            <strong>{{ data().lottery_name }}</strong>
+                          </div>
+                        }
+                        @if (data().prizes.length) {
+                          <div class="prizes">
+                            <div class="info-label">Premios:</div>
+                            @for (p of data().prizes; track p.position) {
+                              <div class="prize-row">
+                                <span>{{ p.position }}. {{ p.name }}</span>
+                                <span class="muted">{{ formatDate(p.draw_date) }}</span>
+                              </div>
+                            }
+                          </div>
+                        }
+                        @if (data().responsible_name) {
+                          <div class="info-row resp">
+                            <span class="info-label">Responsable:</span>
+                            <strong>{{ data().responsible_name }}</strong>
+                            @if (data().responsible_phone) {
+                              <span> · {{ data().responsible_phone }}</span>
+                            }
+                          </div>
+                        }
+                        <div class="verify">Verifica en línea escaneando el QR</div>
+                      </div>
+
+                      <div class="watermark" aria-hidden="true">{{ data().raffle_name }}</div>
+                    }
                   </div>
                 </article>
               }
@@ -566,6 +670,296 @@ interface RenderedTicket extends PrintTicket {
       overflow: hidden;
     }
 
+    /* ============================================================
+       DISEÑO PROFESIONAL — boleta clásica de rifa, premium
+       Aplica solo a .ticket--pro. El talón superior se mantiene
+       idéntico al diseño soccer (mismas líneas para escribir, mismo QR).
+       ============================================================ */
+    .ticket--pro {
+      background: #fffdf7;
+      position: relative;
+      padding: 0 !important;
+      gap: 0 !important;
+      print-color-adjust: exact;
+      -webkit-print-color-adjust: exact;
+    }
+    .ticket--pro .pro-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.08in 0.12in;
+      background: linear-gradient(135deg, #1a1a2e 0%, #2a2a4a 100%);
+      color: #fff;
+      border-bottom: 2px solid #d4a857;
+      print-color-adjust: exact;
+      -webkit-print-color-adjust: exact;
+    }
+    .pro-head__brand { flex: 1; min-width: 0; }
+    .pro-head__eyebrow {
+      font-size: 6.5pt;
+      letter-spacing: 0.18em;
+      color: #d4a857;
+      font-weight: 700;
+    }
+    .pro-head__name {
+      font-family: 'Inter', Georgia, serif;
+      font-weight: 800;
+      font-size: 10.5pt;
+      line-height: 1.15;
+      margin-top: 1pt;
+      color: #fff;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .pro-head__label {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      flex-shrink: 0;
+      padding-left: 8pt;
+    }
+    .pro-head__label small {
+      font-size: 6pt;
+      letter-spacing: 0.16em;
+      color: #d4a857;
+      font-weight: 600;
+    }
+    .pro-head__label strong {
+      font-family: 'Inter', sans-serif;
+      font-weight: 900;
+      font-size: 16pt;
+      line-height: 1;
+      color: #fff;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* === Body: TV a la izquierda, números a la derecha === */
+    .pro-body {
+      display: grid;
+      grid-template-columns: 38% 62%;
+      gap: 0;
+      padding: 0.1in 0.12in;
+      background: linear-gradient(180deg, #fffdf7 0%, #fbf6e9 100%);
+      border-bottom: 1px dashed #d4a857;
+      print-color-adjust: exact;
+      -webkit-print-color-adjust: exact;
+    }
+    .pro-tv {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 4pt 4pt 4pt 0;
+      border-right: 1px dashed rgba(212,168,87,0.4);
+    }
+    .pro-tv svg {
+      width: 100%;
+      max-width: 1.2in;
+      height: auto;
+      filter: drop-shadow(0 2pt 3pt rgba(0,0,0,0.18));
+    }
+    .pro-tv__caption {
+      margin-top: 3pt;
+      font-size: 6.5pt;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      color: #1a1a2e;
+      text-align: center;
+    }
+
+    .pro-numbers {
+      padding: 2pt 0 2pt 8pt;
+      display: flex;
+      flex-direction: column;
+      gap: 4pt;
+      min-height: 0;
+    }
+    .pro-numbers__title {
+      font-size: 6.5pt;
+      letter-spacing: 0.16em;
+      color: #b88a35;
+      font-weight: 800;
+      text-align: center;
+      padding-bottom: 3pt;
+      border-bottom: 1px solid rgba(212,168,87,0.45);
+    }
+    .pro-numbers__grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 2.5pt;
+    }
+    .pro-num {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 3pt 2pt;
+      background: #ffffff;
+      border: 1px solid #1a1a2e;
+      border-radius: 2pt;
+      font-family: 'Inter', sans-serif;
+      font-weight: 800;
+      font-size: 8.5pt;
+      color: #1a1a2e;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 0.02em;
+      box-shadow: inset 0 -1pt 0 rgba(0,0,0,0.06);
+      print-color-adjust: exact;
+      -webkit-print-color-adjust: exact;
+    }
+
+    /* === Premios === */
+    .pro-prizes {
+      padding: 0.06in 0.12in 0.04in;
+      display: grid;
+      gap: 1.5pt;
+      background: #fffdf7;
+    }
+    .pro-prize {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 4pt;
+      align-items: center;
+      padding: 2pt 5pt;
+      font-size: 7pt;
+      color: #1a1a2e;
+      border-radius: 2pt;
+    }
+    .pro-prize__dot {
+      font-size: 7pt;
+      color: #b88a35;
+      width: 8pt;
+      text-align: center;
+    }
+    .pro-prize__name {
+      font-weight: 600;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .pro-prize__date {
+      font-size: 6.5pt;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      color: #b88a35;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+    .pro-prize--main {
+      background: linear-gradient(135deg, #fff3d6 0%, #ffe6b3 100%);
+      border: 1px solid #d4a857;
+    }
+    .pro-prize--main .pro-prize__dot { font-size: 9pt; color: #b88a35; }
+    .pro-prize--main .pro-prize__name { font-weight: 800; color: #6e4a14; }
+    .pro-prize--main .pro-prize__date {
+      background: #1a1a2e;
+      color: #d4a857;
+      padding: 1.5pt 5pt;
+      border-radius: 999px;
+    }
+
+    /* === Footer: QR + info + valor === */
+    .pro-foot {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 0.1in;
+      padding: 0.08in 0.12in 0.1in;
+      align-items: center;
+      background: linear-gradient(180deg, #fbf6e9 0%, #f6efd9 100%);
+      border-top: 1px dashed #d4a857;
+    }
+    .pro-foot__qr {
+      width: 0.7in;
+      height: 0.7in;
+      border: 1.5px solid #d4a857;
+      border-radius: 3pt;
+      padding: 2pt;
+      background: #fff;
+      image-rendering: pixelated;
+    }
+    .pro-foot__info {
+      display: flex;
+      flex-direction: column;
+      gap: 1pt;
+      min-width: 0;
+      font-size: 6.5pt;
+    }
+    .pro-foot__line {
+      display: flex;
+      gap: 3pt;
+      align-items: baseline;
+      color: #1a1a2e;
+    }
+    .pro-foot__line small {
+      font-size: 5.5pt;
+      letter-spacing: 0.08em;
+      color: #6e4a14;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+    .pro-foot__line strong {
+      font-weight: 700;
+      color: #1a1a2e;
+    }
+    .pro-foot__phone { color: #6e4a14; font-size: 6.5pt; }
+    .pro-foot__code {
+      font-family: 'Courier New', monospace;
+      font-size: 6pt;
+      letter-spacing: 0.1em;
+      color: #6e4a14;
+      padding-top: 1pt;
+    }
+    .pro-foot__price {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 4pt 8pt;
+      background: linear-gradient(135deg, #1a1a2e 0%, #2a2a4a 100%);
+      color: #fff;
+      border-radius: 3pt;
+      border: 1.5px solid #d4a857;
+      flex-shrink: 0;
+    }
+    .pro-foot__price small {
+      font-size: 5.5pt;
+      letter-spacing: 0.18em;
+      color: #d4a857;
+      font-weight: 700;
+    }
+    .pro-foot__price strong {
+      font-family: 'Inter', sans-serif;
+      font-size: 10pt;
+      font-weight: 900;
+      color: #fff;
+      margin-top: 1pt;
+    }
+
+    /* Watermark "RIFA OFICIAL" diagonal */
+    .pro-watermark {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) rotate(-25deg);
+      font-family: 'Inter', sans-serif;
+      font-weight: 900;
+      font-size: 28pt;
+      letter-spacing: 0.1em;
+      color: rgba(212, 168, 87, 0.07);
+      pointer-events: none;
+      white-space: nowrap;
+      z-index: 0;
+    }
+
+    /* Compactaciones del modo 6-por-hoja */
+    .page--six .ticket--pro .pro-head__name { font-size: 9pt; }
+    .page--six .ticket--pro .pro-head__label strong { font-size: 13pt; }
+    .page--six .ticket--pro .pro-tv svg { max-width: 0.9in; }
+    .page--six .ticket--pro .pro-num { font-size: 7pt; padding: 2pt 1pt; }
+    .page--six .ticket--pro .pro-foot__qr { width: 0.55in; height: 0.55in; }
+    .page--six .ticket--pro .pro-foot__price strong { font-size: 8.5pt; }
+    .page--six .ticket--pro .pro-watermark { font-size: 22pt; }
+
     /* === Modo impresión === */
     @media print {
       :host { background: #fff; padding: 0; }
@@ -592,6 +986,11 @@ export class TicketPrintSheetComponent implements OnInit {
   readonly origin = input<string>(typeof window !== 'undefined' ? window.location.origin : '');
   /** Cuántas boletas caben en cada hoja carta. 4 (2x2) o 6 (2x3). */
   readonly boletasPerPage = input<4 | 6>(4);
+  /** Diseño del cuerpo de la boleta:
+   *  - 'soccer'      → cancha de fútbol con números en formación 3-4-3 (default)
+   *  - 'professional' → boleta tradicional elegante: TV ilustrado + grilla
+   *    de 20 números + premios listados, estilo rifa clásica con toque premium. */
+  readonly printDesign = input<PrintDesign>('soccer');
 
   readonly loading = signal(true);
   private readonly rendered = signal<RenderedTicket[]>([]);
@@ -663,6 +1062,16 @@ export class TicketPrintSheetComponent implements OnInit {
     const d = new Date(iso + (iso.length === 10 ? 'T12:00:00' : ''));
     if (isNaN(d.getTime())) return iso;
     return d.toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' });
+  }
+
+  /** "2026-09-17" → "17 JUL". Compacto, usado en cards de premios del
+   *  diseño profesional. */
+  formatShortDate(iso: string): string {
+    const d = new Date(iso + (iso.length === 10 ? 'T12:00:00' : ''));
+    if (isNaN(d.getTime())) return iso;
+    const day = String(d.getDate()).padStart(2, '0');
+    const months = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
+    return `${day} ${months[d.getMonth()]}`;
   }
 
   /**

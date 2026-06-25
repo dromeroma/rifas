@@ -7,6 +7,7 @@ import { ToastService } from '@core/services/toast.service';
 
 import {
   PrintData,
+  PrintDesign,
   TicketPrintSheetComponent,
 } from './ticket-print-sheet.component';
 
@@ -41,6 +42,25 @@ import {
           }
         </div>
         <div class="right">
+          <div class="seg" role="group" aria-label="Diseño de la boleta">
+            <span class="seg__label">Diseño:</span>
+            <button
+              type="button"
+              class="seg__opt"
+              [class.seg__opt--on]="design() === 'soccer'"
+              (click)="design.set('soccer')"
+              title="Cancha de fútbol con números en formación">
+              Cancha
+            </button>
+            <button
+              type="button"
+              class="seg__opt"
+              [class.seg__opt--on]="design() === 'professional'"
+              (click)="design.set('professional')"
+              title="Boleta tradicional elegante: TV + grilla de números">
+              Profesional
+            </button>
+          </div>
           <div class="seg" role="group" aria-label="Boletas por hoja">
             <span class="seg__label">Por hoja:</span>
             <button
@@ -91,7 +111,11 @@ import {
             <button class="btn ghost" (click)="goBack()">Volver</button>
           </div>
         } @else {
-          <app-ticket-print-sheet [data]="data()!" [boletasPerPage]="perPage()" />
+          <app-ticket-print-sheet
+            [data]="data()!"
+            [boletasPerPage]="perPage()"
+            [printDesign]="design()"
+          />
         }
       }
     </div>
@@ -253,6 +277,10 @@ export class TicketPrintPageComponent implements OnInit {
   /** 4 (default, 2x2) o 6 (2x3) boletas por hoja carta. Lo controla el
    *  toggle de la toolbar; el sheet re-renderiza en vivo al cambiarlo. */
   readonly perPage = signal<4 | 6>(4);
+  /** Diseño del cuerpo: 'soccer' (cancha de fútbol, default) o
+   *  'professional' (boleta clásica elegante con TV ilustrado + grilla
+   *  de 20 números). Toggle en la toolbar. */
+  readonly design = signal<PrintDesign>('soccer');
 
   private raffleId = 0;
   private sellerId = 0;
