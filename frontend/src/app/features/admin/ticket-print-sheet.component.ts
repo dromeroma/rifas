@@ -327,14 +327,18 @@ export type PrintDesign = 'soccer' | 'professional';
                         }
                       </div>
 
-                      <!-- Premios: header con título + chip VALOR; cada fila
-                           tiene fecha a la izquierda + dot + nombre -->
+                      <!-- Premios: header con título + chip VALOR (con
+                           estrellitas a los lados); cada fila tiene fecha
+                           a la izq + dot + nombre + dotted leader que llena
+                           el espacio sobrante -->
                       <div class="pro-prizes">
                         <div class="pro-prizes__head">
                           <span class="pro-prizes__title">PREMIOS Y SORTEOS</span>
                           <span class="pro-prizes__value">
+                            <span class="pro-prizes__star" aria-hidden="true">✦</span>
                             <small>VALOR</small>
                             <strong>{{ '$' + fmt(data().ticket_price) }}</strong>
+                            <span class="pro-prizes__star" aria-hidden="true">✦</span>
                           </span>
                         </div>
                         @for (p of data().prizes; track p.position) {
@@ -342,6 +346,7 @@ export type PrintDesign = 'soccer' | 'professional';
                             <span class="pro-prize__date">{{ formatShortDate(p.draw_date) }}</span>
                             <span class="pro-prize__dot">{{ p.position === 1 ? '★' : '•' }}</span>
                             <span class="pro-prize__name">{{ p.name }}</span>
+                            <span class="pro-prize__leader" aria-hidden="true"></span>
                           </div>
                         }
                       </div>
@@ -943,11 +948,12 @@ export type PrintDesign = 'soccer' | 'professional';
       color: #c9a96e;
       font-weight: 700;
       margin-bottom: 2pt;
+      font-size: 7pt;
     }
     .pro-head__name {
       font-family: 'Inter', Georgia, serif;
       font-weight: 800;
-      font-size: 11pt;
+      font-size: 12.5pt;
       line-height: 1.1;
       color: #f8f1e3;
       overflow: hidden;
@@ -960,14 +966,14 @@ export type PrintDesign = 'soccer' | 'professional';
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 4pt 9pt;
+      padding: 5pt 11pt;
       background: rgba(201, 169, 110, 0.18);
       border: 1px solid #c9a96e;
       border-radius: 3pt;
       flex-shrink: 0;
     }
     .pro-head__label small {
-      font-size: 5.5pt;
+      font-size: 6pt;
       letter-spacing: 0.22em;
       color: #c9a96e;
       font-weight: 700;
@@ -975,7 +981,7 @@ export type PrintDesign = 'soccer' | 'professional';
     .pro-head__label strong {
       font-family: 'Inter', sans-serif;
       font-weight: 900;
-      font-size: 15pt;
+      font-size: 17pt;
       line-height: 1;
       color: #f8f1e3;
       font-variant-numeric: tabular-nums;
@@ -1020,7 +1026,7 @@ export type PrintDesign = 'soccer' | 'professional';
       display: block;
       width: 100%;
       height: auto;
-      max-height: 1.4in;
+      max-height: 1.65in;
       object-fit: contain;
       mix-blend-mode: multiply;
       filter: drop-shadow(0 1.5pt 3pt rgba(26, 41, 66, 0.18));
@@ -1031,14 +1037,14 @@ export type PrintDesign = 'soccer' | 'professional';
       display: flex;
       align-items: center;
       justify-content: center;
-      height: 17pt;
-      padding: 0 2pt;
+      height: 20pt;
+      padding: 0 3pt;
       background: linear-gradient(180deg, #ffffff 0%, #f8f1e3 100%);
-      border: 1.2px solid #1a2942;
+      border: 1.3px solid #1a2942;
       border-radius: 3pt;
       font-family: 'Inter', sans-serif;
       font-weight: 800;
-      font-size: 9pt;
+      font-size: 10.5pt;
       color: #1a2942;
       font-variant-numeric: tabular-nums;
       letter-spacing: 0.02em;
@@ -1050,11 +1056,12 @@ export type PrintDesign = 'soccer' | 'professional';
       -webkit-print-color-adjust: exact;
     }
 
-    /* === Premios compactos + VALOR sutil + fila con bg lleno === */
+    /* === Premios: header con VALOR encerrado en estrellitas champagne,
+       cada fila con dotted leader que llena el espacio derecho === */
     .pro-prizes {
-      padding: 0.05in 0.14in 0.04in;
+      padding: 0.07in 0.14in 0.06in;
       display: grid;
-      gap: 1.5pt;
+      gap: 2.5pt;
       background:
         linear-gradient(180deg, #f8f1e3 0%, #ede2c8 100%);
       position: relative;
@@ -1062,28 +1069,38 @@ export type PrintDesign = 'soccer' | 'professional';
     }
     .pro-prizes__head {
       display: flex;
-      align-items: baseline;
+      align-items: center;
       justify-content: space-between;
       gap: 8pt;
-      padding-bottom: 2.5pt;
-      margin-bottom: 0.5pt;
+      padding-bottom: 4pt;
+      margin-bottom: 1pt;
       border-bottom: 0.5px dashed #b89656;
     }
     .pro-prizes__title {
-      font-size: 6.5pt;
-      letter-spacing: 0.18em;
+      font-size: 8pt;
+      letter-spacing: 0.2em;
       color: #1a2942;
       font-weight: 900;
       text-transform: uppercase;
     }
-    /* VALOR ahora es texto inline elegante en vez de chip pesado */
+    /* VALOR enmarcado por estrellitas champagne — recuadro elegante */
     .pro-prizes__value {
       display: inline-flex;
-      align-items: baseline;
-      gap: 4pt;
+      align-items: center;
+      gap: 5pt;
+      padding: 2.5pt 9pt;
+      background: rgba(255, 255, 255, 0.55);
+      border: 0.8px solid #c9a96e;
+      border-radius: 3pt;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.6);
+    }
+    .pro-prizes__star {
+      font-size: 7pt;
+      color: #c9a96e;
+      line-height: 1;
     }
     .pro-prizes__value small {
-      font-size: 5.5pt;
+      font-size: 6.5pt;
       letter-spacing: 0.18em;
       color: #1a2942;
       font-weight: 800;
@@ -1091,33 +1108,32 @@ export type PrintDesign = 'soccer' | 'professional';
     }
     .pro-prizes__value strong {
       font-family: 'Inter', sans-serif;
-      font-size: 10pt;
+      font-size: 12pt;
       font-weight: 900;
       color: #7a2f3a;
       letter-spacing: 0.01em;
     }
 
-    /* Fila de premio: el name ocupa todo el espacio restante (no se ven
-       huecos a la derecha), todas con bg sutil para look de card */
+    /* Fila de premio: dotted leader llena el hueco a la derecha del nombre */
     .pro-prize {
       display: grid;
-      grid-template-columns: auto auto 1fr;
-      gap: 5pt;
+      grid-template-columns: auto auto auto 1fr;
+      gap: 6pt;
       align-items: center;
-      padding: 2pt 6pt;
-      font-size: 7pt;
+      padding: 3pt 7pt;
+      font-size: 8pt;
       color: #252830;
       border-radius: 2pt;
-      background: rgba(255, 255, 255, 0.45);
+      background: rgba(255, 255, 255, 0.5);
       border: 0.5px solid rgba(184, 150, 86, 0.3);
     }
     .pro-prize__date {
-      font-size: 6.5pt;
+      font-size: 7.5pt;
       font-weight: 800;
       letter-spacing: 0.08em;
       color: #f8f1e3;
       background: #1a2942;
-      padding: 1pt 5pt;
+      padding: 2pt 7pt;
       border-radius: 999px;
       font-variant-numeric: tabular-nums;
       white-space: nowrap;
@@ -1125,17 +1141,24 @@ export type PrintDesign = 'soccer' | 'professional';
       -webkit-print-color-adjust: exact;
     }
     .pro-prize__dot {
-      font-size: 7pt;
+      font-size: 9pt;
       color: #b89656;
-      width: 7pt;
+      width: 9pt;
       text-align: center;
     }
     .pro-prize__name {
       font-weight: 600;
-      overflow: hidden;
-      text-overflow: ellipsis;
       white-space: nowrap;
       letter-spacing: 0.01em;
+    }
+    /* Dotted leader: línea de puntos champagne que llena el espacio
+       restante en la fila, alineada al baseline del nombre */
+    .pro-prize__leader {
+      align-self: end;
+      height: 7pt;
+      border-bottom: 0.7pt dotted #b89656;
+      margin-bottom: 2pt;
+      min-width: 12pt;
     }
     /* Premio principal destacado */
     .pro-prize--main {
@@ -1147,7 +1170,7 @@ export type PrintDesign = 'soccer' | 'professional';
         0 1pt 2pt rgba(184, 150, 86, 0.2);
     }
     .pro-prize--main .pro-prize__dot {
-      font-size: 9pt;
+      font-size: 11pt;
       color: #7a2f3a;
     }
     .pro-prize--main .pro-prize__name {
@@ -1159,13 +1182,16 @@ export type PrintDesign = 'soccer' | 'professional';
         linear-gradient(135deg, #1a2942 0%, #2a3a5a 100%);
       letter-spacing: 0.1em;
     }
+    .pro-prize--main .pro-prize__leader {
+      border-bottom-color: #7a2f3a;
+    }
 
-    /* === Footer compacto: QR + info, sin VALOR (está arriba) === */
+    /* === Footer: QR + info más grandes para PDF legible === */
     .pro-foot {
       display: grid;
       grid-template-columns: auto 1fr;
-      column-gap: 0.14in;
-      padding: 0.05in 0.14in 0.06in;
+      column-gap: 0.16in;
+      padding: 0.07in 0.14in 0.08in;
       align-items: center;
       background:
         linear-gradient(180deg, #ede2c8 0%, #d4c19a 100%);
@@ -1173,19 +1199,18 @@ export type PrintDesign = 'soccer' | 'professional';
       position: relative;
       z-index: 1;
     }
-    /* Caja del QR con caption */
     .pro-foot__qr-box {
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 1pt;
+      gap: 2pt;
     }
     .pro-foot__qr {
-      width: 0.6in;
-      height: 0.6in;
-      border: 1px solid #b89656;
-      border-radius: 2pt;
-      padding: 1pt;
+      width: 0.75in;
+      height: 0.75in;
+      border: 1.3px solid #b89656;
+      border-radius: 2.5pt;
+      padding: 1.5pt;
       background: #fff;
       image-rendering: pixelated;
       box-shadow:
@@ -1193,7 +1218,7 @@ export type PrintDesign = 'soccer' | 'professional';
         0 1pt 2pt rgba(0,0,0,0.12);
     }
     .pro-foot__qr-caption {
-      font-size: 4.5pt;
+      font-size: 5pt;
       letter-spacing: 0.14em;
       color: #1a2942;
       font-weight: 700;
@@ -1215,7 +1240,7 @@ export type PrintDesign = 'soccer' | 'professional';
       display: contents; /* permite que label+value compartan la misma row del parent grid */
     }
     .pro-foot__label {
-      font-size: 5.5pt;
+      font-size: 6.5pt;
       letter-spacing: 0.14em;
       color: #1a2942;
       font-weight: 800;
@@ -1225,7 +1250,7 @@ export type PrintDesign = 'soccer' | 'professional';
       padding-top: 1pt;
     }
     .pro-foot__value {
-      font-size: 7pt;
+      font-size: 8pt;
       font-weight: 700;
       color: #252830;
       overflow: hidden;
@@ -1238,7 +1263,7 @@ export type PrintDesign = 'soccer' | 'professional';
       font-family: 'Courier New', monospace;
       letter-spacing: 0.12em;
       color: #7a2f3a;
-      font-size: 6.5pt;
+      font-size: 7.5pt;
     }
     /* Separador antes del código (línea dorada sutil entre filas) */
     .pro-foot__row--code .pro-foot__label,
