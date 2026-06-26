@@ -1026,7 +1026,7 @@ export type PrintDesign = 'soccer' | 'professional';
       display: block;
       width: 100%;
       height: auto;
-      max-height: 1.65in;
+      max-height: 1.2in;
       object-fit: contain;
       mix-blend-mode: multiply;
       filter: drop-shadow(0 1.5pt 3pt rgba(26, 41, 66, 0.18));
@@ -1325,10 +1325,29 @@ export type PrintDesign = 'soccer' | 'professional';
         margin: 0;
         padding: 0.35in 0.3in;
         width: 100%;
-        min-height: 100vh;
+        /* Altura exacta de carta — sin 100vh que cambia con zoom del PDF */
+        height: 11in;
+        min-height: 11in;
+        max-height: 11in;
+        overflow: hidden;
+        box-sizing: border-box;
       }
       .page-header {
         font-size: 8pt;
+      }
+      /* Grid con altura exacta = altura útil de la hoja después de header
+         + padding. Cada fila tiene altura fija (no fr) para garantizar
+         que el browser no estire una boleta más allá de su mitad y mande
+         las demás a páginas nuevas. */
+      .grid {
+        height: calc(11in - 0.7in - 0.4in);
+        grid-template-rows: repeat(2, 1fr);
+      }
+      /* Si el contenido de una boleta excede su celda, se recorta en vez
+         de empujar las siguientes a otra página (manteniendo 4/6 por hoja). */
+      .boleta {
+        overflow: hidden;
+        min-height: 0;
       }
       @page {
         size: letter;
