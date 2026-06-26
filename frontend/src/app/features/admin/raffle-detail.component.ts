@@ -990,8 +990,11 @@ export class RaffleDetailComponent implements OnInit {
 
   // Imprimir boletas por rango (sin importar vendedor)
   rangePrintOpen = signal(false);
-  rangeFrom = '';
-  rangeTo = '';
+  // Aunque inicializamos con string, Angular's NumberValueAccessor convierte
+  // los inputs type="number" a number cuando el usuario edita. Tipamos como
+  // union para que TypeScript refleje la realidad y forzemos String() en uso.
+  rangeFrom: string | number = '';
+  rangeTo: string | number = '';
   rangeError = signal<string | null>(null);
 
   // Editar rifa
@@ -1283,14 +1286,19 @@ export class RaffleDetailComponent implements OnInit {
   submitRangePrint() {
     const r = this.raffle();
     if (!r) return;
-    const from = this.rangeFrom.trim();
-    const to = this.rangeTo.trim();
+    // Coerción a string defensiva: Angular's NumberValueAccessor convierte
+    // los inputs type="number" a número en runtime cuando el usuario edita
+    // el valor. Si rangeFrom queda como number (ej. 101), llamar .trim()
+    // tira TypeError y el handler se bloquea silenciosamente. Con String()
+    // garantizamos que siempre sea string, sin importar el flujo.
+    const from = String(this.rangeFrom ?? '').trim();
+    const to = String(this.rangeTo ?? '').trim();
     if (!from || !to) {
       this.rangeError.set('Debes indicar desde y hasta.');
       return;
     }
     if (!/^\d+$/.test(from) || !/^\d+$/.test(to)) {
-      this.rangeError.set('Los valores deben ser números.');
+      this.rangeError.set('Los valores deben ser números enteros.');
       return;
     }
     const fromN = Number(from);
