@@ -517,15 +517,38 @@ export type PrintDesign = 'soccer' | 'professional';
       border-bottom: 1px dashed #d1d5db;
       margin-bottom: 0.08in;
     }
-    .brand { display: flex; align-items: center; gap: 0.4em; }
+    /* .brand y .page-meta forzados a una sola línea con nowrap. .brand
+       puede ellipsizar si el nombre de la rifa es muy largo, .page-meta
+       no se reduce porque el nombre del vendedor + número de hoja son
+       críticos para identificar a quién pertenece la hoja. */
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.4em;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      min-width: 0;
+      flex-shrink: 1;
+    }
     .brand .dot {
       display: inline-block;
       width: 0.5em; height: 0.5em;
       background: #1ec77b;
       border-radius: 50%;
+      flex-shrink: 0;
     }
-    .muted { color: #9ca3af; }
-    .page-meta { display: flex; gap: 1em; }
+    .muted {
+      color: #9ca3af;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .page-meta {
+      display: flex;
+      gap: 1em;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
 
     /* === Grilla 2x2 (4 boletas por hoja, default) ===
        grid-template-rows: minmax(0, 1fr) minmax(0, 1fr) garantiza que
@@ -1209,12 +1232,16 @@ export type PrintDesign = 'soccer' | 'professional';
       border-bottom-color: #7a2f3a;
     }
 
-    /* === Footer: QR + info compactos para que TODO quepa en media hoja === */
+    /* === Footer: QR + info compactos para que TODO quepa en media hoja ===
+       padding-bottom: 0.12in (era 0.04in) — el borde dorado inset del
+       boleta (::after, inset 4pt) cruzaba por el QR/caption porque el
+       qr-box llegaba casi hasta el borde inferior. Más padding bottom
+       sube el qr-box ~0.08in, dejándolo claramente arriba del borde. */
     .pro-foot {
       display: grid;
       grid-template-columns: auto 1fr;
       column-gap: 0.1in;
-      padding: 0.03in 0.1in 0.04in;
+      padding: 0.03in 0.1in 0.12in;
       align-items: center;
       background:
         linear-gradient(180deg, #ede2c8 0%, #d4c19a 100%);
