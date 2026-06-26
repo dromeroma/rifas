@@ -1083,34 +1083,40 @@ export type PrintDesign = 'soccer' | 'professional';
       font-weight: 900;
       text-transform: uppercase;
     }
-    /* VALOR enmarcado por estrellitas champagne — recuadro elegante */
+    /* VALOR con fondo navy + texto blanco/champagne para que el precio
+       resalte como el del header. Estrellitas champagne a los lados. */
     .pro-prizes__value {
       display: inline-flex;
       align-items: center;
       gap: 5pt;
-      padding: 2.5pt 9pt;
-      background: rgba(255, 255, 255, 0.55);
-      border: 0.8px solid #c9a96e;
+      padding: 3pt 11pt;
+      background:
+        linear-gradient(135deg, #1a2942 0%, #2a3a5a 50%, #1a2942 100%);
+      border: 1px solid #c9a96e;
       border-radius: 3pt;
-      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.6);
+      box-shadow:
+        inset 0 0 0 1px rgba(201, 169, 110, 0.35),
+        0 1pt 2pt rgba(26, 41, 66, 0.2);
+      print-color-adjust: exact;
+      -webkit-print-color-adjust: exact;
     }
     .pro-prizes__star {
-      font-size: 7pt;
+      font-size: 7.5pt;
       color: #c9a96e;
       line-height: 1;
     }
     .pro-prizes__value small {
       font-size: 6.5pt;
-      letter-spacing: 0.18em;
-      color: #1a2942;
+      letter-spacing: 0.2em;
+      color: #c9a96e;
       font-weight: 800;
       text-transform: uppercase;
     }
     .pro-prizes__value strong {
       font-family: 'Inter', sans-serif;
-      font-size: 12pt;
+      font-size: 12.5pt;
       font-weight: 900;
-      color: #7a2f3a;
+      color: #ffffff;
       letter-spacing: 0.01em;
     }
 

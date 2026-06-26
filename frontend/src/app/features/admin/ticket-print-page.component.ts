@@ -289,9 +289,40 @@ export class TicketPrintPageComponent implements OnInit {
     const raffleIdRaw = this.route.snapshot.paramMap.get('raffleId');
     const sellerIdRaw = this.route.snapshot.paramMap.get('sellerId');
     this.raffleId = Number(raffleIdRaw);
-    this.sellerId = Number(sellerIdRaw);
 
-    if (!this.raffleId || !this.sellerId) {
+    if (!this.raffleId) {
+      this.error.set('URL inválida');
+      this.loading.set(false);
+      return;
+    }
+
+    // Detecta modo:
+    //   /admin/print/:raffleId/range?from=001&to=050 → modo rango
+    //   /admin/print/:raffleId/:sellerId           → modo vendedor
+    const isRangeMode = sellerIdRaw === 'range';
+    const fromLabel = this.route.snapshot.queryParamMap.get('from');
+    const toLabel = this.route.snapshot.queryParamMap.get('to');
+
+    if (isRangeMode) {
+      if (!fromLabel || !toLabel) {
+        this.error.set('Faltan los parámetros from y to en el rango.');
+        this.loading.set(false);
+        return;
+      }
+      this.sellerId = 0;
+      this.admin.printDataRange(this.raffleId, fromLabel, toLabel).subscribe({
+        next: (resp) => { this.data.set(resp as PrintData); this.loading.set(false); },
+        error: (e) => {
+          const detail = e?.error?.detail ?? 'No se pudieron cargar las boletas';
+          this.error.set(typeof detail === 'string' ? detail : 'Error cargando boletas');
+          this.loading.set(false);
+        },
+      });
+      return;
+    }
+
+    this.sellerId = Number(sellerIdRaw);
+    if (!this.sellerId) {
       this.error.set('URL inválida');
       this.loading.set(false);
       return;
@@ -324,7 +355,13 @@ export class TicketPrintPageComponent implements OnInit {
   }
 
   goBack(): void {
-    this.router.navigate(['/admin/assignments']);
+    // En modo rango (sellerId=0) regresa al detalle de la rifa; en modo
+    // vendedor regresa al listado de asignaciones que es donde nació el flujo.
+    if (this.sellerId === 0 && this.raffleId) {
+      this.router.navigate(['/admin/raffles', this.raffleId]);
+    } else {
+      this.router.navigate(['/admin/assignments']);
+    }
   }
 
   /** Marca como impresas en backend, abre el diálogo de impresión del browser. */

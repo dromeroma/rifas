@@ -148,6 +148,19 @@ export class AdminService {
     return this.http.get(`${this.api}/raffles/${raffleId}/print-data${q}`);
   }
 
+  /** Boletas por rango (sin importar a quién están asignadas). */
+  printDataRange(
+    raffleId: number,
+    fromLabel: string,
+    toLabel: string,
+    onlyUnprinted = false,
+  ): Observable<unknown> {
+    const q =
+      `?from_label=${encodeURIComponent(fromLabel)}&to_label=${encodeURIComponent(toLabel)}` +
+      (onlyUnprinted ? '&only_unprinted=true' : '');
+    return this.http.get(`${this.api}/raffles/${raffleId}/print-data${q}`);
+  }
+
   /** Busca qué boleta contiene un número específico. El backend escopa
    *  automáticamente según rol: admin ve todo, seller solo lo suyo. */
   searchByNumber(raffleId: number, n: string): Observable<NumberSearchResult> {

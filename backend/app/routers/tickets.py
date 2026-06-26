@@ -543,30 +543,57 @@ async def get_print_data(
     db: Annotated[AsyncSession, Depends(get_db)],
     actor: Annotated[User, Depends(require_roles(UserRole.ADMIN, UserRole.SUPER_ADMIN))],
     scope: Annotated[TenantScope, Depends(get_tenant_scope)],
-    seller_id: int = Query(..., description="vendedor cuyas boletas se van a imprimir"),
+    seller_id: int | None = Query(None, description="boletas asignadas a este vendedor"),
+    from_label: str | None = Query(None, description="rango: número inicial (ej. '001')"),
+    to_label: str | None = Query(None, description="rango: número final (ej. '050')"),
     only_unprinted: bool = Query(False, description="solo boletas que no se han impreso aún"),
 ):
-    """Devuelve todo lo necesario para imprimir las boletas asignadas a un
-    vendedor en una rifa. El admin imprime en hojas carta (4 boletas por hoja).
-    Cada boleta lleva un desprendible (talón) que se queda con el vendedor con
-    el nombre y celular del cliente."""
+    """Devuelve todo lo necesario para imprimir boletas en hojas carta.
+
+    Dos modos de uso:
+      A) seller_id=X → todas las boletas asignadas al vendedor X (uso típico
+         cuando se le entregan los talones al vendedor).
+      B) from_label='001' & to_label='050' → rango de boletas
+         independiente de a quién están asignadas (uso del admin para
+         imprimir un sub-lote arbitrario para verificar / recuperar).
+    """
+    if seller_id is None and not (from_label and to_label):
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            "indica 'seller_id' o un rango 'from_label' + 'to_label'",
+        )
+
     raffle = await _verify_raffle_tenancy(db, raffle_id, scope)
 
-    seller = (await db.execute(select(User).where(User.id == seller_id))).scalar_one_or_none()
-    if not seller:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "vendedor no encontrado")
-    # El vendedor debe pertenecer al mismo tenant que la rifa.
-    if scope.tenant_id is not None and seller.tenant_id != scope.tenant_id:
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "el vendedor no pertenece a tu cuenta")
-    if seller.role != UserRole.SELLER:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "solo se imprimen boletas de vendedores")
+    seller = None
+    if seller_id is not None:
+        seller = (await db.execute(select(User).where(User.id == seller_id))).scalar_one_or_none()
+        if not seller:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "vendedor no encontrado")
+        if scope.tenant_id is not None and seller.tenant_id != scope.tenant_id:
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "el vendedor no pertenece a tu cuenta")
+        if seller.role != UserRole.SELLER:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "solo se imprimen boletas de vendedores")
 
     q = (
         select(Ticket)
         .options(selectinload(Ticket.numbers))
-        .where(Ticket.raffle_id == raffle_id, Ticket.seller_id == seller_id)
+        .where(Ticket.raffle_id == raffle_id)
         .order_by(Ticket.number_label)
     )
+    if seller_id is not None:
+        q = q.where(Ticket.seller_id == seller_id)
+    if from_label is not None and to_label is not None:
+        # Padding al ancho de la rifa para tolerar inputs como '1' o '01'
+        digits = int(raffle.number_digits or 4) if hasattr(raffle, "number_digits") else 4
+        # Usamos el ancho del number_label real (no number_digits, que es de los
+        # números individuales). Asumimos 3 dígitos por defecto.
+        fl = from_label.strip().zfill(3)
+        tl = to_label.strip().zfill(3)
+        # Asegurar rango ordenado
+        if fl > tl:
+            fl, tl = tl, fl
+        q = q.where(Ticket.number_label >= fl, Ticket.number_label <= tl)
     if only_unprinted:
         q = q.where(Ticket.printed_at.is_(None))
     tickets = (await db.execute(q)).scalars().all()
@@ -589,6 +616,19 @@ async def get_print_data(
         for t in tickets
     ]
 
+    # Cuando es por rango (no seller específico), describimos el lote como
+    # 'Rango N-M' en seller_name para que la cabecera del print muestre algo
+    # significativo en lugar de un vendedor.
+    if seller:
+        seller_label = seller.full_name
+        seller_phone_v = seller.phone
+        seller_id_v = seller.id
+    else:
+        seller_label = f"Rango {from_label}–{to_label}"
+        seller_phone_v = None
+        # 0 sirve como sentinel "no es un vendedor real" sin chocar con FKs
+        seller_id_v = 0
+
     return PrintDataResponse(
         raffle_id=raffle.id,
         raffle_name=raffle.name,
@@ -599,9 +639,9 @@ async def get_print_data(
         lottery_name=raffle.lottery_name,
         responsible_name=raffle.responsible_name,
         responsible_phone=raffle.responsible_phone,
-        seller_id=seller.id,
-        seller_name=seller.full_name,
-        seller_phone=seller.phone,
+        seller_id=seller_id_v,
+        seller_name=seller_label,
+        seller_phone=seller_phone_v,
         prizes=[
             {
                 "position": p.position,

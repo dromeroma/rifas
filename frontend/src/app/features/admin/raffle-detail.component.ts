@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 
 import { environment } from '@env/environment';
 import { Prize, Raffle, Ticket, TicketStatus } from '@core/models/raffle.model';
@@ -62,6 +62,9 @@ import { TicketActionsModalComponent } from '../seller/ticket-actions-modal.comp
               Liberar vencidas
             </app-button>
             @if (r.numbers_generated && r.status !== 'cancelled') {
+              <app-button variant="secondary" icon="print" (click)="openRangePrintModal()">
+                Imprimir por rango
+              </app-button>
               <app-button variant="primary" icon="emoji_events" (click)="openDrawModal(r)">
                 Registrar ganador
               </app-button>
@@ -202,6 +205,50 @@ import { TicketActionsModalComponent } from '../seller/ticket-actions-modal.comp
             <app-button variant="secondary" (click)="closeTiersModal()">Cancelar</app-button>
             <app-button variant="primary" icon="check" [loading]="savingTiers()" (click)="saveTiers()">
               {{ savingTiers() ? 'Guardando...' : 'Guardar tramos' }}
+            </app-button>
+          </ng-container>
+        </app-modal>
+
+        <!-- ============ MODAL: Imprimir boletas por rango ============ -->
+        <app-modal
+          [open]="rangePrintOpen()"
+          title="Imprimir boletas por rango"
+          subtitle="Imprime un sub-lote arbitrario (sin importar a qué vendedor estén asignadas)."
+          icon="print"
+          size="sm"
+          (close)="closeRangePrintModal()"
+        >
+          <form class="range-form" (ngSubmit)="$event.preventDefault(); submitRangePrint()">
+            <div class="range-form__row">
+              <label class="field">
+                <span>Desde</span>
+                <input type="number" min="1" [max]="r.total_tickets"
+                       [(ngModel)]="rangeFrom" name="from"
+                       inputmode="numeric" placeholder="001" />
+              </label>
+              <label class="field">
+                <span>Hasta</span>
+                <input type="number" min="1" [max]="r.total_tickets"
+                       [(ngModel)]="rangeTo" name="to"
+                       inputmode="numeric" placeholder="050" />
+              </label>
+            </div>
+            <small class="muted">
+              Total disponible: <strong>{{ r.total_tickets }}</strong> boletas
+              (de 001 a {{ r.total_tickets }}).
+            </small>
+            @if (rangeError()) {
+              <div class="alert">
+                <span class="material-icons">error_outline</span>
+                {{ rangeError() }}
+              </div>
+            }
+          </form>
+
+          <ng-container slot="footer">
+            <app-button variant="secondary" (click)="closeRangePrintModal()">Cancelar</app-button>
+            <app-button variant="primary" icon="print" (click)="submitRangePrint()">
+              Imprimir rango
             </app-button>
           </ng-container>
         </app-modal>
@@ -601,6 +648,47 @@ import { TicketActionsModalComponent } from '../seller/ticket-actions-modal.comp
     }
     .tier-pill strong .muted { color: var(--text-muted); font-weight: 400; font-size: 12px; }
 
+    /* ===== Modal Imprimir por rango ===== */
+    .range-form { display: grid; gap: var(--s-3); }
+    .range-form__row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--s-3);
+    }
+    .range-form .field { display: grid; gap: 6px; }
+    .range-form .field span {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .range-form .field input {
+      height: var(--h-input);
+      padding: 0 var(--s-3);
+      background: var(--bg-input);
+      border: 1px solid transparent;
+      color: var(--text);
+      border-radius: var(--r-md);
+      font-size: 18px;
+      font-weight: 700;
+      font-family: 'Inter', monospace;
+      text-align: center;
+      letter-spacing: 0.06em;
+    }
+    .range-form .field input:focus { outline: 0; border-color: var(--accent); }
+    .range-form .muted { font-size: 12px; color: var(--text-muted); }
+    .range-form .alert {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      padding: var(--s-3);
+      background: var(--danger-soft);
+      color: var(--danger);
+      border-radius: var(--r-md);
+      font-size: 13px;
+    }
+
     /* ===== Modal Editar tramos ===== */
     .tiers-form { display: grid; gap: var(--s-3); }
     .tier-edit-row {
@@ -853,6 +941,7 @@ import { TicketActionsModalComponent } from '../seller/ticket-actions-modal.comp
 })
 export class RaffleDetailComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly raffleSvc = inject(RaffleService);
   private readonly admin = inject(AdminService);
   private readonly ops = inject(OpsService);
@@ -898,6 +987,12 @@ export class RaffleDetailComponent implements OnInit {
   savingTiers = signal(false);
   tiersError = signal<string | null>(null);
   tiersEdit: { from_count: number; to_count: number | null; amount_per_ticket: number }[] = [];
+
+  // Imprimir boletas por rango (sin importar vendedor)
+  rangePrintOpen = signal(false);
+  rangeFrom = '';
+  rangeTo = '';
+  rangeError = signal<string | null>(null);
 
   // Editar rifa
   editOpen = signal(false);
@@ -1172,6 +1267,48 @@ export class RaffleDetailComponent implements OnInit {
   }
 
   closeTiersModal() { this.tiersModalOpen.set(false); }
+
+  /** Abre el modal de impresión por rango. Setea defaults (1 → total). */
+  openRangePrintModal() {
+    const r = this.raffle();
+    if (!r) return;
+    this.rangeFrom = '001';
+    this.rangeTo = String(r.total_tickets).padStart(3, '0');
+    this.rangeError.set(null);
+    this.rangePrintOpen.set(true);
+  }
+  closeRangePrintModal() { this.rangePrintOpen.set(false); }
+
+  /** Valida el rango y navega a la página de impresión en modo range. */
+  submitRangePrint() {
+    const r = this.raffle();
+    if (!r) return;
+    const from = this.rangeFrom.trim();
+    const to = this.rangeTo.trim();
+    if (!from || !to) {
+      this.rangeError.set('Debes indicar desde y hasta.');
+      return;
+    }
+    if (!/^\d+$/.test(from) || !/^\d+$/.test(to)) {
+      this.rangeError.set('Los valores deben ser números.');
+      return;
+    }
+    const fromN = Number(from);
+    const toN = Number(to);
+    if (fromN < 1 || toN < 1 || fromN > r.total_tickets || toN > r.total_tickets) {
+      this.rangeError.set(`El rango debe estar entre 1 y ${r.total_tickets}.`);
+      return;
+    }
+    if (fromN > toN) {
+      this.rangeError.set('"Desde" no puede ser mayor que "Hasta".');
+      return;
+    }
+    this.rangeError.set(null);
+    this.rangePrintOpen.set(false);
+    this.router.navigate(['/admin/print', r.id, 'range'], {
+      queryParams: { from: String(fromN).padStart(3, '0'), to: String(toN).padStart(3, '0') },
+    });
+  }
 
   addTierRow() {
     const last = this.tiersEdit[this.tiersEdit.length - 1];
