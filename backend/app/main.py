@@ -76,5 +76,6 @@ app.include_router(payments.router)
 app.include_router(audit.router)
 app.include_router(admin.router)
 app.include_router(verify.router)
+app.include_router(verify.short_router)  # /v/{code} → redirect a /r/:id?b=code
 app.include_router(public.router)
 app.include_router(tenants.router)

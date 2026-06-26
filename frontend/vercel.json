@@ -5,6 +5,11 @@
   "installCommand": "npm ci",
   "framework": null,
   "rewrites": [
+    {
+      "_comment": "Proxy directo al backend para QRs físicos con URL legacy /verify/:code. El backend resuelve el code → raffle_id y responde 302 a /r/:id?b=:code. Esto evita bootstrappear Angular para esta ruta (más rápido, sin riesgo de fallar por errores del bundle JS, sin pantalla de loading infinito si algún chunk falla).",
+      "source": "/verify/:code",
+      "destination": "https://rifas-nehd.onrender.com/v/:code"
+    },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "headers": [
