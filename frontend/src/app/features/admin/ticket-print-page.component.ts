@@ -91,7 +91,21 @@ import {
             (click)="downloadPdfAndMark()"
           >
             <span class="material-icons">picture_as_pdf</span>
-            {{ generating() ? 'Generando PDF...' : (marking() ? 'Procesando...' : 'Descargar PDF') }}
+            @if (generating()) {
+              @if (genProgress(); as p) {
+                @if (p.total > 0) {
+                  Generando hoja {{ p.current }} de {{ p.total }}...
+                } @else {
+                  Preparando boletas...
+                }
+              } @else {
+                Generando PDF...
+              }
+            } @else if (marking()) {
+              Procesando...
+            } @else {
+              Descargar PDF
+            }
           </button>
           <!-- Opción secundaria: imprimir vía browser (requiere configurar
                Márgenes: Ninguno en Chrome). Útil si la impresora ya está conectada. -->
@@ -288,6 +302,9 @@ export class TicketPrintPageComponent implements OnInit {
   readonly loading = signal(true);
   readonly marking = signal(false);
   readonly generating = signal(false);
+  /** Progreso de generación del PDF: "Procesando hoja X de Y". Solo
+   *  visible cuando generating() === true. */
+  readonly genProgress = signal<{ current: number; total: number } | null>(null);
   readonly error = signal<string | null>(null);
   readonly data = signal<PrintData | null>(null);
   /** 4 (default, 2x2) o 6 (2x3) boletas por hoja carta. Lo controla el
@@ -427,6 +444,7 @@ export class TicketPrintPageComponent implements OnInit {
     if (!d || !d.tickets.length) return;
 
     this.generating.set(true);
+    this.genProgress.set({ current: 0, total: 0 });
     try {
       // Lazy-load para no inflar el bundle inicial.
       const [{ domToCanvas }, { jsPDF }] = await Promise.all([
@@ -434,11 +452,16 @@ export class TicketPrintPageComponent implements OnInit {
         import('jspdf'),
       ]);
 
-      const pages = Array.from(
-        document.querySelectorAll<HTMLElement>('app-ticket-print-sheet .page'),
-      );
+      // El sub-componente ticket-print-sheet tiene su propio loading
+      // mientras genera los QRs (puede tomar varios segundos para lotes
+      // grandes). Polleamos hasta que las .page renderizadas existan en
+      // el DOM, con timeout de 60 segundos para lotes muy grandes.
+      const pages = await this.waitForPages(60000);
       if (!pages.length) {
-        this.toast.error('No hay nada para imprimir', 'Recarga la página e intenta de nuevo.');
+        this.toast.error(
+          'No hay nada para imprimir',
+          'Los QRs no se generaron a tiempo. Recarga e intenta de nuevo.',
+        );
         return;
       }
 
@@ -453,16 +476,27 @@ export class TicketPrintPageComponent implements OnInit {
       const CSS_WIDTH = 8.5 * 96;   // 816 px
       const CSS_HEIGHT = 11 * 96;   // 1056 px
 
+      // Para lotes grandes (>20 páginas) bajamos scale 2→1.5 para
+      // evitar quedarnos sin memoria del browser y acelerar la generación.
+      const scale = pages.length > 20 ? 1.5 : 2;
+
+      this.genProgress.set({ current: 0, total: pages.length });
+
       for (let i = 0; i < pages.length; i++) {
         const canvas = await domToCanvas(pages[i], {
-          scale: 2,                          // 2x para nitidez al imprimir
+          scale,
           width: CSS_WIDTH,
           height: CSS_HEIGHT,
           backgroundColor: '#ffffff',
         });
-        const imgData = canvas.toDataURL('image/jpeg', 0.92);
+        const imgData = canvas.toDataURL('image/jpeg', 0.88);
         if (i > 0) pdf.addPage();
         pdf.addImage(imgData, 'JPEG', 0, 0, 8.5, 11);
+        this.genProgress.set({ current: i + 1, total: pages.length });
+        // Cede el thread al browser para que actualice la UI con el
+        // progreso y no parezca colgado. Sin este yield, todo el loop
+        // bloquea el render hasta el final.
+        await new Promise<void>((resolve) => setTimeout(resolve, 0));
       }
 
       const safeName = (d.raffle_name ?? 'rifa').replace(/[^\w\s-]/g, '').trim().replace(/\s+/g, '-');
@@ -489,7 +523,23 @@ export class TicketPrintPageComponent implements OnInit {
       );
     } finally {
       this.generating.set(false);
+      this.genProgress.set(null);
     }
+  }
+
+  /** Pollea el DOM hasta que las .page del sheet estén renderizadas.
+   *  Para lotes grandes (cientos de boletas), el sub-componente puede
+   *  tardar segundos generando QRs antes de renderizar las hojas. */
+  private async waitForPages(timeoutMs: number): Promise<HTMLElement[]> {
+    const start = Date.now();
+    while (Date.now() - start < timeoutMs) {
+      const pages = Array.from(
+        document.querySelectorAll<HTMLElement>('app-ticket-print-sheet .page'),
+      );
+      if (pages.length > 0) return pages;
+      await new Promise<void>((resolve) => setTimeout(resolve, 250));
+    }
+    return [];
   }
 
   /** Espera a que todas las imágenes <img> dentro de los elementos dados
