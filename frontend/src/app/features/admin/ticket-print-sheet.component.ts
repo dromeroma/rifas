@@ -1398,16 +1398,25 @@ export class TicketPrintSheetComponent implements OnInit {
    *  - 'professional' → boleta tradicional elegante: TV ilustrado + grilla
    *    de 20 números + premios listados, estilo rifa clásica con toque premium. */
   readonly printDesign = input<PrintDesign>('soccer');
+  /** Slice opcional [from, to) sobre los tickets renderizados. Permite
+   *  al padre limitar qué boletas se montan en el DOM en cada momento.
+   *  Usado por downloadPdfAndMark para procesar lotes grandes (cientos
+   *  de boletas) en chunks pequeños y evitar Out-Of-Memory del browser:
+   *  el padre pasa { from: 0, to: 20 }, captura las 5 hojas, luego pasa
+   *  { from: 20, to: 40 }, captura las siguientes 5, etc. */
+  readonly renderSlice = input<{ from: number; to: number } | null>(null);
 
   readonly loading = signal(true);
   private readonly rendered = signal<RenderedTicket[]>([]);
 
   readonly pages = computed<RenderedTicket[][]>(() => {
     const all = this.rendered();
+    const slice = this.renderSlice();
+    const tickets = slice ? all.slice(slice.from, slice.to) : all;
     const size = this.boletasPerPage();
     const out: RenderedTicket[][] = [];
-    for (let i = 0; i < all.length; i += size) {
-      out.push(all.slice(i, i + size));
+    for (let i = 0; i < tickets.length; i += size) {
+      out.push(tickets.slice(i, i + size));
     }
     return out;
   });

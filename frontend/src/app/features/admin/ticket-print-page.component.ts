@@ -144,6 +144,7 @@ import {
             [data]="data()!"
             [boletasPerPage]="perPage()"
             [printDesign]="design()"
+            [renderSlice]="renderSlice()"
           />
         }
       }
@@ -305,6 +306,11 @@ export class TicketPrintPageComponent implements OnInit {
   /** Progreso de generación del PDF: "Procesando hoja X de Y". Solo
    *  visible cuando generating() === true. */
   readonly genProgress = signal<{ current: number; total: number } | null>(null);
+  /** Slice de boletas a renderizar en el DOM. Null = renderizar todas
+   *  (modo normal de preview). Cuando downloadPdfAndMark procesa lotes
+   *  grandes, este signal se actualiza por chunks para que solo unas
+   *  pocas hojas estén en el DOM a la vez (evita Out-Of-Memory). */
+  readonly renderSlice = signal<{ from: number; to: number } | null>(null);
   readonly error = signal<string | null>(null);
   readonly data = signal<PrintData | null>(null);
   /** 4 (default, 2x2) o 6 (2x3) boletas por hoja carta. Lo controla el
@@ -454,6 +460,7 @@ export class TicketPrintPageComponent implements OnInit {
 
     this.generating.set(true);
     this.genProgress.set({ current: 0, total: 0 });
+
     try {
       // Lazy-load para no inflar el bundle inicial.
       const [{ domToCanvas }, { jsPDF }] = await Promise.all([
@@ -461,12 +468,10 @@ export class TicketPrintPageComponent implements OnInit {
         import('jspdf'),
       ]);
 
-      // El sub-componente ticket-print-sheet tiene su propio loading
-      // mientras genera los QRs (puede tomar varios segundos para lotes
-      // grandes). Polleamos hasta que las .page renderizadas existan en
-      // el DOM, con timeout de 60 segundos para lotes muy grandes.
-      const pages = await this.waitForPages(60000);
-      if (!pages.length) {
+      // 1) Esperar a que el sub-componente termine de generar los QRs.
+      //    Esto solo se hace una vez al inicio, no por cada chunk.
+      const initialPages = await this.waitForPages(60000);
+      if (!initialPages.length) {
         this.toast.error(
           'No hay nada para imprimir',
           'Los QRs no se generaron a tiempo. Recarga e intenta de nuevo.',
@@ -474,45 +479,81 @@ export class TicketPrintPageComponent implements OnInit {
         return;
       }
 
-      // Espera a que todas las imágenes (QR, TV) terminen de cargar
-      // antes de capturar — si captura antes, salen vacías o cortadas.
-      await this.waitForImages(pages);
+      // 2) Calcular dimensiones de chunks:
+      //    Procesamos 5 hojas a la vez. Solo esas 5 estarán en el DOM
+      //    durante cada chunk. Después de capturarlas, el siguiente
+      //    setRenderSlice las descarta y monta las 5 siguientes. Este
+      //    es el fix clave del Out-Of-Memory: nunca tenemos las 100
+      //    hojas montadas simultáneamente.
+      const totalTickets = d.tickets.length;
+      const ticketsPerPage = this.perPage();      // 4 o 6
+      const pagesPerChunk = 5;
+      const ticketsPerChunk = pagesPerChunk * ticketsPerPage;  // 20 o 30 boletas por chunk
+      const totalPages = Math.ceil(totalTickets / ticketsPerPage);
 
+      // 3) Crear PDF y dimensiones físicas exactas.
       const pdf = new jsPDF({ unit: 'in', format: 'letter', orientation: 'portrait' });
+      const CSS_WIDTH = 8.5 * 96;
+      const CSS_HEIGHT = 11 * 96;
 
-      // Dimensiones físicas exactas del .page en CSS (96dpi).
-      // Forzar estas dimensiones evita distorsión por rounding del browser.
-      const CSS_WIDTH = 8.5 * 96;   // 816 px
-      const CSS_HEIGHT = 11 * 96;   // 1056 px
+      // Scale adaptativo según tamaño del lote:
+      //   ≤20 hojas: scale 2 (máxima nitidez)
+      //   ≤50 hojas: scale 1.5
+      //   >50 hojas: scale 1 (evita OOM en lotes enormes)
+      const scale = totalPages > 50 ? 1 : (totalPages > 20 ? 1.5 : 2);
+      const jpegQuality = totalPages > 50 ? 0.75 : (totalPages > 20 ? 0.85 : 0.92);
 
-      // Para lotes grandes (>20 páginas) bajamos scale 2→1.5 para
-      // evitar quedarnos sin memoria del browser y acelerar la generación.
-      const scale = pages.length > 20 ? 1.5 : 2;
+      this.genProgress.set({ current: 0, total: totalPages });
 
-      this.genProgress.set({ current: 0, total: pages.length });
+      let globalPageIdx = 0;
 
-      for (let i = 0; i < pages.length; i++) {
-        const canvas = await domToCanvas(pages[i], {
-          scale,
-          width: CSS_WIDTH,
-          height: CSS_HEIGHT,
-          backgroundColor: '#ffffff',
-        });
-        const imgData = canvas.toDataURL('image/jpeg', 0.88);
-        if (i > 0) pdf.addPage();
-        pdf.addImage(imgData, 'JPEG', 0, 0, 8.5, 11);
-        this.genProgress.set({ current: i + 1, total: pages.length });
-        // Cede el thread al browser para que actualice la UI con el
-        // progreso y no parezca colgado. Sin este yield, todo el loop
-        // bloquea el render hasta el final.
-        await new Promise<void>((resolve) => setTimeout(resolve, 0));
+      // 4) Iterar por chunks de tickets.
+      for (let chunkStart = 0; chunkStart < totalTickets; chunkStart += ticketsPerChunk) {
+        const chunkEnd = Math.min(chunkStart + ticketsPerChunk, totalTickets);
+        this.renderSlice.set({ from: chunkStart, to: chunkEnd });
+
+        // Esperar a que Angular re-renderice el DOM con solo este chunk.
+        // 2 RAFs garantiza que el browser hizo layout + paint.
+        await this.nextFrame();
+        await this.nextFrame();
+
+        // Esperar también a que las imágenes del chunk carguen
+        // (aunque ya estén en cache deberían resolver rápido).
+        const chunkPages = await this.waitForPages(15000);
+        if (chunkPages.length === 0) continue;
+        await this.waitForImages(chunkPages);
+
+        // Capturar cada hoja del chunk.
+        for (let p = 0; p < chunkPages.length; p++) {
+          const canvas = await domToCanvas(chunkPages[p], {
+            scale,
+            width: CSS_WIDTH,
+            height: CSS_HEIGHT,
+            backgroundColor: '#ffffff',
+          });
+          const imgData = canvas.toDataURL('image/jpeg', jpegQuality);
+          if (globalPageIdx > 0) pdf.addPage();
+          pdf.addImage(imgData, 'JPEG', 0, 0, 8.5, 11);
+          globalPageIdx++;
+          this.genProgress.set({ current: globalPageIdx, total: totalPages });
+          // Yield al browser para que pinte el progreso y libere memoria.
+          await new Promise<void>((resolve) => setTimeout(resolve, 0));
+        }
+
+        // Pequeña pausa entre chunks para dar tiempo al GC.
+        await new Promise<void>((resolve) => setTimeout(resolve, 50));
       }
 
+      // 5) Restaurar el render completo para que el preview vuelva a la
+      //    normalidad si el usuario sigue navegando en la página.
+      this.renderSlice.set(null);
+
+      // 6) Guardar el PDF.
       const safeName = (d.raffle_name ?? 'rifa').replace(/[^\w\s-]/g, '').trim().replace(/\s+/g, '-');
       const safeSeller = (d.seller_name ?? 'rango').replace(/[^\w\s-]/g, '').trim().replace(/\s+/g, '-');
       pdf.save(`boletas-${safeName}-${safeSeller}.pdf`);
 
-      // Marca como impresas en backend (best-effort, no bloquea la descarga).
+      // 7) Marcar boletas como impresas (best-effort, no bloquea).
       const ticketIds = d.tickets.map((t) => t.ticket_id);
       this.admin.markPrinted(this.raffleId, ticketIds).subscribe({
         next: () => this.toast.success(
@@ -530,10 +571,21 @@ export class TicketPrintPageComponent implements OnInit {
         'Error generando PDF',
         'Intenta de nuevo o usa el botón "Imprimir" como alternativa.',
       );
+      // Restaurar el slice en caso de error.
+      this.renderSlice.set(null);
     } finally {
       this.generating.set(false);
       this.genProgress.set(null);
     }
+  }
+
+  /** Espera al siguiente frame del browser. Útil entre cambios al signal
+   *  renderSlice y captura del DOM, para garantizar que Angular detectó
+   *  el cambio y el browser hizo layout + paint. */
+  private nextFrame(): Promise<void> {
+    return new Promise((resolve) => {
+      requestAnimationFrame(() => resolve());
+    });
   }
 
   /** Pollea el DOM hasta que las .page del sheet estén renderizadas.
