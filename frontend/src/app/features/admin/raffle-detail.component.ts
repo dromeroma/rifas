@@ -233,6 +233,31 @@ import { TicketActionsModalComponent } from '../seller/ticket-actions-modal.comp
                        inputmode="numeric" placeholder="050" />
               </label>
             </div>
+
+            <!-- Selector de diseño dentro del modal: el usuario debe elegir
+                 ANTES de descargar porque el auto-download de la página de
+                 impresión arranca de inmediato y no le da tiempo de cambiarlo
+                 desde la toolbar de esa página. -->
+            <div class="range-form__design">
+              <span class="range-form__design-label">Diseño de la boleta</span>
+              <div class="range-form__design-opts">
+                <button type="button"
+                        class="range-form__design-opt"
+                        [class.range-form__design-opt--on]="rangeDesign() === 'soccer'"
+                        (click)="rangeDesign.set('soccer')">
+                  <span class="material-icons">sports_soccer</span>
+                  Cancha
+                </button>
+                <button type="button"
+                        class="range-form__design-opt"
+                        [class.range-form__design-opt--on]="rangeDesign() === 'professional'"
+                        (click)="rangeDesign.set('professional')">
+                  <span class="material-icons">workspace_premium</span>
+                  Profesional
+                </button>
+              </div>
+            </div>
+
             <small class="muted">
               Total disponible: <strong>{{ r.total_tickets }}</strong> boletas
               (de 001 a {{ r.total_tickets }}).
@@ -678,6 +703,53 @@ import { TicketActionsModalComponent } from '../seller/ticket-actions-modal.comp
     }
     .range-form .field input:focus { outline: 0; border-color: var(--accent); }
     .range-form .muted { font-size: 12px; color: var(--text-muted); }
+
+    /* Selector de diseño dentro del modal — el usuario elige cancha o
+       profesional ANTES de iniciar la descarga, evitando race conditions
+       con el auto-download que arranca apenas la página de impresión carga. */
+    .range-form__design { display: grid; gap: 8px; }
+    .range-form__design-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .range-form__design-opts {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--s-2);
+    }
+    .range-form__design-opt {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      height: var(--h-input);
+      padding: 0 var(--s-3);
+      background: var(--bg-input);
+      border: 1px solid transparent;
+      color: var(--text-muted);
+      border-radius: var(--r-md);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+    }
+    .range-form__design-opt:hover {
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--text);
+    }
+    .range-form__design-opt .material-icons { font-size: 18px; }
+    .range-form__design-opt--on {
+      background: var(--accent);
+      color: #0a0e0c;
+      border-color: var(--accent);
+    }
+    .range-form__design-opt--on:hover {
+      background: var(--accent);
+      color: #0a0e0c;
+    }
     .range-form .alert {
       display: flex;
       gap: 8px;
@@ -996,6 +1068,10 @@ export class RaffleDetailComponent implements OnInit {
   rangeFrom: string | number = '';
   rangeTo: string | number = '';
   rangeError = signal<string | null>(null);
+  // Diseño del PDF a generar: cancha (default) o profesional. Se elige en
+  // el modal para que viaje como queryParam a la página de impresión —
+  // así el auto-download captura el diseño correcto sin race condition.
+  rangeDesign = signal<'soccer' | 'professional'>('soccer');
 
   // Editar rifa
   editOpen = signal(false);
@@ -1271,7 +1347,10 @@ export class RaffleDetailComponent implements OnInit {
 
   closeTiersModal() { this.tiersModalOpen.set(false); }
 
-  /** Abre el modal de impresión por rango. Setea defaults (1 → total). */
+  /** Abre el modal de impresión por rango. Setea defaults (1 → total).
+   *  No reseteamos rangeDesign — preserva la última elección del usuario
+   *  entre aperturas (si imprimió profesional antes, la siguiente vez
+   *  el toggle aparece ya en profesional). */
   openRangePrintModal() {
     const r = this.raffle();
     if (!r) return;
@@ -1314,13 +1393,17 @@ export class RaffleDetailComponent implements OnInit {
     this.rangeError.set(null);
     this.rangePrintOpen.set(false);
     // auto=download → la página de impresión auto-descarga el PDF en cuanto
-    // la data + las imágenes (QRs) estén listas, sin requerir un segundo
-    // clic en "Descargar PDF". Mejor UX para el flujo de imprimir-por-rango
-    // (es lote grande, el usuario espera solo bajar el PDF, no previsualizar).
+    // la data + las imágenes (QRs) estén listas, sin requerir un segundo clic.
+    // design=soccer|professional → el diseño elegido en el modal se aplica
+    // ANTES de que arranque el auto-download, garantizando que TODAS las
+    // hojas del PDF usen el mismo diseño (antes había race condition donde
+    // las primeras hojas usaban el default soccer y las últimas el toggle
+    // manualmente cambiado por el usuario).
     this.router.navigate(['/admin/print', r.id, 'range'], {
       queryParams: {
         from: String(fromN).padStart(3, '0'),
         to: String(toN).padStart(3, '0'),
+        design: this.rangeDesign(),
         auto: 'download',
       },
     });

@@ -342,6 +342,15 @@ export class TicketPrintPageComponent implements OnInit {
     // espera bajar el PDF directamente sin pasos extra.
     const autoDownload = this.route.snapshot.queryParamMap.get('auto') === 'download';
 
+    // Si la URL trae ?design=soccer|professional, aplicamos ese diseño
+    // ANTES de cualquier render. Crítico para auto-download: el diseño
+    // debe estar fijado antes de que se generen las hojas, sino la captura
+    // saldría con el default (soccer) en vez del que pidió el usuario.
+    const designParam = this.route.snapshot.queryParamMap.get('design');
+    if (designParam === 'soccer' || designParam === 'professional') {
+      this.design.set(designParam);
+    }
+
     if (isRangeMode) {
       if (!fromLabel || !toLabel) {
         this.error.set('Faltan los parámetros from y to en el rango.');
