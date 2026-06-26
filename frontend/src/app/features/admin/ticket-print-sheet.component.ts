@@ -1320,7 +1320,21 @@ export type PrintDesign = 'soccer' | 'professional';
     .page--six .ticket--pro .pro-foot__value { font-size: 5.5pt; }
     .page--six .ticket--pro .pro-watermark { font-size: 18pt; }
 
-    /* === Modo impresión === */
+    /* === Modo impresión ===
+
+       CLAVE DEL BUG QUE SE VEÍA EN EL PDF (no en preview):
+       - En pantalla, .page tiene min-height 11in (puede crecer si el
+         contenido es más alto). La grid es flex:1 sin altura fija, así
+         que las celdas crecen para acomodar boletas grandes. Todo se ve.
+       - En PDF, .page está fijo en 11in (paper letter). La grid está
+         fija en ~10in. Las celdas son ~4.94in. Pero .boleta tiene
+         overflow:hidden (base CSS), así que si el contenido de la boleta
+         > 4.94in, el bottom (premios + footer) se RECORTA dentro de la
+         celda. En preview no pasa porque la celda crece.
+
+       Fix: aplicar compactaciones EXTRA aquí en @media print para
+       garantizar que la boleta cabe en 4.94in sin perder calidad en
+       el preview de pantalla. Target: boleta ≤ 4.6in (margen 0.3in). */
     @media print {
       :host { background: #fff; padding: 0; }
       .page {
@@ -1339,11 +1353,6 @@ export type PrintDesign = 'soccer' | 'professional';
         padding-bottom: 0.1in;
         margin-bottom: 0.12in;
       }
-      /* Grid con altura exacta = altura útil de la hoja después de header
-         + padding. Cada fila usa minmax(0, 1fr) para forzar 2 filas iguales
-         sin permitir que el contenido las estire. La boleta DEBE estar
-         compactada (TV 0.85in, QR 0.6in, etc) para realmente caber en su
-         celda — sin overflow:hidden para no cortar el footer accidentalmente. */
       .grid {
         height: calc(11in - 0.6in - 0.35in);
         grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
@@ -1351,6 +1360,103 @@ export type PrintDesign = 'soccer' | 'professional';
       .boleta {
         min-height: 0;
       }
+
+      /* --- COMPACTACIONES EXTRA SOLO EN PRINT ---
+         No tocan el preview de pantalla (donde ya se ve bien según el
+         usuario). Solo se aplican al renderizar el PDF, donde la celda
+         del grid está fija y necesitamos que la boleta quepa. */
+
+      /* Talón fijo en 1.05in (no %): garantiza que la altura del talón
+         es independiente del cell-height y no cambia entre preview/print. */
+      .talon {
+        flex: 0 0 1.05in;
+        padding: 0.04in 0.1in;
+        gap: 0.02in;
+      }
+      .talon .big-label { font-size: 15pt; margin-top: 0.02in; }
+      .talon .short-code { font-size: 6.5pt; margin-top: 0.02in; }
+      .talon .talon-eyebrow { font-size: 6pt; }
+      .talon .qr { width: 0.55in; height: 0.55in; }
+      .talon .lines--two { gap: 0.05in; margin-top: 0.03in; }
+      .talon .lines--two .line { height: 11pt; padding-bottom: 1.5pt; }
+      .talon .lines--two .line span { font-size: 6pt; }
+
+      /* Ticket pro: compactaciones del cuerpo para que el resto del
+         contenido (header + body + premios + footer) quepa en ~3.5in
+         (4.94in cell - 1.05in talón - 0.05in safety) */
+      .ticket--pro .pro-head {
+        padding: 0.04in 0.1in;
+      }
+      .ticket--pro .pro-head__eyebrow { font-size: 6pt; margin-bottom: 1pt; }
+      .ticket--pro .pro-head__name { font-size: 10pt; }
+      .ticket--pro .pro-head__label { padding: 2pt 7pt; }
+      .ticket--pro .pro-head__label small { font-size: 5pt; }
+      .ticket--pro .pro-head__label strong { font-size: 12pt; margin-top: 0; }
+
+      .ticket--pro .pro-body {
+        padding: 0.03in 0.1in 0.03in;
+        column-gap: 2.5pt;
+        row-gap: 1.5pt;
+      }
+      .ticket--pro .pro-tv__img { max-height: 0.7in; }
+      .ticket--pro .pro-num {
+        height: 13pt;
+        font-size: 8pt;
+        border-width: 1px;
+      }
+
+      .ticket--pro .pro-prizes {
+        padding: 0.03in 0.1in 0.03in;
+        gap: 1pt;
+      }
+      .ticket--pro .pro-prizes__head {
+        padding-bottom: 2pt;
+        margin-bottom: 0;
+      }
+      .ticket--pro .pro-prizes__title { font-size: 6pt; letter-spacing: 0.14em; }
+      .ticket--pro .pro-prizes__value {
+        padding: 1.5pt 7pt;
+        gap: 3pt;
+      }
+      .ticket--pro .pro-prizes__value small { font-size: 4.5pt; }
+      .ticket--pro .pro-prizes__value strong { font-size: 9pt; }
+      .ticket--pro .pro-prizes__star { font-size: 5.5pt; }
+      .ticket--pro .pro-prize {
+        padding: 1pt 5pt;
+        font-size: 6pt;
+        gap: 4pt;
+      }
+      .ticket--pro .pro-prize__date {
+        font-size: 5.5pt;
+        padding: 0.5pt 5pt;
+      }
+      .ticket--pro .pro-prize__dot { font-size: 7pt; width: 7pt; }
+      .ticket--pro .pro-prize__leader { height: 5pt; margin-bottom: 1.5pt; }
+      .ticket--pro .pro-prize--main .pro-prize__dot { font-size: 8pt; }
+
+      .ticket--pro .pro-foot {
+        padding: 0.03in 0.1in 0.04in;
+        column-gap: 0.1in;
+      }
+      .ticket--pro .pro-foot__qr { width: 0.5in; height: 0.5in; padding: 0.5pt; }
+      .ticket--pro .pro-foot__qr-caption { font-size: 4pt; }
+      .ticket--pro .pro-foot__info { font-size: 5.5pt; row-gap: 1pt; }
+      .ticket--pro .pro-foot__label { font-size: 5pt; padding-top: 0.5pt; }
+      .ticket--pro .pro-foot__value { font-size: 6pt; }
+      .ticket--pro .pro-foot__value--mono { font-size: 5.5pt; }
+      .ticket--pro .pro-foot__row--code .pro-foot__label,
+      .ticket--pro .pro-foot__row--code .pro-foot__value {
+        padding-top: 1.5pt;
+        margin-top: 0.5pt;
+      }
+      .ticket--pro .pro-watermark { font-size: 20pt; }
+
+      /* Modo 6 por hoja: aplica también las mismas compactaciones print
+         (las celdas son más angostas pero igual de altas que en modo 4) */
+      .page--six .ticket--pro .pro-tv__img { max-height: 0.6in; }
+      .page--six .ticket--pro .pro-num { height: 11pt; font-size: 7pt; }
+      .page--six .ticket--pro .pro-foot__qr { width: 0.42in; height: 0.42in; }
+
       @page {
         size: letter;
         margin: 0;
