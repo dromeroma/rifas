@@ -486,15 +486,16 @@ export type PrintDesign = 'soccer' | 'professional';
     .print-host { display: flex; flex-direction: column; align-items: center; gap: 1.5rem; }
 
     /* === Hoja carta (8.5in x 11in) ===
-       Altura FIJA en 11in para que preview = PDF. Padding minimizado
-       para dejar el máximo espacio posible para las 4 boletas. */
+       Altura FIJA en 11in para que preview = PDF. Padding mínimo
+       (0.15in vert, 0.2in horiz) — apenas suficiente margen de
+       seguridad para impresoras, maximizando el área para las boletas. */
     .page {
       width: 8.5in;
       height: 11in;
       max-height: 11in;
       background: #fff;
       box-shadow: 0 4px 24px rgba(0,0,0,0.12);
-      padding: 0.2in 0.25in;
+      padding: 0.15in 0.2in;
       box-sizing: border-box;
       display: flex;
       flex-direction: column;
@@ -1036,7 +1037,7 @@ export type PrintDesign = 'soccer' | 'professional';
       display: block;
       width: 100%;
       height: auto;
-      max-height: 0.95in;
+      max-height: 1.1in;
       object-fit: contain;
       mix-blend-mode: multiply;
       filter: drop-shadow(0 1pt 2pt rgba(26, 41, 66, 0.18));
@@ -1047,14 +1048,14 @@ export type PrintDesign = 'soccer' | 'professional';
       display: flex;
       align-items: center;
       justify-content: center;
-      height: 15pt;
+      height: 17pt;
       padding: 0 3pt;
       background: linear-gradient(180deg, #ffffff 0%, #f8f1e3 100%);
       border: 1.2px solid #1a2942;
       border-radius: 3pt;
       font-family: 'Inter', sans-serif;
       font-weight: 800;
-      font-size: 8.5pt;
+      font-size: 9.5pt;
       color: #1a2942;
       font-variant-numeric: tabular-nums;
       letter-spacing: 0.02em;
@@ -1068,13 +1069,16 @@ export type PrintDesign = 'soccer' | 'professional';
 
     /* === Premios: header con VALOR encerrado en estrellitas champagne,
        cada fila con dotted leader que llena el espacio derecho ===
-       flex: 1 → absorbe el espacio que sobre en la boleta para que no
-       haya hueco vacío entre los premios y el footer. */
+       flex: 1 + grid-auto-rows: 1fr → las filas se distribuyen para
+       ocupar TODO el espacio que sobra en la boleta, dando más aire
+       vertical a cada premio (en lugar de empacarlos arriba con hueco
+       muerto abajo). align-items: center en .pro-prize centra el
+       contenido dentro de la fila estirada. */
     .pro-prizes {
-      padding: 0.03in 0.1in 0.03in;
+      padding: 0.04in 0.1in 0.04in;
       display: grid;
-      grid-auto-rows: min-content;
-      gap: 1pt;
+      grid-auto-rows: 1fr;
+      gap: 1.5pt;
       background:
         linear-gradient(180deg, #f8f1e3 0%, #ede2c8 100%);
       position: relative;
@@ -1225,8 +1229,8 @@ export type PrintDesign = 'soccer' | 'professional';
       gap: 1pt;
     }
     .pro-foot__qr {
-      width: 0.55in;
-      height: 0.55in;
+      width: 0.7in;
+      height: 0.7in;
       border: 1.2px solid #b89656;
       border-radius: 2pt;
       padding: 1pt;
