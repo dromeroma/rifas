@@ -612,9 +612,10 @@ export type PrintDesign = 'soccer' | 'professional';
     .talon-eyebrow {
       font-size: 7pt;
       font-weight: 700;
-      letter-spacing: 0.12em;
+      letter-spacing: 0.1em;
       text-transform: uppercase;
       color: #6b7280;
+      white-space: nowrap;
     }
     .big-label {
       font-family: 'Inter', system-ui, sans-serif;
@@ -677,8 +678,9 @@ export type PrintDesign = 'soccer' | 'professional';
       font-size: 7pt;
       font-weight: 700;
       color: #6e4a14;
-      letter-spacing: 0.08em;
+      letter-spacing: 0.06em;
       text-transform: uppercase;
+      white-space: nowrap;
     }
     /* Pequeño punto dorado al inicio de cada línea, toque elegante */
     .lines--two .line::before {
@@ -1093,10 +1095,11 @@ export type PrintDesign = 'soccer' | 'professional';
     }
     .pro-prizes__title {
       font-size: 7pt;
-      letter-spacing: 0.16em;
+      letter-spacing: 0.1em;
       color: #1a2942;
       font-weight: 900;
       text-transform: uppercase;
+      white-space: nowrap;
     }
     /* VALOR con fondo navy + texto blanco/champagne. */
     .pro-prizes__value {
@@ -1140,20 +1143,20 @@ export type PrintDesign = 'soccer' | 'professional';
       grid-template-columns: auto auto auto 1fr;
       gap: 5pt;
       align-items: center;
-      padding: 1pt 6pt;
-      font-size: 7pt;
+      padding: 1.5pt 6pt;
+      font-size: 8.5pt;
       color: #252830;
       border-radius: 2pt;
       background: rgba(255, 255, 255, 0.5);
       border: 0.5px solid rgba(184, 150, 86, 0.3);
     }
     .pro-prize__date {
-      font-size: 6.5pt;
+      font-size: 7.5pt;
       font-weight: 800;
       letter-spacing: 0.08em;
       color: #f8f1e3;
       background: #1a2942;
-      padding: 1pt 6pt;
+      padding: 1.5pt 7pt;
       border-radius: 999px;
       font-variant-numeric: tabular-nums;
       white-space: nowrap;
@@ -1161,9 +1164,9 @@ export type PrintDesign = 'soccer' | 'professional';
       -webkit-print-color-adjust: exact;
     }
     .pro-prize__dot {
-      font-size: 8pt;
+      font-size: 9.5pt;
       color: #b89656;
-      width: 8pt;
+      width: 9pt;
       text-align: center;
     }
     .pro-prize__name {
@@ -1190,7 +1193,7 @@ export type PrintDesign = 'soccer' | 'professional';
         0 1pt 2pt rgba(184, 150, 86, 0.2);
     }
     .pro-prize--main .pro-prize__dot {
-      font-size: 8pt;
+      font-size: 10pt;
       color: #7a2f3a;
     }
     .pro-prize--main .pro-prize__name {
@@ -1238,11 +1241,12 @@ export type PrintDesign = 'soccer' | 'professional';
         0 1pt 2pt rgba(0,0,0,0.12);
     }
     .pro-foot__qr-caption {
-      font-size: 4pt;
-      letter-spacing: 0.14em;
+      font-size: 5pt;
+      letter-spacing: 0.1em;
       color: #1a2942;
       font-weight: 700;
       text-transform: uppercase;
+      white-space: nowrap;
     }
 
     /* Info en grid de 2 columnas (label fijo + valor flex) — todo
@@ -1250,18 +1254,18 @@ export type PrintDesign = 'soccer' | 'professional';
     .pro-foot__info {
       display: grid;
       grid-template-columns: auto 1fr;
-      column-gap: 7pt;
-      row-gap: 1.5pt;
+      column-gap: 8pt;
+      row-gap: 2pt;
       align-items: baseline;
       min-width: 0;
-      font-size: 6.5pt;
+      font-size: 7.5pt;
     }
     .pro-foot__row {
       display: contents; /* permite que label+value compartan la misma row del parent grid */
     }
     .pro-foot__label {
-      font-size: 5.5pt;
-      letter-spacing: 0.14em;
+      font-size: 6.5pt;
+      letter-spacing: 0.1em;
       color: #1a2942;
       font-weight: 800;
       text-transform: uppercase;
@@ -1270,7 +1274,7 @@ export type PrintDesign = 'soccer' | 'professional';
       padding-top: 1pt;
     }
     .pro-foot__value {
-      font-size: 7pt;
+      font-size: 8pt;
       font-weight: 700;
       color: #252830;
       overflow: hidden;
@@ -1283,7 +1287,7 @@ export type PrintDesign = 'soccer' | 'professional';
       font-family: 'Courier New', monospace;
       letter-spacing: 0.12em;
       color: #7a2f3a;
-      font-size: 6.5pt;
+      font-size: 7.5pt;
     }
     /* Separador antes del código (línea dorada sutil entre filas) */
     .pro-foot__row--code .pro-foot__label,
