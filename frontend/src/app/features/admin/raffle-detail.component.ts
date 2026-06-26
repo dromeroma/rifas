@@ -1305,8 +1305,16 @@ export class RaffleDetailComponent implements OnInit {
     }
     this.rangeError.set(null);
     this.rangePrintOpen.set(false);
+    // auto=download → la página de impresión auto-descarga el PDF en cuanto
+    // la data + las imágenes (QRs) estén listas, sin requerir un segundo
+    // clic en "Descargar PDF". Mejor UX para el flujo de imprimir-por-rango
+    // (es lote grande, el usuario espera solo bajar el PDF, no previsualizar).
     this.router.navigate(['/admin/print', r.id, 'range'], {
-      queryParams: { from: String(fromN).padStart(3, '0'), to: String(toN).padStart(3, '0') },
+      queryParams: {
+        from: String(fromN).padStart(3, '0'),
+        to: String(toN).padStart(3, '0'),
+        auto: 'download',
+      },
     });
   }
 

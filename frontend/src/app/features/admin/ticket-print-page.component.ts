@@ -319,6 +319,12 @@ export class TicketPrintPageComponent implements OnInit {
     const fromLabel = this.route.snapshot.queryParamMap.get('from');
     const toLabel = this.route.snapshot.queryParamMap.get('to');
 
+    // Si la URL trae ?auto=download, disparamos la descarga del PDF
+    // automáticamente en cuanto la data + imágenes estén listas. Usado
+    // por el modal "Imprimir por rango" del detalle de rifa — el usuario
+    // espera bajar el PDF directamente sin pasos extra.
+    const autoDownload = this.route.snapshot.queryParamMap.get('auto') === 'download';
+
     if (isRangeMode) {
       if (!fromLabel || !toLabel) {
         this.error.set('Faltan los parámetros from y to en el rango.');
@@ -327,7 +333,11 @@ export class TicketPrintPageComponent implements OnInit {
       }
       this.sellerId = 0;
       this.admin.printDataRange(this.raffleId, fromLabel, toLabel).subscribe({
-        next: (resp) => { this.data.set(resp as PrintData); this.loading.set(false); },
+        next: (resp) => {
+          this.data.set(resp as PrintData);
+          this.loading.set(false);
+          if (autoDownload) this.scheduleAutoDownload();
+        },
         error: (e) => {
           const detail = e?.error?.detail ?? 'No se pudieron cargar las boletas';
           this.error.set(typeof detail === 'string' ? detail : 'Error cargando boletas');
@@ -361,6 +371,7 @@ export class TicketPrintPageComponent implements OnInit {
         }
         this.data.set(data);
         this.loading.set(false);
+        if (autoDownload) this.scheduleAutoDownload();
       },
       error: (e) => {
         const detail = e?.error?.detail ?? 'No se pudieron cargar las boletas';
@@ -368,6 +379,17 @@ export class TicketPrintPageComponent implements OnInit {
         this.loading.set(false);
       },
     });
+  }
+
+  /** Programa la descarga automática del PDF cuando la página entra con
+   *  ?auto=download. Da un pequeño delay para que Angular pinte el DOM
+   *  (las @for de pages/boletas) antes de que modern-screenshot intente
+   *  capturarlas. La función downloadPdfAndMark() ya espera internamente
+   *  a que las imágenes (QR, TV) carguen. */
+  private scheduleAutoDownload(): void {
+    setTimeout(() => {
+      this.downloadPdfAndMark();
+    }, 600);
   }
 
   goBack(): void {
