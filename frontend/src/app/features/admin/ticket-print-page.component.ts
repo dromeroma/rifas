@@ -381,20 +381,24 @@ export class TicketPrintPageComponent implements OnInit {
   }
 
   /**
-   * Genera el PDF directamente vía html2canvas + jspdf y lo descarga.
+   * Genera el PDF directamente vía modern-screenshot + jspdf y lo descarga.
    *
    * Esto evita el diálogo de impresión del navegador (que escala el
    * contenido para acomodar márgenes default de Chrome, haciendo que
    * las boletas se vean chiquitas). El PDF resultante tiene tamaño
    * carta exacto y las boletas llenan toda la hoja como las renderiza
-   * el componente, sin importar la configuración del navegador.
+   * el componente.
+   *
+   * Usamos modern-screenshot (en lugar de html2canvas) porque maneja
+   * correctamente CSS moderno (flex, grid, mix-blend-mode) sin sobreponer
+   * elementos. Captura al tamaño físico exacto del .page (8.5x11in =
+   * 816x1056px @ 96dpi) con scale 2 para nitidez de impresión.
    *
    * Flujo:
-   *   1. Captura cada .page como canvas usando html2canvas (con scale 2
-   *      para resolución de impresión).
-   *   2. Convierte cada canvas a JPEG y lo agrega al PDF en su propia hoja.
-   *   3. Descarga el PDF con un nombre descriptivo.
-   *   4. Marca las boletas como impresas en backend en paralelo.
+   *   1. Espera a que todas las imágenes (QR, TV) terminen de cargar.
+   *   2. Captura cada .page como canvas a resolución de impresión.
+   *   3. Agrega cada canvas al PDF como página completa.
+   *   4. Descarga el PDF y marca las boletas como impresas en backend.
    */
   async downloadPdfAndMark(): Promise<void> {
     const d = this.data();
@@ -402,10 +406,9 @@ export class TicketPrintPageComponent implements OnInit {
 
     this.generating.set(true);
     try {
-      // Lazy-load para no inflar el bundle inicial — solo se cargan al
-      // disparar la descarga de PDF (acción puntual, no frecuente).
-      const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
-        import('html2canvas'),
+      // Lazy-load para no inflar el bundle inicial.
+      const [{ domToCanvas }, { jsPDF }] = await Promise.all([
+        import('modern-screenshot'),
         import('jspdf'),
       ]);
 
@@ -417,14 +420,23 @@ export class TicketPrintPageComponent implements OnInit {
         return;
       }
 
+      // Espera a que todas las imágenes (QR, TV) terminen de cargar
+      // antes de capturar — si captura antes, salen vacías o cortadas.
+      await this.waitForImages(pages);
+
       const pdf = new jsPDF({ unit: 'in', format: 'letter', orientation: 'portrait' });
 
+      // Dimensiones físicas exactas del .page en CSS (96dpi).
+      // Forzar estas dimensiones evita distorsión por rounding del browser.
+      const CSS_WIDTH = 8.5 * 96;   // 816 px
+      const CSS_HEIGHT = 11 * 96;   // 1056 px
+
       for (let i = 0; i < pages.length; i++) {
-        const canvas = await html2canvas(pages[i], {
-          scale: 2,             // 2x para nitidez al imprimir desde el PDF
-          useCORS: true,
+        const canvas = await domToCanvas(pages[i], {
+          scale: 2,                          // 2x para nitidez al imprimir
+          width: CSS_WIDTH,
+          height: CSS_HEIGHT,
           backgroundColor: '#ffffff',
-          logging: false,
         });
         const imgData = canvas.toDataURL('image/jpeg', 0.92);
         if (i > 0) pdf.addPage();
@@ -456,6 +468,27 @@ export class TicketPrintPageComponent implements OnInit {
     } finally {
       this.generating.set(false);
     }
+  }
+
+  /** Espera a que todas las imágenes <img> dentro de los elementos dados
+   *  terminen de cargar. Crítico para que modern-screenshot capture las
+   *  imágenes (QR del talón, QR del footer, TV) ya renderizadas. */
+  private async waitForImages(roots: HTMLElement[]): Promise<void> {
+    const allImgs: HTMLImageElement[] = [];
+    for (const root of roots) {
+      allImgs.push(...Array.from(root.querySelectorAll<HTMLImageElement>('img')));
+    }
+    await Promise.all(
+      allImgs.map((img) => {
+        if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+        return new Promise<void>((resolve) => {
+          const done = () => resolve();
+          img.addEventListener('load', done, { once: true });
+          img.addEventListener('error', done, { once: true });
+          setTimeout(done, 3000); // timeout de seguridad
+        });
+      }),
+    );
   }
 
   /** Marca como impresas en backend, abre el diálogo de impresión del browser. */
