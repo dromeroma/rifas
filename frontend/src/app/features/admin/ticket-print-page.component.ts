@@ -81,32 +81,31 @@ import {
             </button>
           </div>
           <button class="btn ghost" (click)="goBack()">Cancelar</button>
+          <!-- Botón principal: genera el PDF directamente vía html2canvas+jspdf,
+               saltándose el diálogo de impresión del navegador y su escalado
+               por márgenes default. Garantiza que el PDF sale a tamaño completo
+               de hoja carta sin importar la configuración de Chrome. -->
           <button
             class="btn primary"
-            [disabled]="!data() || marking()"
+            [disabled]="!data() || generating() || marking()"
+            (click)="downloadPdfAndMark()"
+          >
+            <span class="material-icons">picture_as_pdf</span>
+            {{ generating() ? 'Generando PDF...' : (marking() ? 'Procesando...' : 'Descargar PDF') }}
+          </button>
+          <!-- Opción secundaria: imprimir vía browser (requiere configurar
+               Márgenes: Ninguno en Chrome). Útil si la impresora ya está conectada. -->
+          <button
+            class="btn ghost"
+            [disabled]="!data() || generating() || marking()"
             (click)="printAndMark()"
+            title="Usa el diálogo de impresión del navegador (requiere configurar Márgenes: Ninguno)"
           >
             <span class="material-icons">print</span>
-            {{ marking() ? 'Procesando...' : 'Imprimir y marcar' }}
+            Imprimir
           </button>
         </div>
       </header>
-
-      <!-- Banner con instrucciones para que el PDF salga al tamaño máximo.
-           Chrome (y otros browsers) por defecto agrega ~0.5in de margen al
-           imprimir, lo cual ESCALA todo el contenido para que quepa, haciendo
-           que las boletas se vean chiquitas. Esta nota le recuerda al usuario
-           que tiene que cambiar la configuración antes de aceptar la impresión. -->
-      <div class="print-tip no-print">
-        <span class="material-icons">tips_and_updates</span>
-        <div>
-          <strong>Para que las boletas salgan grandes:</strong>
-          en el diálogo de impresión del navegador, en
-          <strong>"Configuración"</strong> o <strong>"Más opciones"</strong>,
-          cambia <strong>Márgenes → Ninguno</strong> y
-          <strong>Escala → 100% (Predeterminado)</strong>.
-        </div>
-      </div>
 
       @if (loading()) {
         <div class="state">
@@ -247,28 +246,6 @@ import {
     .seg__opt--on { background: #1ec77b; color: #0a0e0c; }
     .seg__opt--on:hover { background: #18b06e; color: #0a0e0c; }
 
-    /* Banner amarillo con la nota crítica para que el PDF salga grande.
-       Chrome por defecto agrega ~0.5in de margen, escalando el contenido.
-       Si el usuario no cambia esta config, las boletas salen chiquitas. */
-    .print-tip {
-      display: flex;
-      align-items: flex-start;
-      gap: 10px;
-      padding: 12px 20px;
-      background: #fef3c7;
-      border-bottom: 1px solid #fcd34d;
-      color: #78350f;
-      font-size: 13px;
-      line-height: 1.4;
-    }
-    .print-tip .material-icons {
-      font-size: 20px;
-      color: #d97706;
-      flex-shrink: 0;
-      margin-top: 1px;
-    }
-    .print-tip strong { color: #451a03; font-weight: 700; }
-
     .state {
       flex: 1;
       display: flex;
@@ -310,6 +287,7 @@ export class TicketPrintPageComponent implements OnInit {
 
   readonly loading = signal(true);
   readonly marking = signal(false);
+  readonly generating = signal(false);
   readonly error = signal<string | null>(null);
   readonly data = signal<PrintData | null>(null);
   /** 4 (default, 2x2) o 6 (2x3) boletas por hoja carta. Lo controla el
@@ -399,6 +377,84 @@ export class TicketPrintPageComponent implements OnInit {
       this.router.navigate(['/admin/raffles', this.raffleId]);
     } else {
       this.router.navigate(['/admin/assignments']);
+    }
+  }
+
+  /**
+   * Genera el PDF directamente vía html2canvas + jspdf y lo descarga.
+   *
+   * Esto evita el diálogo de impresión del navegador (que escala el
+   * contenido para acomodar márgenes default de Chrome, haciendo que
+   * las boletas se vean chiquitas). El PDF resultante tiene tamaño
+   * carta exacto y las boletas llenan toda la hoja como las renderiza
+   * el componente, sin importar la configuración del navegador.
+   *
+   * Flujo:
+   *   1. Captura cada .page como canvas usando html2canvas (con scale 2
+   *      para resolución de impresión).
+   *   2. Convierte cada canvas a JPEG y lo agrega al PDF en su propia hoja.
+   *   3. Descarga el PDF con un nombre descriptivo.
+   *   4. Marca las boletas como impresas en backend en paralelo.
+   */
+  async downloadPdfAndMark(): Promise<void> {
+    const d = this.data();
+    if (!d || !d.tickets.length) return;
+
+    this.generating.set(true);
+    try {
+      // Lazy-load para no inflar el bundle inicial — solo se cargan al
+      // disparar la descarga de PDF (acción puntual, no frecuente).
+      const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
+        import('html2canvas'),
+        import('jspdf'),
+      ]);
+
+      const pages = Array.from(
+        document.querySelectorAll<HTMLElement>('app-ticket-print-sheet .page'),
+      );
+      if (!pages.length) {
+        this.toast.error('No hay nada para imprimir', 'Recarga la página e intenta de nuevo.');
+        return;
+      }
+
+      const pdf = new jsPDF({ unit: 'in', format: 'letter', orientation: 'portrait' });
+
+      for (let i = 0; i < pages.length; i++) {
+        const canvas = await html2canvas(pages[i], {
+          scale: 2,             // 2x para nitidez al imprimir desde el PDF
+          useCORS: true,
+          backgroundColor: '#ffffff',
+          logging: false,
+        });
+        const imgData = canvas.toDataURL('image/jpeg', 0.92);
+        if (i > 0) pdf.addPage();
+        pdf.addImage(imgData, 'JPEG', 0, 0, 8.5, 11);
+      }
+
+      const safeName = (d.raffle_name ?? 'rifa').replace(/[^\w\s-]/g, '').trim().replace(/\s+/g, '-');
+      const safeSeller = (d.seller_name ?? 'rango').replace(/[^\w\s-]/g, '').trim().replace(/\s+/g, '-');
+      pdf.save(`boletas-${safeName}-${safeSeller}.pdf`);
+
+      // Marca como impresas en backend (best-effort, no bloquea la descarga).
+      const ticketIds = d.tickets.map((t) => t.ticket_id);
+      this.admin.markPrinted(this.raffleId, ticketIds).subscribe({
+        next: () => this.toast.success(
+          'PDF descargado',
+          `${ticketIds.length} boleta(s) marcadas como impresas.`,
+        ),
+        error: () => this.toast.success(
+          'PDF descargado',
+          'No se pudo marcar como impreso, pero el PDF se generó correctamente.',
+        ),
+      });
+    } catch (e) {
+      console.error('Error generando PDF:', e);
+      this.toast.error(
+        'Error generando PDF',
+        'Intenta de nuevo o usa el botón "Imprimir" como alternativa.',
+      );
+    } finally {
+      this.generating.set(false);
     }
   }
 
