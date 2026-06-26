@@ -92,6 +92,22 @@ import {
         </div>
       </header>
 
+      <!-- Banner con instrucciones para que el PDF salga al tamaño máximo.
+           Chrome (y otros browsers) por defecto agrega ~0.5in de margen al
+           imprimir, lo cual ESCALA todo el contenido para que quepa, haciendo
+           que las boletas se vean chiquitas. Esta nota le recuerda al usuario
+           que tiene que cambiar la configuración antes de aceptar la impresión. -->
+      <div class="print-tip no-print">
+        <span class="material-icons">tips_and_updates</span>
+        <div>
+          <strong>Para que las boletas salgan grandes:</strong>
+          en el diálogo de impresión del navegador, en
+          <strong>"Configuración"</strong> o <strong>"Más opciones"</strong>,
+          cambia <strong>Márgenes → Ninguno</strong> y
+          <strong>Escala → 100% (Predeterminado)</strong>.
+        </div>
+      </div>
+
       @if (loading()) {
         <div class="state">
           <div class="spinner"></div>
@@ -230,6 +246,28 @@ import {
     .seg__opt:hover { background: rgba(255,255,255,0.06); color: #fff; }
     .seg__opt--on { background: #1ec77b; color: #0a0e0c; }
     .seg__opt--on:hover { background: #18b06e; color: #0a0e0c; }
+
+    /* Banner amarillo con la nota crítica para que el PDF salga grande.
+       Chrome por defecto agrega ~0.5in de margen, escalando el contenido.
+       Si el usuario no cambia esta config, las boletas salen chiquitas. */
+    .print-tip {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 12px 20px;
+      background: #fef3c7;
+      border-bottom: 1px solid #fcd34d;
+      color: #78350f;
+      font-size: 13px;
+      line-height: 1.4;
+    }
+    .print-tip .material-icons {
+      font-size: 20px;
+      color: #d97706;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .print-tip strong { color: #451a03; font-weight: 700; }
 
     .state {
       flex: 1;

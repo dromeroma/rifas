@@ -1037,7 +1037,7 @@ export type PrintDesign = 'soccer' | 'professional';
       display: block;
       width: 100%;
       height: auto;
-      max-height: 1.1in;
+      max-height: 0.95in;
       object-fit: contain;
       mix-blend-mode: multiply;
       filter: drop-shadow(0 1pt 2pt rgba(26, 41, 66, 0.18));
@@ -1048,14 +1048,14 @@ export type PrintDesign = 'soccer' | 'professional';
       display: flex;
       align-items: center;
       justify-content: center;
-      height: 17pt;
+      height: 15pt;
       padding: 0 3pt;
       background: linear-gradient(180deg, #ffffff 0%, #f8f1e3 100%);
       border: 1.2px solid #1a2942;
       border-radius: 3pt;
       font-family: 'Inter', sans-serif;
       font-weight: 800;
-      font-size: 9.5pt;
+      font-size: 8.5pt;
       color: #1a2942;
       font-variant-numeric: tabular-nums;
       letter-spacing: 0.02em;
@@ -1069,16 +1069,13 @@ export type PrintDesign = 'soccer' | 'professional';
 
     /* === Premios: header con VALOR encerrado en estrellitas champagne,
        cada fila con dotted leader que llena el espacio derecho ===
-       flex: 1 + grid-auto-rows: 1fr → las filas se distribuyen para
-       ocupar TODO el espacio que sobra en la boleta, dando más aire
-       vertical a cada premio (en lugar de empacarlos arriba con hueco
-       muerto abajo). align-items: center en .pro-prize centra el
-       contenido dentro de la fila estirada. */
+       flex: 1 → absorbe el espacio que sobra en la boleta sin estirar
+       las filas individuales (grid-auto-rows: min-content). */
     .pro-prizes {
-      padding: 0.04in 0.1in 0.04in;
+      padding: 0.03in 0.1in 0.03in;
       display: grid;
-      grid-auto-rows: 1fr;
-      gap: 1.5pt;
+      grid-auto-rows: min-content;
+      gap: 1pt;
       background:
         linear-gradient(180deg, #f8f1e3 0%, #ede2c8 100%);
       position: relative;
@@ -1229,8 +1226,8 @@ export type PrintDesign = 'soccer' | 'professional';
       gap: 1pt;
     }
     .pro-foot__qr {
-      width: 0.7in;
-      height: 0.7in;
+      width: 0.55in;
+      height: 0.55in;
       border: 1.2px solid #b89656;
       border-radius: 2pt;
       padding: 1pt;
