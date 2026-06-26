@@ -238,6 +238,86 @@
       }
     })();
   </script>
+
+  <!-- ============================================================
+       AUTO-RECOVERY del cache obsoleto.
+       Problema: cuando hacemos deploy, los chunks JS cambian de hash.
+       Si el browser del usuario tiene cacheado un index.html viejo
+       (referencia chunks que ya no existen), todos los chunks dan
+       404 → Angular no bootstrappea → splash queda eternamente.
+       El usuario "limpia cache" pero a veces no es suficiente (PWA,
+       service worker, etc.).
+
+       Fix: si después de 8 segundos Angular no ha bootstrappeado, o
+       si detectamos un error específico de carga de chunk, limpiamos
+       agresivamente cache + service workers + caches API y recargamos
+       con bust de cache. Auto-curado sin que el usuario tenga que
+       hacer nada.
+       ============================================================ */
+  <script>
+    (function () {
+      var RECOVERY_TIMEOUT_MS = 8000;
+      var RECOVERY_KEY = 'boletera_recovery_attempt';
+
+      function nukeAndReload(reason) {
+        // Evita loop infinito: solo intenta auto-recovery una vez por sesión
+        try {
+          if (sessionStorage.getItem(RECOVERY_KEY)) {
+            console.warn('[auto-recovery] ya se intentó antes, no recargar de nuevo');
+            return;
+          }
+          sessionStorage.setItem(RECOVERY_KEY, String(Date.now()));
+        } catch (e) {}
+
+        console.warn('[auto-recovery] disparado por:', reason, '— limpiando todo y recargando');
+
+        var ops = [];
+
+        // 1) Desregistrar service workers
+        if ('serviceWorker' in navigator) {
+          ops.push(navigator.serviceWorker.getRegistrations().then(function (regs) {
+            return Promise.all(regs.map(function (r) { return r.unregister(); }));
+          }).catch(function () {}));
+        }
+
+        // 2) Limpiar caches API (PWA cache)
+        if ('caches' in window) {
+          ops.push(caches.keys().then(function (names) {
+            return Promise.all(names.map(function (n) { return caches.delete(n); }));
+          }).catch(function () {}));
+        }
+
+        Promise.all(ops).then(function () {
+          // Recarga con timestamp para esquivar cache del browser
+          var sep = location.href.indexOf('?') >= 0 ? '&' : '?';
+          location.replace(location.href + sep + '_r=' + Date.now());
+        });
+      }
+
+      // Listener global: cualquier error de carga de chunk JS dispara recovery
+      window.addEventListener('error', function (ev) {
+        var src = ev.target && (ev.target.src || ev.target.href);
+        if (!src) return;
+        // Si falló un script o un asset .js que es de Angular
+        if (/\.(js|css)(\?|$)/.test(src) && (
+          src.indexOf('chunk-') >= 0 ||
+          src.indexOf('main-') >= 0 ||
+          src.indexOf('polyfills-') >= 0 ||
+          src.indexOf('styles-') >= 0
+        )) {
+          nukeAndReload('asset 404: ' + src);
+        }
+      }, true);
+
+      // Timeout: si después de N segundos Angular sigue sin bootstrappear,
+      // asumir que algo está mal y auto-recuperar
+      setTimeout(function () {
+        if (!document.body.classList.contains('booted')) {
+          nukeAndReload('timeout ' + RECOVERY_TIMEOUT_MS + 'ms sin bootstrap');
+        }
+      }, RECOVERY_TIMEOUT_MS);
+    })();
+  </script>
 </head>
 <body class="mat-typography">
   <!-- Splash pre-bootstrap visible mientras Angular carga. Solo se muestra
