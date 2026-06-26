@@ -12,6 +12,7 @@ from app.models.customer import Customer
 from app.models.prize import Prize
 from app.models.raffle import Raffle, RaffleStatus
 from app.models.ticket import Ticket, TicketStatus
+from app.models.ticket_number import TicketNumber
 from app.models.user import User, UserRole
 from app.schemas.raffle import (
     PrizeCreate, PrizeOut, PrizeUpdate,
@@ -185,6 +186,130 @@ async def update_raffle(
     await db.commit()
     await db.refresh(raffle, attribute_names=["prizes"])
     return raffle
+
+
+@router.get("/{raffle_id}/integrity-check")
+async def integrity_check(
+    raffle_id: int,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    actor: Annotated[User, Depends(require_roles(UserRole.ADMIN, UserRole.SUPER_ADMIN))],
+    scope: Annotated[TenantScope, Depends(get_tenant_scope)],
+):
+    """
+    Verifica la integridad de los números de boletas de una rifa.
+    Garantiza que ningún número aparece en más de una boleta — crítico
+    porque un número repetido permitiría a varias personas reclamar el
+    mismo premio.
+
+    Aunque el sistema ya tiene 2 capas de protección (algoritmo de
+    shuffle sin reemplazo + UNIQUE(raffle_id, number) en SQL), este
+    endpoint permite re-validar bajo demanda y dar tranquilidad al
+    administrador antes del sorteo.
+
+    Retorna:
+      ok: bool — true si todo está correcto
+      total_numbers: int — números totales en boletas (= total_tickets * numbers_per_ticket)
+      unique_numbers: int — números únicos (debe igualar total_numbers)
+      duplicates: list — si hay duplicados, los lista con sus boletas
+      missing_tickets: list — boletas con cantidad incorrecta de números
+      summary: str — resumen humano del resultado
+    """
+    raffle = (await db.execute(select(Raffle).where(Raffle.id == raffle_id))).scalar_one_or_none()
+    if not raffle:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "rifa no encontrada")
+    assert_tenant_owns(scope, raffle.tenant_id)
+
+    if not raffle.numbers_generated:
+        return {
+            "ok": False,
+            "total_numbers": 0,
+            "unique_numbers": 0,
+            "expected_numbers": raffle.total_tickets * raffle.numbers_per_ticket,
+            "duplicates": [],
+            "missing_tickets": [],
+            "summary": "La rifa aún no tiene números generados.",
+        }
+
+    expected = raffle.total_tickets * raffle.numbers_per_ticket
+
+    # Conteo total de números asignados a boletas de esta rifa
+    from sqlalchemy import func
+    total = (await db.execute(
+        select(func.count(TicketNumber.id)).where(TicketNumber.raffle_id == raffle_id)
+    )).scalar()
+
+    # Conteo de números ÚNICOS — si difiere de total, hay duplicados
+    unique = (await db.execute(
+        select(func.count(func.distinct(TicketNumber.number))).where(
+            TicketNumber.raffle_id == raffle_id
+        )
+    )).scalar()
+
+    duplicates: list = []
+    if total != unique:
+        # Lista los duplicados con las boletas donde aparecen (top 50)
+        from sqlalchemy import text
+        result = await db.execute(text("""
+            SELECT tn.number,
+                   COUNT(*) as cnt,
+                   ARRAY_AGG(t.number_label ORDER BY t.number_label) as boleta_labels
+              FROM ticket_numbers tn
+              JOIN tickets t ON t.id = tn.ticket_id
+             WHERE tn.raffle_id = :rid
+             GROUP BY tn.number
+            HAVING COUNT(*) > 1
+             ORDER BY cnt DESC, tn.number ASC
+             LIMIT 50
+        """), {"rid": raffle_id})
+        duplicates = [
+            {"number": row[0], "count": row[1], "boletas": list(row[2])}
+            for row in result
+        ]
+
+    # Boletas con cantidad incorrecta de números (debe ser numbers_per_ticket)
+    from sqlalchemy import text
+    result = await db.execute(text("""
+        SELECT t.number_label, COUNT(tn.id) as cnt
+          FROM tickets t
+          LEFT JOIN ticket_numbers tn ON tn.ticket_id = t.id
+         WHERE t.raffle_id = :rid
+         GROUP BY t.id, t.number_label
+        HAVING COUNT(tn.id) != :npt
+         ORDER BY t.number_label
+         LIMIT 50
+    """), {"rid": raffle_id, "npt": raffle.numbers_per_ticket})
+    missing_tickets = [
+        {"boleta": row[0], "numeros_actuales": row[1]}
+        for row in result
+    ]
+
+    ok = (total == expected) and (total == unique) and (not missing_tickets)
+
+    if ok:
+        summary = (
+            f"✓ Integridad correcta: {total} números, todos únicos. "
+            f"Las {raffle.total_tickets} boletas tienen sus {raffle.numbers_per_ticket} "
+            f"números cada una. Ningún número se repite."
+        )
+    else:
+        problems = []
+        if total != expected:
+            problems.append(f"se esperaban {expected} números pero hay {total}")
+        if total != unique:
+            problems.append(f"{total - unique} números están duplicados")
+        if missing_tickets:
+            problems.append(f"{len(missing_tickets)} boletas tienen cantidad incorrecta de números")
+        summary = "✗ PROBLEMAS DETECTADOS: " + "; ".join(problems)
+
+    return {
+        "ok": ok,
+        "total_numbers": total,
+        "unique_numbers": unique,
+        "expected_numbers": expected,
+        "duplicates": duplicates,
+        "missing_tickets": missing_tickets,
+        "summary": summary,
+    }
 
 
 @router.post("/{raffle_id}/generate-numbers", response_model=RaffleOut)

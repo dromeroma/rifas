@@ -176,4 +176,24 @@ export class AdminService {
       { ticket_ids: ticketIds },
     );
   }
+
+  /** Verifica que ningún número esté duplicado en las boletas de la rifa.
+   *  Crítico: un número repetido permitiría que varias personas reclamen
+   *  el mismo premio. El sistema ya tiene 2 capas de protección, pero este
+   *  endpoint permite re-validar bajo demanda antes del sorteo. */
+  integrityCheck(raffleId: number): Observable<IntegrityCheckResult> {
+    return this.http.get<IntegrityCheckResult>(
+      `${this.api}/raffles/${raffleId}/integrity-check`,
+    );
+  }
+}
+
+export interface IntegrityCheckResult {
+  ok: boolean;
+  total_numbers: number;
+  unique_numbers: number;
+  expected_numbers: number;
+  duplicates: Array<{ number: string; count: number; boletas: string[] }>;
+  missing_tickets: Array<{ boleta: string; numeros_actuales: number }>;
+  summary: string;
 }

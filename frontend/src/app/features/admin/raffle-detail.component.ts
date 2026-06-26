@@ -6,7 +6,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { environment } from '@env/environment';
 import { Prize, Raffle, Ticket, TicketStatus } from '@core/models/raffle.model';
 import { RaffleStats } from '@core/models/stats.model';
-import { AdminService } from '@core/services/admin.service';
+import { AdminService, IntegrityCheckResult } from '@core/services/admin.service';
 import { AuthService } from '@core/services/auth.service';
 import { ConfirmService } from '@core/services/confirm.service';
 import { DrawWinnerResult, OpsService } from '@core/services/ops.service';
@@ -62,6 +62,9 @@ import { TicketActionsModalComponent } from '../seller/ticket-actions-modal.comp
               Liberar vencidas
             </app-button>
             @if (r.numbers_generated && r.status !== 'cancelled') {
+              <app-button variant="secondary" icon="verified" [loading]="integrityChecking()" (click)="runIntegrityCheck()">
+                Verificar números
+              </app-button>
               <app-button variant="secondary" icon="print" (click)="openRangePrintModal()">
                 Imprimir por rango
               </app-button>
@@ -275,6 +278,74 @@ import { TicketActionsModalComponent } from '../seller/ticket-actions-modal.comp
             <app-button variant="primary" icon="print" (click)="submitRangePrint()">
               Imprimir rango
             </app-button>
+          </ng-container>
+        </app-modal>
+
+        <!-- ============ MODAL: Resultado verificación de integridad ============ -->
+        <app-modal
+          [open]="integrityOpen()"
+          title="Verificación de integridad"
+          subtitle="Garantía de que ningún número se repite entre boletas."
+          icon="verified"
+          size="md"
+          (close)="closeIntegrityModal()"
+        >
+          @if (integrityResult(); as res) {
+            <div class="integrity" [class.integrity--ok]="res.ok" [class.integrity--bad]="!res.ok">
+              <div class="integrity__hero">
+                <span class="material-icons">{{ res.ok ? 'check_circle' : 'error' }}</span>
+                <strong>{{ res.summary }}</strong>
+              </div>
+
+              <div class="integrity__stats">
+                <div class="integrity__stat">
+                  <span class="integrity__stat-label">Números totales</span>
+                  <strong>{{ res.total_numbers }}</strong>
+                </div>
+                <div class="integrity__stat">
+                  <span class="integrity__stat-label">Números únicos</span>
+                  <strong [class.integrity__stat--bad]="res.total_numbers !== res.unique_numbers">
+                    {{ res.unique_numbers }}
+                  </strong>
+                </div>
+                <div class="integrity__stat">
+                  <span class="integrity__stat-label">Esperados</span>
+                  <strong>{{ res.expected_numbers }}</strong>
+                </div>
+              </div>
+
+              @if (res.duplicates.length > 0) {
+                <div class="integrity__section">
+                  <h4>⚠ Números duplicados ({{ res.duplicates.length }})</h4>
+                  <div class="integrity__list">
+                    @for (d of res.duplicates; track d.number) {
+                      <div class="integrity__dup">
+                        <strong>{{ d.number }}</strong>
+                        <span class="muted">aparece {{ d.count }} veces en boletas:</span>
+                        <span class="integrity__boletas">{{ d.boletas.join(', ') }}</span>
+                      </div>
+                    }
+                  </div>
+                </div>
+              }
+
+              @if (res.missing_tickets.length > 0) {
+                <div class="integrity__section">
+                  <h4>⚠ Boletas con cantidad incorrecta de números ({{ res.missing_tickets.length }})</h4>
+                  <div class="integrity__list">
+                    @for (m of res.missing_tickets; track m.boleta) {
+                      <div class="integrity__dup">
+                        Boleta <strong>{{ m.boleta }}</strong>:
+                        <span class="muted">tiene {{ m.numeros_actuales }} números (debería tener {{ raffle()?.numbers_per_ticket }})</span>
+                      </div>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          }
+          <ng-container slot="footer">
+            <app-button variant="primary" (click)="closeIntegrityModal()">Cerrar</app-button>
           </ng-container>
         </app-modal>
 
@@ -750,6 +821,86 @@ import { TicketActionsModalComponent } from '../seller/ticket-actions-modal.comp
       background: var(--accent);
       color: #0a0e0c;
     }
+
+    /* ===== Modal verificación de integridad ===== */
+    .integrity { display: grid; gap: var(--s-4); }
+    .integrity__hero {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: var(--s-3);
+      border-radius: var(--r-md);
+      border: 1px solid transparent;
+    }
+    .integrity--ok .integrity__hero {
+      background: rgba(30, 199, 123, 0.1);
+      border-color: rgba(30, 199, 123, 0.35);
+      color: #b5f4d6;
+    }
+    .integrity--ok .integrity__hero .material-icons {
+      color: #1ec77b;
+      font-size: 28px;
+    }
+    .integrity--bad .integrity__hero {
+      background: rgba(239, 68, 68, 0.1);
+      border-color: rgba(239, 68, 68, 0.35);
+      color: #fecaca;
+    }
+    .integrity--bad .integrity__hero .material-icons {
+      color: #ef4444;
+      font-size: 28px;
+    }
+    .integrity__hero strong { font-size: 14px; line-height: 1.45; }
+
+    .integrity__stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--s-2);
+    }
+    .integrity__stat {
+      display: grid;
+      gap: 4px;
+      padding: var(--s-3);
+      background: var(--bg-input);
+      border-radius: var(--r-md);
+      text-align: center;
+    }
+    .integrity__stat-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .integrity__stat strong { font-size: 22px; color: var(--text); font-variant-numeric: tabular-nums; }
+    .integrity__stat--bad { color: #ef4444 !important; }
+
+    .integrity__section { display: grid; gap: var(--s-2); }
+    .integrity__section h4 {
+      margin: 0;
+      font-size: 13px;
+      color: #f59e0b;
+      font-weight: 700;
+    }
+    .integrity__list {
+      display: grid;
+      gap: 6px;
+      max-height: 260px;
+      overflow-y: auto;
+      padding: var(--s-2);
+      background: rgba(0,0,0,0.25);
+      border-radius: var(--r-md);
+    }
+    .integrity__dup {
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .integrity__dup strong { color: var(--text); font-family: 'Courier New', monospace; }
+    .integrity__dup .muted { color: var(--text-muted); margin: 0 6px; }
+    .integrity__boletas {
+      font-family: 'Courier New', monospace;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
     .range-form .alert {
       display: flex;
       gap: 8px;
@@ -1073,6 +1224,11 @@ export class RaffleDetailComponent implements OnInit {
   // así el auto-download captura el diseño correcto sin race condition.
   rangeDesign = signal<'soccer' | 'professional'>('soccer');
 
+  // Verificación de integridad de números (anti-duplicados).
+  integrityChecking = signal(false);
+  integrityResult = signal<IntegrityCheckResult | null>(null);
+  integrityOpen = signal(false);
+
   // Editar rifa
   editOpen = signal(false);
   savingEdit = signal(false);
@@ -1360,6 +1516,30 @@ export class RaffleDetailComponent implements OnInit {
     this.rangePrintOpen.set(true);
   }
   closeRangePrintModal() { this.rangePrintOpen.set(false); }
+
+  /** Llama al endpoint de verificación de integridad y muestra resultado.
+   *  Confirma que ningún número está duplicado en las boletas de la rifa.
+   *  Crítico antes del sorteo — un número repetido permitiría a varias
+   *  personas reclamar el mismo premio. */
+  runIntegrityCheck() {
+    const r = this.raffle();
+    if (!r) return;
+    this.integrityChecking.set(true);
+    this.integrityResult.set(null);
+    this.admin.integrityCheck(r.id).subscribe({
+      next: (result) => {
+        this.integrityChecking.set(false);
+        this.integrityResult.set(result);
+        this.integrityOpen.set(true);
+      },
+      error: (e) => {
+        this.integrityChecking.set(false);
+        const detail = e?.error?.detail ?? 'No se pudo verificar la integridad';
+        this.toast.error('Error verificando integridad', typeof detail === 'string' ? detail : '');
+      },
+    });
+  }
+  closeIntegrityModal() { this.integrityOpen.set(false); }
 
   /** Valida el rango y navega a la página de impresión en modo range. */
   submitRangePrint() {
