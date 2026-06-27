@@ -86,7 +86,7 @@ import {
                   <small class="muted">{{ raffleName(a.raffle_id) }}</small>
                 </div>
                 <div class="row__range">
-                  <strong class="num">{{ pad(a.from_ticket) }} → {{ pad(a.to_ticket) }}</strong>
+                  <strong class="num">{{ pad(a.from_ticket, a.raffle_id) }} → {{ pad(a.to_ticket, a.raffle_id) }}</strong>
                   <small class="muted">{{ a.to_ticket - a.from_ticket + 1 }} boletas</small>
                 </div>
                 <app-chip [tone]="a.status === 'active' ? 'accent' : 'default'">{{ a.status }}</app-chip>
@@ -213,7 +213,7 @@ export class AssignmentsComponent implements OnInit {
         const seller = this.sellers().find(s => s.id === a.seller_id);
         this.toast.success(
           'Asignación creada',
-          `Boletas ${this.pad(a.from_ticket)}–${this.pad(a.to_ticket)} asignadas a ${seller?.full_name ?? 'el vendedor'}.`,
+          `Boletas ${this.pad(a.from_ticket, a.raffle_id)}–${this.pad(a.to_ticket, a.raffle_id)} asignadas a ${seller?.full_name ?? 'el vendedor'}.`,
         );
       },
       error: (e) => {
@@ -227,7 +227,19 @@ export class AssignmentsComponent implements OnInit {
 
   raffleName(id: number) { return this.raffles().find((r) => r.id === id)?.name ?? `#${id}`; }
   sellerName(id: number) { return this.sellers().find((s) => s.id === id)?.full_name ?? `#${id}`; }
-  pad(n: number) { return String(n).padStart(3, '0'); }
+  /** Pad dinámico por rifa: usa el ancho del total_tickets de la rifa
+   *  (mínimo 3) para que coincida con los labels reales. Sin esto, rifas
+   *  con 1000+ boletas mostraban "1 → 50" en vez de "0001 → 0050". */
+  pad(n: number, raffleId?: number) {
+    if (raffleId != null) {
+      const raffle = this.raffles().find((r) => r.id === raffleId);
+      if (raffle) {
+        const width = Math.max(3, String(raffle.total_tickets).length);
+        return String(n).padStart(width, '0');
+      }
+    }
+    return String(n).padStart(3, '0');
+  }
 
   /** Abre la página de impresión (fuera del shell para imprimir limpio). */
   openPrint(a: SellerAssignment) {

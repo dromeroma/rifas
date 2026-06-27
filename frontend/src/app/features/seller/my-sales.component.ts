@@ -435,16 +435,21 @@ export class MySalesComponent implements OnInit {
     const rId = this.selectedRaffleId();
     if (!rId) return [];
 
-    // Set de labels asignadas a este vendedor para la rifa seleccionada
-    const labels = new Set<string>();
-    for (const a of this.assignments()) {
-      if (a.raffle_id !== rId) continue;
-      for (let i = a.from_ticket; i <= a.to_ticket; i++) {
-        labels.add(String(i).padStart(3, '0'));
-      }
-    }
-    // allTickets ya viene filtrado por la rifa en el backend; solo filtramos por label
-    return this.allTickets().filter((t) => labels.has(t.number_label));
+    // El backend YA filtra Ticket.seller_id == user.id en /raffles/:id/tickets
+    // (ver tickets.py:list_tickets). Por eso allTickets() ya contiene
+    // exclusivamente las boletas asignadas al vendedor.
+    //
+    // Antes se hacía un segundo filtro client-side por number_label
+    // generado a partir de assignments.from_ticket/to_ticket, pero usaba
+    // padStart(3, '0') hardcoded — lo cual fallaba para rifas con 1000+
+    // boletas (labels de 4 dígitos como '0001', '0050', '0714'). El Set
+    // de labels generaba '001', '050', '714' que nunca matcheaban con
+    // '0001', '0050', '0714' del backend → resultado: 0 boletas visibles
+    // aunque la vendedora sí tuviera asignaciones.
+    //
+    // Fix: confiar en el backend como fuente de verdad. Sin segundo filtro
+    // client-side, los bugs de padding ya no son problema.
+    return this.allTickets();
   });
 
   readonly filteredTickets = computed(() => {
