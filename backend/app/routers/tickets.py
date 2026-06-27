@@ -598,12 +598,15 @@ async def get_print_data(
     if seller_id is not None:
         q = q.where(Ticket.seller_id == seller_id)
     if from_label is not None and to_label is not None:
-        # Padding al ancho de la rifa para tolerar inputs como '1' o '01'
-        digits = int(raffle.number_digits or 4) if hasattr(raffle, "number_digits") else 4
-        # Usamos el ancho del number_label real (no number_digits, que es de los
-        # números individuales). Asumimos 3 dígitos por defecto.
-        fl = from_label.strip().zfill(3)
-        tl = to_label.strip().zfill(3)
+        # Padding al ancho del label real de las boletas de esta rifa
+        # (depende de total_tickets — ver number_generator.py:label_width).
+        # Rifas con 1000+ boletas tienen labels '0001'-'1000' (4 dígitos);
+        # con 500 son '001'-'500' (3 dígitos). zfill(3) hardcoded rompía
+        # el rango cuando el usuario pasaba '0715' y la BD esperaba '0715'
+        # pero la comparación quedaba '715' >= '0715' = false.
+        label_width = max(3, len(str(raffle.total_tickets)))
+        fl = from_label.strip().zfill(label_width)
+        tl = to_label.strip().zfill(label_width)
         # Asegurar rango ordenado
         if fl > tl:
             fl, tl = tl, fl

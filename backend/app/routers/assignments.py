@@ -135,8 +135,17 @@ async def create_assignment(
     db.add(assignment)
     await db.flush()
 
-    # Marcar boletas con seller_id
-    labels = [str(i).zfill(3) for i in range(from_ticket, to_ticket + 1)]
+    # Marcar boletas con seller_id.
+    # IMPORTANTE: el width del label depende del total de boletas de la rifa
+    # (ver services/number_generator.py:label_width). Hardcodear zfill(3)
+    # rompe en rifas con 1000+ boletas (labels de 4 dígitos como '0715'):
+    # los labels generados '715','716',... no matchean con '0715','0716'...
+    # de la BD, la query devuelve 0 tickets, ningún seller_id se setea →
+    # el seller_assignment queda registrado pero los tickets reales no se
+    # vinculan al vendedor (bug visible en el grid del admin que pinta el
+    # color "asignada" cuando ticket.seller_id existe).
+    label_width = max(3, len(str(raffle.total_tickets)))
+    labels = [str(i).zfill(label_width) for i in range(from_ticket, to_ticket + 1)]
     tickets = (
         await db.execute(
             select(Ticket).where(Ticket.raffle_id == raffle.id, Ticket.number_label.in_(labels))
