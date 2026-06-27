@@ -207,14 +207,37 @@ export class AssignmentsComponent implements OnInit {
     }
     this.saving.set(true);
     this.admin.createAssignment(+this.form.raffle_id, +this.form.seller_id, +this.form.quantity).subscribe({
-      next: (a) => {
-        this.list.update((arr) => [a, ...arr]);
+      next: (assignments) => {
+        // El backend puede devolver MÚLTIPLES bloques si el rango pedido
+        // cruza boletas ya asignadas a otros vendedores. Agregamos todos al
+        // listado y mostramos un toast con resumen.
+        this.list.update((arr) => [...assignments, ...arr]);
         this.saving.set(false);
-        const seller = this.sellers().find(s => s.id === a.seller_id);
-        this.toast.success(
-          'Asignación creada',
-          `Boletas ${this.pad(a.from_ticket, a.raffle_id)}–${this.pad(a.to_ticket, a.raffle_id)} asignadas a ${seller?.full_name ?? 'el vendedor'}.`,
+        if (assignments.length === 0) return;
+
+        const first = assignments[0];
+        const seller = this.sellers().find(s => s.id === first.seller_id);
+        const sellerName = seller?.full_name ?? 'el vendedor';
+        const totalAssigned = assignments.reduce(
+          (sum, a) => sum + (a.to_ticket - a.from_ticket + 1),
+          0,
         );
+
+        if (assignments.length === 1) {
+          this.toast.success(
+            'Asignación creada',
+            `Boletas ${this.pad(first.from_ticket, first.raffle_id)}–${this.pad(first.to_ticket, first.raffle_id)} asignadas a ${sellerName}.`,
+          );
+        } else {
+          // Múltiples bloques (el rango pedido tenía huecos por asignaciones previas)
+          const ranges = assignments
+            .map((a) => `${this.pad(a.from_ticket, a.raffle_id)}–${this.pad(a.to_ticket, a.raffle_id)}`)
+            .join(', ');
+          this.toast.success(
+            `${totalAssigned} boletas asignadas en ${assignments.length} bloques`,
+            `${sellerName} recibió: ${ranges} (se saltaron las boletas ya asignadas a otros vendedores).`,
+          );
+        }
       },
       error: (e) => {
         const detail = e?.error?.detail ?? 'Error creando asignación';

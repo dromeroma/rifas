@@ -103,8 +103,17 @@ export class AdminService {
     return this.http.get<SellerAssignment[]>(`${this.api}/assignments${q}`);
   }
 
-  createAssignment(raffleId: number, sellerId: number, quantity: number): Observable<SellerAssignment> {
-    return this.http.post<SellerAssignment>(`${this.api}/assignments`, {
+  /**
+   * Crea asignación(es) buscando el primer rango de N boletas libres.
+   * Devuelve una LISTA porque si el rango pedido cruza boletas ya
+   * asignadas a otros vendedores, el backend lo divide automáticamente
+   * en múltiples bloques consecutivos.
+   *
+   * Ejemplo: si el vendedor A tiene 0001-0050 y 0714, asignar 800 al
+   * vendedor B devuelve 2 bloques: 0051-0713 (663) + 0715-0851 (137).
+   */
+  createAssignment(raffleId: number, sellerId: number, quantity: number): Observable<SellerAssignment[]> {
+    return this.http.post<SellerAssignment[]>(`${this.api}/assignments`, {
       raffle_id: raffleId,
       seller_id: sellerId,
       quantity,

@@ -84,7 +84,7 @@ async def list_assignments(
     return (await db.execute(q)).scalars().all()
 
 
-@router.post("", response_model=SellerAssignmentOut, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=List[SellerAssignmentOut], status_code=status.HTTP_201_CREATED)
 async def create_assignment(
     payload: SellerAssignmentCreate,
     request: Request,
@@ -92,6 +92,27 @@ async def create_assignment(
     actor: Annotated[User, Depends(require_roles(UserRole.ADMIN))],
     scope: Annotated[TenantScope, Depends(get_tenant_scope)],
 ):
+    """
+    Asigna N boletas al vendedor empezando por el número MÁS BAJO disponible.
+
+    Algoritmo:
+      1. Recopila los números de boleta ya asignados a CUALQUIER vendedor.
+      2. Recorre 1 → total_tickets y elige los primeros N que estén libres.
+      3. Si el rango elegido tiene huecos por boletas ya asignadas a otros
+         vendedores, AUTOMÁTICAMENTE divide la asignación en múltiples
+         bloques consecutivos (uno por cada "isla" de boletas libres).
+      4. Crea un SellerAssignment por cada bloque.
+      5. Marca cada Ticket.seller_id con el seller correspondiente.
+
+    Ejemplos:
+      - Dalia tiene 0001-0050 y 0714. Asigno 20 a Valentina:
+          Resultado: 1 bloque 0051-0070 (no toca a Dalia).
+      - Dalia tiene 0001-0050 y 0714. Asigno 800 a alguien:
+          Resultado: 2 bloques → 0051-0713 (663) + 0715-0851 (137).
+          Salta la 0714 que ya es de Dalia.
+
+    Retorna la lista de SellerAssignment creados (1 o más).
+    """
     raffle = (await db.execute(select(Raffle).where(Raffle.id == payload.raffle_id))).scalar_one_or_none()
     if not raffle:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "rifa no encontrada")
@@ -102,53 +123,84 @@ async def create_assignment(
     seller = (await db.execute(select(User).where(User.id == payload.seller_id, User.role == UserRole.SELLER))).scalar_one_or_none()
     if not seller:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "vendedor no encontrado")
-    # Seller debe pertenecer al mismo tenant de la rifa
     if seller.tenant_id != raffle.tenant_id:
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST,
             "el vendedor no pertenece a la misma cuenta que la rifa.",
         )
 
-    # Determinar el siguiente bloque libre: tomamos el mayor to_ticket asignado y arrancamos desde ahí + 1.
-    max_assigned = (
+    quantity = int(payload.quantity)
+    if quantity < 1:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "quantity debe ser >= 1")
+
+    # 1) Tickets ya asignados (a cualquier vendedor) en esta rifa
+    assigned_labels = (
         await db.execute(
-            select(func.coalesce(func.max(SellerAssignment.to_ticket), 0)).where(
-                SellerAssignment.raffle_id == raffle.id
+            select(Ticket.number_label).where(
+                Ticket.raffle_id == raffle.id,
+                Ticket.seller_id.is_not(None),
             )
         )
-    ).scalar_one()
-    from_ticket = int(max_assigned) + 1
-    to_ticket = from_ticket + payload.quantity - 1
-    if to_ticket > raffle.total_tickets:
+    ).scalars().all()
+    assigned_nums: set[int] = set()
+    for label in assigned_labels:
+        try:
+            assigned_nums.add(int(label))
+        except (ValueError, TypeError):
+            continue
+
+    # 2) Elegir los primeros `quantity` números libres
+    available_nums: list[int] = []
+    for n in range(1, raffle.total_tickets + 1):
+        if n not in assigned_nums:
+            available_nums.append(n)
+            if len(available_nums) == quantity:
+                break
+
+    if len(available_nums) < quantity:
         raise HTTPException(
             status.HTTP_409_CONFLICT,
-            f"sin boletas disponibles: solo quedan {raffle.total_tickets - max_assigned}",
+            f"sin boletas suficientes: pediste {quantity} pero solo hay "
+            f"{len(available_nums)} disponibles",
         )
 
-    assignment = SellerAssignment(
-        raffle_id=raffle.id,
-        seller_id=seller.id,
-        from_ticket=from_ticket,
-        to_ticket=to_ticket,
-        status="active",
-    )
-    db.add(assignment)
+    # 3) Agrupar en bloques consecutivos: [(from, to), (from, to), ...]
+    blocks: list[tuple[int, int]] = []
+    block_from = available_nums[0]
+    block_to = available_nums[0]
+    for n in available_nums[1:]:
+        if n == block_to + 1:
+            block_to = n
+        else:
+            blocks.append((block_from, block_to))
+            block_from = block_to = n
+    blocks.append((block_from, block_to))
+
+    # 4) Crear un SellerAssignment por bloque
+    assignments: list[SellerAssignment] = []
+    for from_t, to_t in blocks:
+        a = SellerAssignment(
+            raffle_id=raffle.id,
+            seller_id=seller.id,
+            from_ticket=from_t,
+            to_ticket=to_t,
+            status="active",
+        )
+        db.add(a)
+        assignments.append(a)
     await db.flush()
 
-    # Marcar boletas con seller_id.
-    # IMPORTANTE: el width del label depende del total de boletas de la rifa
-    # (ver services/number_generator.py:label_width). Hardcodear zfill(3)
-    # rompe en rifas con 1000+ boletas (labels de 4 dígitos como '0715'):
-    # los labels generados '715','716',... no matchean con '0715','0716'...
-    # de la BD, la query devuelve 0 tickets, ningún seller_id se setea →
-    # el seller_assignment queda registrado pero los tickets reales no se
-    # vinculan al vendedor (bug visible en el grid del admin que pinta el
-    # color "asignada" cuando ticket.seller_id existe).
+    # 5) Marcar todos los tickets correspondientes con seller_id.
+    # Width dinámico: rifas con N boletas usan labels con len(str(N)) dígitos
+    # (mín 3). zfill correcto evita el bug de matching de v0.15.25.
     label_width = max(3, len(str(raffle.total_tickets)))
-    labels = [str(i).zfill(label_width) for i in range(from_ticket, to_ticket + 1)]
+    target_labels = [str(n).zfill(label_width) for n in available_nums]
     tickets = (
         await db.execute(
-            select(Ticket).where(Ticket.raffle_id == raffle.id, Ticket.number_label.in_(labels))
+            select(Ticket).where(
+                Ticket.raffle_id == raffle.id,
+                Ticket.number_label.in_(target_labels),
+            )
         )
     ).scalars().all()
     for t in tickets:
@@ -157,15 +209,19 @@ async def create_assignment(
 
     await log_action(
         db, actor_id=actor.id, action="assignment.create",
-        entity_type="assignment", entity_id=assignment.id, request=request,
+        entity_type="assignment", entity_id=assignments[0].id, request=request,
         metadata={
             "seller_id": seller.id, "raffle_id": raffle.id,
-            "from_ticket": from_ticket, "to_ticket": to_ticket,
+            "requested": quantity,
+            "total_assigned": len(available_nums),
+            "blocks": [{"from": f, "to": t} for f, t in blocks],
+            "assignment_ids": [a.id for a in assignments],
         },
     )
     await db.commit()
-    await db.refresh(assignment)
-    return assignment
+    for a in assignments:
+        await db.refresh(a)
+    return assignments
 
 
 # ============ Detalle de vendedor: rifas + boletas asignadas ============

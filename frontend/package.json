@@ -1,6 +1,6 @@
 {
   "name": "boletera",
-  "version": "0.15.25",
+  "version": "0.15.26",
   "private": true,
   "scripts": {
     "ng": "ng",
