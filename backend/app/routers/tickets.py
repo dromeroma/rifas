@@ -90,13 +90,21 @@ async def _verify_ticket_tenancy(db: AsyncSession, ticket_id: int, scope: Tenant
 async def list_tickets(
     raffle_id: int,
     db: Annotated[AsyncSession, Depends(get_db)],
-    _user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(get_current_user)],
     scope: Annotated[TenantScope, Depends(get_tenant_scope)],
 ):
+    """
+    Lista boletas de la rifa. Scoping por rol:
+      - SELLER: solo ve las boletas asignadas a él (Ticket.seller_id == user.id).
+        Sin este filtro el vendedor veía las 1000 boletas de la rifa y no podía
+        distinguir cuáles eran las suyas en la UI de "Mis Ventas".
+      - ADMIN / SUPER_ADMIN: ve TODAS las boletas (necesario para gestión).
+    """
     await _verify_raffle_tenancy(db, raffle_id, scope)
-    res = await db.execute(
-        select(Ticket).where(Ticket.raffle_id == raffle_id).order_by(Ticket.number_label)
-    )
+    q = select(Ticket).where(Ticket.raffle_id == raffle_id).order_by(Ticket.number_label)
+    if user.role == UserRole.SELLER:
+        q = q.where(Ticket.seller_id == user.id)
+    res = await db.execute(q)
     return res.scalars().all()
 
 
