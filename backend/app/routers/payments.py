@@ -46,7 +46,10 @@ async def submit_payment_endpoint(
     ticket_id: int,
     request: Request,
     db: Annotated[AsyncSession, Depends(get_db)],
-    actor: Annotated[User, Depends(require_roles(UserRole.SELLER, UserRole.ADMIN, UserRole.SUPER_ADMIN))],
+    # Solo SELLER — reportar un pago entrante de un cliente es acción de
+    # venta. Los admins gestionan los pagos ya reportados (aprobar/rechazar/
+    # editar/eliminar) vía los demás endpoints de /payments, no los crean.
+    actor: Annotated[User, Depends(require_roles(UserRole.SELLER))],
     scope: Annotated[TenantScope, Depends(get_tenant_scope)],
     method: Annotated[PaymentMethod, Form()],
     amount: Annotated[Decimal, Form()],

@@ -89,8 +89,13 @@ export const routes: Routes = [
   },
 
   {
+    // /seller — flujo operativo de VENTA (reservar boletas, registrar pagos,
+    // gestionar clientes propios). EXCLUSIVO para SELLER: los admins NO
+    // venden, solo administran (gestionan desde /admin).
+    // Si un admin intenta entrar, roleGuard lo redirige al login con un
+    // mensaje y termina en /admin (su área correcta).
     path: 'seller',
-    canActivate: [authGuard, roleGuard(['seller', 'admin', 'super_admin'])],
+    canActivate: [authGuard, roleGuard(['seller'])],
     loadChildren: () => import('./features/seller/seller.routes').then((m) => m.SELLER_ROUTES),
   },
 

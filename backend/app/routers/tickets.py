@@ -119,7 +119,9 @@ async def reserve_package_endpoint(
     payload: ReservePackageRequest,
     request: Request,
     db: Annotated[AsyncSession, Depends(get_db)],
-    actor: Annotated[User, Depends(require_roles(UserRole.SELLER, UserRole.ADMIN, UserRole.SUPER_ADMIN))],
+    # Solo SELLER — los admins no venden, solo administran. Aunque tengan
+    # boletas asignadas (caso legacy), no pueden ejecutar la acción de venta.
+    actor: Annotated[User, Depends(require_roles(UserRole.SELLER))],
     scope: Annotated[TenantScope, Depends(get_tenant_scope)],
 ):
     """Reserva atómicamente N números aleatorios disponibles para un cliente
@@ -184,7 +186,8 @@ async def reserve(
     payload: ReserveRequest,
     request: Request,
     db: Annotated[AsyncSession, Depends(get_db)],
-    actor: Annotated[User, Depends(require_roles(UserRole.SELLER, UserRole.ADMIN, UserRole.SUPER_ADMIN))],
+    # Solo SELLER — reservar una boleta a un cliente es acción de venta.
+    actor: Annotated[User, Depends(require_roles(UserRole.SELLER))],
     scope: Annotated[TenantScope, Depends(get_tenant_scope)],
 ):
     await _verify_ticket_tenancy(db, ticket_id, scope)
@@ -292,7 +295,10 @@ async def mark_paid(
     ticket_id: int,
     request: Request,
     db: Annotated[AsyncSession, Depends(get_db)],
-    actor: Annotated[User, Depends(require_roles(UserRole.SELLER, UserRole.ADMIN, UserRole.SUPER_ADMIN))],
+    # Solo SELLER — marcar boleta como pagada cierra la venta. Para
+    # correcciones administrativas existen los endpoints de payments
+    # donde el admin sí puede aprobar/editar/eliminar pagos.
+    actor: Annotated[User, Depends(require_roles(UserRole.SELLER))],
     scope: Annotated[TenantScope, Depends(get_tenant_scope)],
 ):
     """Marca la boleta como pagada. El vendedor solo puede marcar las suyas."""
