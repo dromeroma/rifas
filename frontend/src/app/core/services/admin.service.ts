@@ -120,6 +120,24 @@ export class AdminService {
     });
   }
 
+  /**
+   * Asigna BOLETAS ESPECÍFICAS (por número de boleta) a un vendedor.
+   * Caso de uso: un cliente le pide al vendedor X la boleta '0123' que
+   * no tiene asignada. Admin escribe '0123', '0124', '0500' y se las
+   * asigna a X directamente.
+   *
+   * El backend agrupa boletas consecutivas en un solo bloque y crea
+   * múltiples si no son consecutivas. Falla si alguna ya pertenece a
+   * otro vendedor (operación atómica).
+   */
+  assignByLabels(raffleId: number, sellerId: number, labels: string[]): Observable<SellerAssignment[]> {
+    return this.http.post<SellerAssignment[]>(`${this.api}/assignments/by-labels`, {
+      raffle_id: raffleId,
+      seller_id: sellerId,
+      labels,
+    });
+  }
+
   /** Detalle de las asignaciones de un vendedor: por rifa, con todas sus boletas. */
   sellerAssignmentsDetail(sellerId: number): Observable<RaffleAssignmentDetail[]> {
     return this.http.get<RaffleAssignmentDetail[]>(

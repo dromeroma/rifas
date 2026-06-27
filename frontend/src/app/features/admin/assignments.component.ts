@@ -74,6 +74,55 @@ import {
         }
       </app-card>
 
+      <!-- ============ ASIGNAR BOLETAS ESPECÍFICAS ============ -->
+      <app-card
+        title="Asignar boletas específicas"
+        subtitle="Cuando un cliente pide al vendedor una boleta puntual: escribe sus números separados por coma."
+        icon="confirmation_number"
+      >
+        <form class="form" (ngSubmit)="assignSpecific()">
+          <label class="field">
+            <span>Rifa</span>
+            <select [(ngModel)]="specificForm.raffle_id" name="rifaEspecifica">
+              @for (r of raffles(); track r.id) {
+                <option [value]="r.id" [disabled]="!r.numbers_generated">
+                  {{ r.name }} {{ r.numbers_generated ? '' : '(sin números)' }}
+                </option>
+              }
+            </select>
+          </label>
+
+          <label class="field">
+            <span>Vendedor</span>
+            <select [(ngModel)]="specificForm.seller_id" name="vendedorEspecifico">
+              @for (s of sellers(); track s.id) {
+                <option [value]="s.id">{{ s.full_name }} — {{ s.email }}</option>
+              }
+            </select>
+          </label>
+
+          <label class="field field--wide">
+            <span>Boletas <small class="muted">(separadas por coma, espacio o salto de línea — ej. "0123, 0456, 789")</small></span>
+            <textarea
+              [(ngModel)]="specificForm.labels"
+              name="labelsEspecificas"
+              rows="2"
+              placeholder="0123, 0456, 0789"
+              class="textarea"></textarea>
+          </label>
+
+          <div class="form__cta">
+            <app-button type="submit" variant="primary" [loading]="savingSpecific()" [disabled]="!sellers().length" icon="add_task">
+              {{ savingSpecific() ? 'Asignando...' : 'Asignar boletas' }}
+            </app-button>
+          </div>
+        </form>
+
+        @if (specificError()) {
+          <div class="alert"><span class="material-icons">error_outline</span>{{ specificError() }}</div>
+        }
+      </app-card>
+
       <app-card title="Asignaciones existentes" [subtitle]="list().length + ' total'">
         @if (!list().length) {
           <app-empty icon="assignment_ind" title="Sin asignaciones aún" description="Cuando asignes un bloque aparecerá aquí." />
@@ -129,7 +178,26 @@ import {
       border-radius: var(--r-md);
       font-size: 14px;
     }
-    select:focus, input:focus { outline: 0; border-color: var(--accent); }
+    select:focus, input:focus, .textarea:focus { outline: 0; border-color: var(--accent); }
+
+    /* Textarea (para boletas específicas separadas por coma) */
+    .textarea {
+      min-height: 56px;
+      background: var(--bg-input);
+      border: 1px solid transparent;
+      color: var(--text);
+      padding: var(--s-3);
+      border-radius: var(--r-md);
+      font-size: 14px;
+      font-family: 'Inter', sans-serif;
+      resize: vertical;
+      line-height: 1.4;
+    }
+
+    /* Campo de ancho completo (rompe el grid de 4 columnas para ocupar todo) */
+    @media (min-width: 700px) {
+      .field--wide { grid-column: 1 / -1; }
+    }
 
     .form__cta { display: flex; justify-content: stretch; }
     @media (min-width: 700px) { .form__cta { justify-content: flex-end; } }
@@ -184,6 +252,12 @@ export class AssignmentsComponent implements OnInit {
 
   form = { raffle_id: 0, seller_id: 0, quantity: 20 };
 
+  // Form de "Asignar boletas específicas" (por número). Independiente
+  // del form de cantidad para que el admin pueda usar ambos sin conflicto.
+  savingSpecific = signal(false);
+  specificError = signal<string | null>(null);
+  specificForm = { raffle_id: 0, seller_id: 0, labels: '' };
+
   ngOnInit(): void {
     forkJoin({
       raffles: this.raffleSvc.list(),
@@ -194,8 +268,14 @@ export class AssignmentsComponent implements OnInit {
       this.sellers.set(sellers);
       this.list.set(list);
       const firstReady = raffles.find((r) => r.numbers_generated);
-      if (firstReady) this.form.raffle_id = firstReady.id;
-      if (sellers.length) this.form.seller_id = sellers[0].id;
+      if (firstReady) {
+        this.form.raffle_id = firstReady.id;
+        this.specificForm.raffle_id = firstReady.id;
+      }
+      if (sellers.length) {
+        this.form.seller_id = sellers[0].id;
+        this.specificForm.seller_id = sellers[0].id;
+      }
     });
   }
 
@@ -243,6 +323,60 @@ export class AssignmentsComponent implements OnInit {
         const detail = e?.error?.detail ?? 'Error creando asignación';
         this.error.set(detail);
         this.saving.set(false);
+        this.toast.error('No se pudo asignar', detail);
+      },
+    });
+  }
+
+  /** Asigna boletas específicas (por número) al vendedor seleccionado.
+   *  Parsea el textarea (acepta comas, espacios y saltos de línea como
+   *  separador). El backend agrupa boletas consecutivas en un bloque y
+   *  rechaza si alguna está ya asignada a otro vendedor. */
+  assignSpecific() {
+    this.specificError.set(null);
+    if (!this.specificForm.raffle_id || !this.specificForm.seller_id) {
+      this.specificError.set('Selecciona rifa y vendedor.');
+      return;
+    }
+    // Parsear: dividir por cualquier separador no-numérico, descartar vacíos
+    const labels = this.specificForm.labels
+      .split(/[\s,;\n]+/)
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
+    if (labels.length === 0) {
+      this.specificError.set('Escribe al menos una boleta (ej. "0123, 0456").');
+      return;
+    }
+
+    this.savingSpecific.set(true);
+    this.admin.assignByLabels(+this.specificForm.raffle_id, +this.specificForm.seller_id, labels).subscribe({
+      next: (assignments) => {
+        this.list.update((arr) => [...assignments, ...arr]);
+        this.savingSpecific.set(false);
+
+        const seller = this.sellers().find(s => s.id === +this.specificForm.seller_id);
+        const sellerName = seller?.full_name ?? 'el vendedor';
+        const totalAssigned = assignments.reduce(
+          (sum, a) => sum + (a.to_ticket - a.from_ticket + 1),
+          0,
+        );
+        const ranges = assignments
+          .map((a) => a.from_ticket === a.to_ticket
+            ? this.pad(a.from_ticket, a.raffle_id)
+            : `${this.pad(a.from_ticket, a.raffle_id)}–${this.pad(a.to_ticket, a.raffle_id)}`)
+          .join(', ');
+        this.toast.success(
+          `${totalAssigned} boleta(s) asignada(s)`,
+          `${sellerName} recibió: ${ranges}`,
+        );
+        // Reset solo el campo de boletas, conservar rifa y vendedor para
+        // facilitar asignaciones múltiples consecutivas al mismo vendedor.
+        this.specificForm.labels = '';
+      },
+      error: (e) => {
+        const detail = e?.error?.detail ?? 'No se pudieron asignar las boletas';
+        this.specificError.set(detail);
+        this.savingSpecific.set(false);
         this.toast.error('No se pudo asignar', detail);
       },
     });

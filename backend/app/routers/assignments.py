@@ -15,7 +15,7 @@ from app.models.reservation import Reservation
 from app.models.seller_assignment import SellerAssignment
 from app.models.ticket import Ticket, TicketStatus
 from app.models.user import User, UserRole
-from app.schemas.user import SellerAssignmentCreate, SellerAssignmentOut
+from app.schemas.user import AssignByLabelsRequest, SellerAssignmentCreate, SellerAssignmentOut
 from app.services.audit_service import log_action
 
 router = APIRouter(prefix="/assignments", tags=["assignments"])
@@ -214,6 +214,162 @@ async def create_assignment(
             "seller_id": seller.id, "raffle_id": raffle.id,
             "requested": quantity,
             "total_assigned": len(available_nums),
+            "blocks": [{"from": f, "to": t} for f, t in blocks],
+            "assignment_ids": [a.id for a in assignments],
+        },
+    )
+    await db.commit()
+    for a in assignments:
+        await db.refresh(a)
+    return assignments
+
+
+# ============ Asignación de boletas ESPECÍFICAS por número ============
+
+
+@router.post("/by-labels", response_model=List[SellerAssignmentOut], status_code=status.HTTP_201_CREATED)
+async def assign_by_labels(
+    payload: AssignByLabelsRequest,
+    request: Request,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    actor: Annotated[User, Depends(require_roles(UserRole.ADMIN, UserRole.SUPER_ADMIN))],
+    scope: Annotated[TenantScope, Depends(get_tenant_scope)],
+):
+    """
+    Asigna boletas ESPECÍFICAS (elegidas por su número) a un vendedor.
+
+    Caso de uso: un cliente le pide al vendedor X la boleta '0123' pero el
+    vendedor no la tiene asignada. El admin entra acá, escribe '0123' y la
+    asigna directamente a X — la boleta queda con seller_id de X y
+    aparece en su listado para vender.
+
+    Reglas:
+      - Solo se pueden asignar boletas que estén libres (seller_id=NULL).
+      - Si alguna pertenece a OTRO vendedor → error 409 con la lista de
+        conflictos (no se modifica nada — operación atómica).
+      - Si una label no existe → error 404.
+      - Las labels se normalizan al ancho real del label de la rifa
+        (ej. para rifa de 1000, '123' se convierte en '0123').
+      - Acepta duplicados en el payload (se deduplican).
+      - Si las boletas asignadas son consecutivas (ej. 0123, 0124, 0125)
+        crea UN solo seller_assignment con el rango. Si no son
+        consecutivas (ej. 0123, 0500, 0501), crea múltiples bloques.
+    """
+    raffle = (await db.execute(select(Raffle).where(Raffle.id == payload.raffle_id))).scalar_one_or_none()
+    if not raffle:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "rifa no encontrada")
+    assert_tenant_owns(scope, raffle.tenant_id)
+    if not raffle.numbers_generated:
+        raise HTTPException(status.HTTP_409_CONFLICT, "primero genera los números de la rifa")
+
+    seller = (await db.execute(
+        select(User).where(User.id == payload.seller_id, User.role == UserRole.SELLER)
+    )).scalar_one_or_none()
+    if not seller:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "vendedor no encontrado")
+    if seller.tenant_id != raffle.tenant_id:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            "el vendedor no pertenece a la misma cuenta que la rifa.",
+        )
+
+    # 1) Normalizar y validar labels: trimear, parsear a int, validar rango
+    label_width = max(3, len(str(raffle.total_tickets)))
+    nums_set: set[int] = set()
+    invalid: list[str] = []
+    for raw in payload.labels:
+        s = str(raw).strip()
+        if not s:
+            continue
+        # Aceptar tanto "0123" como "123"
+        if not s.lstrip("0").isdigit() and s != "0":
+            invalid.append(s)
+            continue
+        try:
+            n = int(s)
+        except ValueError:
+            invalid.append(s)
+            continue
+        if n < 1 or n > raffle.total_tickets:
+            invalid.append(s)
+            continue
+        nums_set.add(n)
+
+    if invalid:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            f"labels inválidos o fuera del rango [1, {raffle.total_tickets}]: "
+            f"{', '.join(invalid[:10])}{'...' if len(invalid) > 10 else ''}",
+        )
+    if not nums_set:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "debes indicar al menos una boleta")
+
+    nums = sorted(nums_set)
+    target_labels = [str(n).zfill(label_width) for n in nums]
+
+    # 2) Buscar los tickets en BD
+    tickets = (await db.execute(
+        select(Ticket).where(
+            Ticket.raffle_id == raffle.id,
+            Ticket.number_label.in_(target_labels),
+        )
+    )).scalars().all()
+
+    if len(tickets) != len(nums):
+        found_labels = {t.number_label for t in tickets}
+        missing = [lbl for lbl in target_labels if lbl not in found_labels]
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND,
+            f"boletas no encontradas: {', '.join(missing[:10])}{'...' if len(missing) > 10 else ''}",
+        )
+
+    # 3) Verificar que ninguna pertenezca a OTRO vendedor (no la misma).
+    # Si ya está con el mismo seller, no es error — es no-op para esa boleta.
+    conflicts = [t.number_label for t in tickets if t.seller_id is not None and t.seller_id != seller.id]
+    if conflicts:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            f"las siguientes boletas ya están asignadas a otro vendedor: "
+            f"{', '.join(conflicts[:10])}{'...' if len(conflicts) > 10 else ''}",
+        )
+
+    # 4) Agrupar nums en bloques consecutivos
+    blocks: list[tuple[int, int]] = []
+    block_from = block_to = nums[0]
+    for n in nums[1:]:
+        if n == block_to + 1:
+            block_to = n
+        else:
+            blocks.append((block_from, block_to))
+            block_from = block_to = n
+    blocks.append((block_from, block_to))
+
+    # 5) Crear un SellerAssignment por bloque
+    assignments: list[SellerAssignment] = []
+    for from_t, to_t in blocks:
+        a = SellerAssignment(
+            raffle_id=raffle.id,
+            seller_id=seller.id,
+            from_ticket=from_t,
+            to_ticket=to_t,
+            status="active",
+            note="Asignación específica por número de boleta",
+        )
+        db.add(a)
+        assignments.append(a)
+    await db.flush()
+
+    # 6) Marcar tickets con seller_id (los que ya tenían el mismo seller quedan igual)
+    for t in tickets:
+        if t.seller_id is None:
+            t.seller_id = seller.id
+
+    await log_action(
+        db, actor_id=actor.id, action="assignment.create_by_labels",
+        entity_type="assignment", entity_id=assignments[0].id, request=request,
+        metadata={
+            "seller_id": seller.id, "raffle_id": raffle.id,
+            "requested_labels": target_labels,
             "blocks": [{"from": f, "to": t} for f, t in blocks],
             "assignment_ids": [a.id for a in assignments],
         },

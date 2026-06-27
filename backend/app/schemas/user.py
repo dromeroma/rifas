@@ -57,6 +57,16 @@ class SellerAssignmentCreate(BaseModel):
     quantity: int = Field(gt=0, description="Cantidad de boletas a asignar al final del rango disponible")
 
 
+class AssignByLabelsRequest(BaseModel):
+    """Asigna boletas específicas (por número de boleta) a un vendedor.
+    Útil cuando un cliente pide una boleta puntual a un vendedor que aún
+    no la tiene asignada. Admite labels con o sin ceros adelante (se
+    normalizan al ancho real de la rifa)."""
+    raffle_id: int
+    seller_id: int
+    labels: list[str] = Field(min_length=1, description="Lista de números de boleta a asignar")
+
+
 class SellerAssignmentOut(BaseModel):
     id: int
     raffle_id: int
