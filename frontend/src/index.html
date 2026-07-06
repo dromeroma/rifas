@@ -240,47 +240,59 @@
   </script>
 
   <!-- ============================================================
-       AUTO-RECOVERY del cache obsoleto.
-       Problema: cuando hacemos deploy, los chunks JS cambian de hash.
-       Si el browser del usuario tiene cacheado un index.html viejo
-       (referencia chunks que ya no existen), todos los chunks dan
-       404 → Angular no bootstrappea → splash queda eternamente.
-       El usuario "limpia cache" pero a veces no es suficiente (PWA,
-       service worker, etc.).
+       AUTO-RECOVERY del cache obsoleto (v2 — sin loops).
 
-       Fix: si después de 8 segundos Angular no ha bootstrappeado, o
-       si detectamos un error específico de carga de chunk, limpiamos
-       agresivamente cache + service workers + caches API y recargamos
-       con bust de cache. Auto-curado sin que el usuario tenga que
-       hacer nada.
+       Historia: la v1 tenía un setTimeout de 8s que disparaba
+       nukeAndReload si Angular no había bootstrappeado. Cuando Render
+       hace cold start (30s+ para responder) o sessionStorage está
+       deshabilitado (modo privado, PWA en cierto webviews), el flag
+       anti-loop fallaba y la app entraba en un loop infinito de
+       reloads/spinner sin cargar nunca.
+
+       v2 mucho más conservador:
+         - Elimina el timeout automático.
+         - Solo dispara recovery si hay un error CONCRETO de carga de
+           asset (chunk-XXX.js 404, etc.) — el escenario original que
+           motivó el auto-recovery.
+         - Requiere sessionStorage funcional: si no está disponible,
+           NO se hace recovery (mejor que loop).
        ============================================================ */
   <script>
     (function () {
-      var RECOVERY_TIMEOUT_MS = 8000;
       var RECOVERY_KEY = 'boletera_recovery_attempt';
 
-      function nukeAndReload(reason) {
-        // Evita loop infinito: solo intenta auto-recovery una vez por sesión
+      function sessionStorageWorks() {
         try {
-          if (sessionStorage.getItem(RECOVERY_KEY)) {
-            console.warn('[auto-recovery] ya se intentó antes, no recargar de nuevo');
-            return;
-          }
-          sessionStorage.setItem(RECOVERY_KEY, String(Date.now()));
-        } catch (e) {}
+          var k = '__ss_probe__';
+          sessionStorage.setItem(k, '1');
+          sessionStorage.removeItem(k);
+          return true;
+        } catch (e) {
+          return false;
+        }
+      }
+
+      function nukeAndReload(reason) {
+        // Sin sessionStorage no podemos garantizar single-attempt → no reload.
+        // Es MUCHO mejor mostrar spinner un rato que entrar en loop.
+        if (!sessionStorageWorks()) {
+          console.warn('[auto-recovery] sessionStorage no disponible, no reload por seguridad');
+          return;
+        }
+        if (sessionStorage.getItem(RECOVERY_KEY)) {
+          console.warn('[auto-recovery] ya se intentó antes, no recargar de nuevo');
+          return;
+        }
+        sessionStorage.setItem(RECOVERY_KEY, String(Date.now()));
 
         console.warn('[auto-recovery] disparado por:', reason, '— limpiando todo y recargando');
 
         var ops = [];
-
-        // 1) Desregistrar service workers
         if ('serviceWorker' in navigator) {
           ops.push(navigator.serviceWorker.getRegistrations().then(function (regs) {
             return Promise.all(regs.map(function (r) { return r.unregister(); }));
           }).catch(function () {}));
         }
-
-        // 2) Limpiar caches API (PWA cache)
         if ('caches' in window) {
           ops.push(caches.keys().then(function (names) {
             return Promise.all(names.map(function (n) { return caches.delete(n); }));
@@ -288,17 +300,17 @@
         }
 
         Promise.all(ops).then(function () {
-          // Recarga con timestamp para esquivar cache del browser
           var sep = location.href.indexOf('?') >= 0 ? '&' : '?';
           location.replace(location.href + sep + '_r=' + Date.now());
         });
       }
 
-      // Listener global: cualquier error de carga de chunk JS dispara recovery
+      // Solo dispara recovery en error REAL de carga de chunk/main/polyfills.
+      // NO hay timeout automático — Render cold start puede tardar 30s+ y
+      // eso no debe disparar recovery.
       window.addEventListener('error', function (ev) {
         var src = ev.target && (ev.target.src || ev.target.href);
         if (!src) return;
-        // Si falló un script o un asset .js que es de Angular
         if (/\.(js|css)(\?|$)/.test(src) && (
           src.indexOf('chunk-') >= 0 ||
           src.indexOf('main-') >= 0 ||
@@ -309,13 +321,15 @@
         }
       }, true);
 
-      // Timeout: si después de N segundos Angular sigue sin bootstrappear,
-      // asumir que algo está mal y auto-recuperar
-      setTimeout(function () {
-        if (!document.body.classList.contains('booted')) {
-          nukeAndReload('timeout ' + RECOVERY_TIMEOUT_MS + 'ms sin bootstrap');
+      // Limpia el flag de recovery cuando Angular bootstrappea bien.
+      // Así en la próxima sesión (si volviera a haber deploy con chunks
+      // nuevos) el recovery puede dispararse otra vez.
+      var cleanupInterval = setInterval(function () {
+        if (document.body.classList.contains('booted')) {
+          clearInterval(cleanupInterval);
+          try { sessionStorage.removeItem(RECOVERY_KEY); } catch (e) {}
         }
-      }, RECOVERY_TIMEOUT_MS);
+      }, 1000);
     })();
   </script>
 </head>
