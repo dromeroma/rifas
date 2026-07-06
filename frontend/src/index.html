@@ -190,8 +190,13 @@
       line-height: 1.5;
     }
     @keyframes public-spin { to { transform: rotate(360deg); } }
-    /* Cuando Angular monta, agrega .booted al body y el splash se oculta */
-    body.booted .public-splash { display: none; }
+    /* Cuando Angular monta, agrega .booted al body y el splash se oculta.
+       IMPORTANTE: !important es OBLIGATORIO porque el splash tiene
+       style="display: flex" inline (seteado por JS al detectar ruta
+       pública). Los estilos inline ganan por specificity sobre reglas
+       CSS de clase — sin !important, esta regla nunca se aplica y el
+       splash queda visible sobre la app aunque Angular haya cargado. */
+    body.booted .public-splash { display: none !important; }
   </style>
   <script>
     (function () {
@@ -215,17 +220,30 @@
       // Marca body.booted cuando Angular renderiza algo dentro de app-root,
       // para ocultar el splash pre-bootstrap. Usa MutationObserver para
       // detectar el primer hijo agregado al app-root.
+      //
+      // IMPORTANTE: además de agregar body.booted (para la regla CSS),
+      // limpiamos el estilo INLINE display:flex del splash directamente
+      // vía JS. Sin esto, aunque agreguemos body.booted, el splash seguía
+      // visible porque el style inline (seteado más abajo por el script
+      // que activa el splash en rutas públicas) tiene mayor specificity
+      // que cualquier regla CSS de clase.
+      function hideSplash() {
+        document.body.classList.add('booted');
+        var splash = document.getElementById('public-splash');
+        if (splash) splash.style.display = 'none';
+      }
+
       var bootedObserver = null;
       function watchBoot() {
         var root = document.querySelector('app-root');
         if (!root) { setTimeout(watchBoot, 100); return; }
         if (root.children && root.children.length > 0) {
-          document.body.classList.add('booted');
+          hideSplash();
           return;
         }
         bootedObserver = new MutationObserver(function () {
           if (root.children && root.children.length > 0) {
-            document.body.classList.add('booted');
+            hideSplash();
             bootedObserver.disconnect();
           }
         });
