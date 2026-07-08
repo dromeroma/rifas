@@ -1062,7 +1062,12 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
       filter: drop-shadow(0 20px 40px rgba(0,0,0,0.5));
     }
 
-    /* Card flotante de boleta — más compacta */
+    /* Card flotante de boleta — más compacta.
+       En móvil se oculta para que el TV se vea limpio y el hero no
+       compita por espacio con el título. */
+    @media (max-width: 720px) {
+      .ticket-card { display: none; }
+    }
     .ticket-card {
       position: absolute;
       bottom: 4%;
