@@ -230,19 +230,47 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
               <div class="prizes-grid">
                 @for (p of r.prizes; track p.position; let idx = $index) {
                   <article class="prize-card" [class.prize-card--top]="idx === 0">
-                    <div class="prize-card__num">{{ (idx + 1) < 10 ? '0' : '' }}{{ idx + 1 }}</div>
+                    <div class="prize-card__head">
+                      <span class="prize-card__num">
+                        <span class="prize-card__num-hash">#</span>
+                        <span>{{ (idx + 1) < 10 ? '0' : '' }}{{ idx + 1 }}</span>
+                      </span>
+                      @if (idx === 0) {
+                        <span class="prize-card__ribbon">
+                          <span class="material-icons-outlined">workspace_premium</span>
+                          Mayor
+                        </span>
+                      }
+                    </div>
+
                     <div class="prize-card__media">
                       @if (idx === 0 && r.logo_url) {
                         <img [src]="r.logo_url" [alt]="p.name" />
+                      } @else if (prizeAmount(p.name); as amt) {
+                        <div class="prize-money">
+                          <span class="prize-money__currency">$</span>
+                          <span class="prize-money__amount">{{ amt.value }}</span>
+                          <span class="prize-money__unit">{{ amt.unit }}</span>
+                        </div>
+                        <div class="prize-money__label">En efectivo</div>
                       } @else {
                         <div class="prize-card__emoji">{{ prizeEmoji(p.name) }}</div>
                       }
                     </div>
+
                     <div class="prize-card__body">
                       <h3>{{ p.name }}</h3>
-                      <p class="muted">
-                        {{ idx === 0 ? 'Premio mayor' : idx === 1 ? 'Segundo premio' : idx === 2 ? 'Tercer premio' : 'Cuarto premio' }}
-                      </p>
+                      <div class="prize-card__meta">
+                        <span class="prize-card__tier">
+                          {{ idx === 0 ? 'Premio mayor' : idx === 1 ? 'Segundo premio' : idx === 2 ? 'Tercer premio' : 'Cuarto premio' }}
+                        </span>
+                        @if (p.draw_date) {
+                          <span class="prize-card__date">
+                            <span class="material-icons-outlined">event</span>
+                            {{ formatDateShort(p.draw_date) }}
+                          </span>
+                        }
+                      </div>
                     </div>
                   </article>
                 }
@@ -1291,70 +1319,209 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
         grid-template-columns: repeat(2, 1fr);
         gap: 12px;
       }
-      .prize-card { padding: 14px; }
+      .prize-card { padding: 16px; }
       .prize-card__body h3 { font-size: 14px; }
-      .prize-card__body p { font-size: 12px; }
-      .prize-card__num { font-size: 10px; padding: 3px 8px; margin-bottom: 10px; }
+      .prize-card__num { font-size: 11px; }
+      .prize-card__ribbon { font-size: 9px; padding: 3px 8px; }
+      .prize-card__ribbon .material-icons-outlined { font-size: 11px; }
       .prize-card__emoji { font-size: 42px; }
+      .prize-card__media { margin-bottom: 14px; }
+      .prize-money__currency { font-size: 16px; margin-top: 4px; }
+      .prize-money__amount { font-size: 40px; }
+      .prize-money__unit { font-size: 20px; }
+      .prize-money__label { font-size: 9px; letter-spacing: 0.18em; }
+      .prize-card__tier { font-size: 10px; padding: 2px 7px; }
+      .prize-card__date { font-size: 10.5px; }
     }
     .prize-card {
       position: relative;
-      background: var(--card);
+      background:
+        radial-gradient(ellipse at top right, rgba(34, 197, 94, 0.04) 0%, transparent 55%),
+        var(--card);
       border: 1px solid var(--border);
       border-radius: var(--r-lg);
-      padding: 20px;
+      padding: 22px;
       backdrop-filter: blur(6px);
-      transition: transform var(--t-med), border-color var(--t-med);
+      transition: transform var(--t-med), border-color var(--t-med),
+                  box-shadow var(--t-med);
+      overflow: hidden;
+    }
+    .prize-card::before {
+      /* Detalle superior: línea verde fina que crece en hover — nivel Stripe */
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent 0%, var(--brand) 50%, transparent 100%);
+      opacity: 0;
+      transition: opacity var(--t-med);
     }
     .prize-card:hover {
-      transform: translateY(-3px);
-      border-color: var(--border-str);
+      transform: translateY(-4px);
+      border-color: var(--border-md);
+      box-shadow: 0 24px 48px rgba(0, 0, 0, 0.32),
+                  0 0 0 1px rgba(34, 197, 94, 0.08);
     }
+    .prize-card:hover::before { opacity: 0.9; }
+
     .prize-card--top {
       background:
-        radial-gradient(ellipse at top, rgba(34, 197, 94, 0.15) 0%, transparent 60%),
+        radial-gradient(ellipse at top, rgba(34, 197, 94, 0.14) 0%, transparent 55%),
+        radial-gradient(ellipse at bottom right, rgba(34, 197, 94, 0.06) 0%, transparent 60%),
         var(--card);
-      border-color: rgba(34, 197, 94, 0.45);
+      border-color: rgba(34, 197, 94, 0.35);
       box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.15),
-                  0 20px 40px rgba(34, 197, 94, 0.1);
+                  0 20px 44px rgba(34, 197, 94, 0.1);
+    }
+    .prize-card--top::before { opacity: 1; }
+
+    /* Header con # numeración + ribbon premium mayor */
+    .prize-card__head {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 16px;
+      min-height: 24px;
     }
     .prize-card__num {
-      display: inline-block;
-      padding: 4px 10px;
-      background: var(--brand-soft);
-      color: var(--brand-glow);
-      border-radius: 8px;
-      font-size: 11px;
-      font-weight: 700;
+      display: inline-flex;
+      align-items: baseline;
+      gap: 2px;
+      font-family: 'JetBrains Mono', 'Menlo', ui-monospace, monospace;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      letter-spacing: 0.02em;
       font-variant-numeric: tabular-nums;
-      margin-bottom: 14px;
     }
+    .prize-card__num-hash { color: var(--text-dim); font-weight: 400; }
+    .prize-card--top .prize-card__num { color: var(--brand-glow); }
+    .prize-card--top .prize-card__num-hash { color: rgba(34, 197, 94, 0.55); }
+
+    .prize-card__ribbon {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 4px 10px;
+      background: linear-gradient(180deg, rgba(34, 197, 94, 0.22) 0%, rgba(34, 197, 94, 0.12) 100%);
+      border: 1px solid rgba(34, 197, 94, 0.35);
+      color: var(--brand-glow);
+      border-radius: 999px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .prize-card__ribbon .material-icons-outlined { font-size: 12px; }
+
+    /* Media area — display consistente para imagen / dinero / emoji */
     .prize-card__media {
-      display: grid; place-items: center;
-      aspect-ratio: 4 / 3;
+      position: relative;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      aspect-ratio: 5 / 4;
       background:
-        radial-gradient(circle at center, rgba(34, 197, 94, 0.06) 0%, transparent 60%),
+        radial-gradient(circle at center, rgba(34, 197, 94, 0.08) 0%, transparent 55%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.03) 0%, transparent 100%),
         var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--r-md);
-      margin-bottom: 16px;
+      margin-bottom: 18px;
       overflow: hidden;
     }
-    .prize-card__media img {
-      max-width: 100%; max-height: 100%;
-      object-fit: contain;
-      transition: transform 400ms cubic-bezier(0.4, 0, 0.2, 1);
+    .prize-card__media::after {
+      /* Grid sutil de puntos que da textura tecnológica */
+      content: '';
+      position: absolute; inset: 0;
+      background-image: radial-gradient(circle, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+      background-size: 14px 14px;
+      pointer-events: none;
+      mask-image: radial-gradient(ellipse at center, black 20%, transparent 80%);
+      -webkit-mask-image: radial-gradient(ellipse at center, black 20%, transparent 80%);
     }
-    .prize-card:hover .prize-card__media img { transform: scale(1.05); }
-    .prize-card__emoji { font-size: 56px; line-height: 1; }
-    .prize-card__body h3 {
-      margin: 0 0 4px;
-      font-size: 16px;
+    .prize-card__media img {
+      position: relative; z-index: 1;
+      max-width: 88%; max-height: 88%;
+      object-fit: contain;
+      transition: transform 500ms cubic-bezier(0.4, 0, 0.2, 1);
+      filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.3));
+    }
+    .prize-card:hover .prize-card__media img { transform: scale(1.06); }
+    .prize-card__emoji {
+      position: relative; z-index: 1;
+      font-size: 56px; line-height: 1;
+      filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.3));
+    }
+
+    /* Display monetario elegante */
+    .prize-money {
+      position: relative; z-index: 1;
+      display: flex;
+      align-items: baseline;
+      gap: 4px;
+      color: var(--text);
+      font-family: 'Inter', system-ui, sans-serif;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -0.03em;
+      line-height: 1;
+    }
+    .prize-money__currency {
+      font-size: 22px;
+      color: var(--brand-glow);
+      font-weight: 500;
+      align-self: flex-start;
+      margin-top: 6px;
+    }
+    .prize-money__amount {
+      font-size: 54px;
       font-weight: 700;
+    }
+    .prize-money__unit {
+      font-size: 26px;
+      color: var(--brand-glow);
+      font-weight: 600;
+    }
+    .prize-money__label {
+      position: relative; z-index: 1;
+      font-size: 10px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.24em;
+      font-weight: 600;
+      margin-top: 8px;
+    }
+
+    /* Body */
+    .prize-card__body h3 {
+      margin: 0 0 10px;
+      font-size: 16px;
+      font-weight: 600;
       letter-spacing: -0.01em;
       color: var(--text);
+      line-height: 1.3;
     }
-    .prize-card__body p { margin: 0; font-size: 13px; }
+    .prize-card__meta {
+      display: flex; align-items: center; gap: 8px;
+      flex-wrap: wrap;
+    }
+    .prize-card__tier {
+      display: inline-flex;
+      padding: 3px 8px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+    .prize-card--top .prize-card__tier {
+      background: var(--brand-soft);
+      border-color: rgba(34, 197, 94, 0.25);
+      color: var(--brand-glow);
+    }
+    .prize-card__date {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 11.5px;
+      color: var(--text-dim);
+      font-weight: 500;
+    }
+    .prize-card__date .material-icons-outlined { font-size: 13px; }
 
     /* ============================================================
        ¿CÓMO PARTICIPAR?
@@ -2030,6 +2197,32 @@ export class PublicPurchaseComponent implements OnInit, OnDestroy {
     const msg = `Hola, quiero saber más sobre la rifa "${raffleName}".`;
     return `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
   });
+
+  /**
+   * Detecta si el nombre del premio es un monto monetario ("bono 200K",
+   * "efectivo 500.000", etc) y lo divide en value/unit para mostrarlo con
+   * tipografía tabular en un display "$ 200 K" en el card, en lugar del
+   * emoji genérico de billete. Devuelve null si no es monetario.
+   */
+  prizeAmount(name: string): { value: string; unit: string } | null {
+    const n = (name || '').toLowerCase();
+    if (!/(bono|efectivo|dinero|plata|cash|premio en)/.test(n)) return null;
+    // Casos comunes: "200K", "200k", "1M", "500.000", "500000"
+    const kMatch = n.match(/(\d+(?:[.,]\d+)?)\s*k\b/);
+    if (kMatch) return { value: kMatch[1].replace(',', '.'), unit: 'K' };
+    const mMatch = n.match(/(\d+(?:[.,]\d+)?)\s*m\b/);
+    if (mMatch) return { value: mMatch[1].replace(',', '.'), unit: 'M' };
+    const raw = n.match(/(\d[\d.,]*)/);
+    if (raw) {
+      const digits = raw[1].replace(/[.,]/g, '');
+      const num = parseInt(digits, 10);
+      if (isNaN(num)) return null;
+      if (num >= 1_000_000) return { value: String(num / 1_000_000), unit: 'M' };
+      if (num >= 1_000) return { value: String(num / 1_000), unit: 'K' };
+      return { value: String(num), unit: '' };
+    }
+    return null;
+  }
 
   prizeEmoji(name: string): string {
     const n = (name || '').toLowerCase();
