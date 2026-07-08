@@ -27,6 +27,13 @@ export interface PublicRaffleOverview {
     draw_date: string | null;
     estimated_value: number | null;
   }>;
+  seller: PublicSellerInfo | null;
+}
+
+export interface PublicSellerInfo {
+  full_name: string;
+  slug: string;
+  phone: string | null;
 }
 
 export interface AvailableTicket {
@@ -81,6 +88,7 @@ export interface CheckoutRequest {
   customer_phone: string;
   customer_city?: string;
   referral_code?: string;
+  seller_slug?: string;
 }
 
 export interface CheckoutResponse {
@@ -127,14 +135,17 @@ export class PublicSalesService {
   private readonly http = inject(HttpClient);
   private readonly api = environment.apiUrl;
 
-  overview(raffleId: number): Observable<PublicRaffleOverview> {
-    return this.http.get<PublicRaffleOverview>(`${this.api}/public/raffles/${raffleId}/overview`);
+  overview(raffleId: number, sellerSlug?: string | null): Observable<PublicRaffleOverview> {
+    const q = sellerSlug ? `?v=${encodeURIComponent(sellerSlug)}` : '';
+    return this.http.get<PublicRaffleOverview>(`${this.api}/public/raffles/${raffleId}/overview${q}`);
   }
 
-  availableTickets(raffleId: number, skip = 0, limit = 500): Observable<AvailableTicket[]> {
-    return this.http.get<AvailableTicket[]>(
-      `${this.api}/public/raffles/${raffleId}/available?skip=${skip}&limit=${limit}`,
-    );
+  availableTickets(
+    raffleId: number, skip = 0, limit = 500, sellerSlug?: string | null,
+  ): Observable<AvailableTicket[]> {
+    let url = `${this.api}/public/raffles/${raffleId}/available?skip=${skip}&limit=${limit}`;
+    if (sellerSlug) url += `&v=${encodeURIComponent(sellerSlug)}`;
+    return this.http.get<AvailableTicket[]>(url);
   }
 
   lookupTicket(raffleId: number, number: string): Observable<TicketLookup> {

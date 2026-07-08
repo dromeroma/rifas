@@ -82,10 +82,23 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
           <div class="hero__bg" aria-hidden="true"></div>
           <div class="container hero__grid">
             <div class="hero__content">
-              <div class="hero__badge">
-                <span class="hero__badge-dot"></span>
-                <span>Hecho en Colombia · Rifa activa</span>
-              </div>
+              @if (r.seller; as s) {
+                <div class="seller-badge">
+                  <div class="seller-badge__avatar">
+                    {{ sellerInitials(s.full_name) }}
+                  </div>
+                  <div class="seller-badge__body">
+                    <span class="seller-badge__label">Vendido por</span>
+                    <strong>{{ s.full_name }}</strong>
+                  </div>
+                  <span class="seller-badge__check material-icons-outlined">verified</span>
+                </div>
+              } @else {
+                <div class="hero__badge">
+                  <span class="hero__badge-dot"></span>
+                  <span>Hecho en Colombia · Rifa activa</span>
+                </div>
+              }
 
               <h1 class="hero__title">
                 @if (heroTitleParts(); as ht) {
@@ -948,6 +961,50 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
       font-weight: 600;
       color: var(--brand-glow);
       margin-bottom: 24px;
+    }
+
+    /* Badge del vendedor cuando entras por link personal ?v=<slug> */
+    .seller-badge {
+      display: inline-flex; align-items: center; gap: 12px;
+      padding: 8px 16px 8px 8px;
+      background: linear-gradient(135deg, rgba(34, 197, 94, 0.12) 0%, rgba(34, 197, 94, 0.04) 100%);
+      border: 1px solid var(--border-md);
+      border-radius: 999px;
+      margin-bottom: 24px;
+      backdrop-filter: blur(6px);
+    }
+    .seller-badge__avatar {
+      width: 34px; height: 34px;
+      display: grid; place-items: center;
+      background: linear-gradient(180deg, #22c55e 0%, #16a34a 100%);
+      color: #041613;
+      font-size: 13px;
+      font-weight: 800;
+      border-radius: 50%;
+      letter-spacing: -0.01em;
+      box-shadow: 0 4px 12px rgba(34, 197, 94, 0.35);
+    }
+    .seller-badge__body {
+      display: flex; flex-direction: column;
+      line-height: 1.2;
+    }
+    .seller-badge__label {
+      font-size: 10px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      font-weight: 600;
+    }
+    .seller-badge__body strong {
+      font-size: 14px;
+      color: var(--text);
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+    .seller-badge__check {
+      color: var(--brand-glow);
+      font-size: 18px;
+      margin-left: 4px;
     }
     .hero__badge-dot {
       width: 8px; height: 8px;
@@ -2095,6 +2152,7 @@ export class PublicPurchaseComponent implements OnInit, OnDestroy {
   };
 
   private raffleId = 0;
+  private sellerSlug: string | null = null;
 
   totalPrice = computed(() => {
     const r = this.overview();
@@ -2195,6 +2253,14 @@ export class PublicPurchaseComponent implements OnInit, OnDestroy {
     }));
   });
 
+  /** Iniciales (máx 2) para el avatar del banner del vendedor. */
+  sellerInitials(name: string): string {
+    if (!name) return '?';
+    const parts = name.trim().split(/\s+/);
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }
+
   whatsappHref = computed(() => {
     const r = this.overview();
     const phone = r?.lottery_name ? '573135487605' : '573135487605';
@@ -2260,7 +2326,10 @@ export class PublicPurchaseComponent implements OnInit, OnDestroy {
     const ref = this.route.snapshot.queryParamMap.get('ref');
     if (ref) { try { localStorage.setItem('boletera_referral_code', ref); } catch {} }
 
-    this.svc.overview(id).subscribe({
+    // Link personal de vendedor: ?v=<slug>
+    this.sellerSlug = this.route.snapshot.queryParamMap.get('v');
+
+    this.svc.overview(id, this.sellerSlug).subscribe({
       next: (r) => {
         this.overview.set(r);
         this.loading.set(false);
@@ -2306,7 +2375,7 @@ export class PublicPurchaseComponent implements OnInit, OnDestroy {
 
   loadAvailable() {
     this.loadingTickets.set(true);
-    this.svc.availableTickets(this.raffleId).subscribe({
+    this.svc.availableTickets(this.raffleId, 0, 500, this.sellerSlug).subscribe({
       next: (list) => { this.available.set(list); this.loadingTickets.set(false); },
       error: () => this.loadingTickets.set(false),
     });
@@ -2441,6 +2510,7 @@ export class PublicPurchaseComponent implements OnInit, OnDestroy {
       customer_phone: this.form.customer_phone,
       customer_city: this.form.customer_city || undefined,
       referral_code: referralCode,
+      seller_slug: this.sellerSlug || undefined,
     }).subscribe({
       next: (resp) => {
         try {

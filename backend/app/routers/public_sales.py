@@ -69,6 +69,14 @@ class AvailableTicketOut(BaseModel):
     code: str  # para poder hacer preview via /verify/:code sin exponer más
 
 
+class SellerInfoOut(BaseModel):
+    """Info pública del vendedor cuando el cliente entra por su link
+    personal (?v=<slug>). Solo campos NO sensibles."""
+    full_name: str
+    slug: str
+    phone: str | None = None
+
+
 class RafflePublicOverview(BaseModel):
     id: int
     name: str
@@ -87,6 +95,9 @@ class RafflePublicOverview(BaseModel):
     show_draw_date: bool  # True cuando threshold alcanzado O admin la programó
     public_welcome_message: str | None
     prizes: list[dict]
+    # Si el cliente entró por link personal de un vendedor (?v=<slug>),
+    # se rellena con la info pública del vendedor. Null en pool general.
+    seller: SellerInfoOut | None = None
 
 
 class CheckoutRequest(BaseModel):
@@ -97,6 +108,7 @@ class CheckoutRequest(BaseModel):
     customer_phone: str = Field(min_length=7, max_length=30)
     customer_city: str | None = None
     referral_code: str | None = None  # si vino por link ?ref=XYZ
+    seller_slug: str | None = None    # si vino por link ?v=<slug>
 
 
 class CheckoutResponse(BaseModel):
@@ -266,14 +278,41 @@ async def _raffle_sold_stats(db: AsyncSession, raffle_id: int) -> tuple[int, int
 
 
 @router.get("/raffles/{raffle_id}/overview", response_model=RafflePublicOverview)
-async def public_overview(raffle_id: int, db: Annotated[AsyncSession, Depends(get_db)]):
+async def public_overview(
+    raffle_id: int,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    v: str | None = Query(None, description="Slug del vendedor si vino por link personal"),
+):
     """Info pública de la rifa: precio, %vendido, premios, fecha (si aplica).
-    Sin autenticación. Solo devuelve datos NO sensibles."""
+    Sin autenticación. Solo devuelve datos NO sensibles.
+
+    Si viene con `?v=<slug>`, agrega info del vendedor al response — el
+    cliente ve "Vendido por: X" y las boletas se filtran al pool de
+    ese vendedor."""
     raffle = (await db.execute(
         select(Raffle).where(Raffle.id == raffle_id)
     )).scalar_one_or_none()
     if not raffle or not raffle.is_public:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "rifa no encontrada")
+
+    # Si viene con slug de vendedor, obtenerlo
+    from app.models.user import User, UserRole
+    seller_info: SellerInfoOut | None = None
+    if v:
+        seller = (await db.execute(
+            select(User).where(
+                User.public_slug == v,
+                User.role == UserRole.SELLER,
+                User.tenant_id == raffle.tenant_id,
+                User.is_active.is_(True),
+            )
+        )).scalar_one_or_none()
+        if seller:
+            seller_info = SellerInfoOut(
+                full_name=seller.full_name,
+                slug=seller.public_slug,
+                phone=seller.phone,
+            )
 
     total, paid, pct = await _raffle_sold_stats(db, raffle.id)
 
@@ -312,6 +351,7 @@ async def public_overview(raffle_id: int, db: Annotated[AsyncSession, Depends(ge
         show_draw_date=show_date,
         public_welcome_message=raffle.public_welcome_message,
         prizes=prizes,
+        seller=seller_info,
     )
 
 
@@ -321,33 +361,51 @@ async def public_available_tickets(
     db: Annotated[AsyncSession, Depends(get_db)],
     skip: int = Query(0, ge=0),
     limit: int = Query(500, ge=1, le=1000),
+    v: str | None = Query(None, description="Slug del vendedor. Si viene, solo boletas de ese seller"),
 ):
-    """Boletas realmente disponibles al público:
-      - seller_id IS NULL (no asignada a vendedor humano)
-      - customer_id IS NULL (no reservada ni comprada por nadie)
-      - status = AVAILABLE (no reservada por ningún flujo)
+    """Boletas disponibles al público. Dos modos:
 
-    Si una boleta está asignada a un vendedor humano, se considera
-    "fuera del pool público" — el vendedor humano tiene el derecho
-    exclusivo de venderla."""
+    1. **Sin `v`** (pool general): boletas SIN vendedor humano asignado.
+       - seller_id IS NULL, customer_id IS NULL, status = AVAILABLE.
+
+    2. **Con `?v=<slug>`** (link personal del vendedor): boletas
+       asignadas a ese vendedor específicamente y aún disponibles.
+       - seller_id = <id del vendedor>, customer_id IS NULL,
+         status = AVAILABLE.
+    """
     raffle = (await db.execute(
         select(Raffle).where(Raffle.id == raffle_id, Raffle.is_public.is_(True))
     )).scalar_one_or_none()
     if not raffle:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "rifa no encontrada")
 
-    q = (
-        select(Ticket)
-        .where(
-            Ticket.raffle_id == raffle_id,
-            Ticket.seller_id.is_(None),
-            Ticket.customer_id.is_(None),
-            Ticket.status == TicketStatus.AVAILABLE,
-        )
-        .order_by(Ticket.number_label)
-        .offset(skip)
-        .limit(limit)
+    seller_filter = None
+    if v:
+        from app.models.user import User, UserRole
+        seller = (await db.execute(
+            select(User).where(
+                User.public_slug == v,
+                User.role == UserRole.SELLER,
+                User.tenant_id == raffle.tenant_id,
+                User.is_active.is_(True),
+            )
+        )).scalar_one_or_none()
+        if not seller:
+            # Slug inválido → devuelve pool vacío (frontend mostrará mensaje).
+            return []
+        seller_filter = seller.id
+
+    q = select(Ticket).where(
+        Ticket.raffle_id == raffle_id,
+        Ticket.customer_id.is_(None),
+        Ticket.status == TicketStatus.AVAILABLE,
     )
+    if seller_filter is None:
+        q = q.where(Ticket.seller_id.is_(None))
+    else:
+        q = q.where(Ticket.seller_id == seller_filter)
+
+    q = q.order_by(Ticket.number_label).offset(skip).limit(limit)
     tickets = (await db.execute(q)).scalars().all()
     return [AvailableTicketOut(id=t.id, number_label=t.number_label, code=t.code) for t in tickets]
 
@@ -490,6 +548,24 @@ async def public_checkout(
     if not raffle.enable_online_purchase and not raffle.enable_manual_transfer:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "esta rifa no acepta compras online")
 
+    # 0) Resolver seller si viene por link personal
+    expected_seller_id: int | None = None
+    if payload.seller_slug:
+        from app.models.user import User, UserRole
+        seller = (await db.execute(
+            select(User).where(
+                User.public_slug == payload.seller_slug,
+                User.role == UserRole.SELLER,
+                User.tenant_id == raffle.tenant_id,
+                User.is_active.is_(True),
+            )
+        )).scalar_one_or_none()
+        if not seller:
+            raise HTTPException(
+                status.HTTP_404_NOT_FOUND, "el enlace del vendedor no es válido",
+            )
+        expected_seller_id = seller.id
+
     # 1) Verificar tickets
     tickets = (await db.execute(
         select(Ticket).where(
@@ -500,10 +576,12 @@ async def public_checkout(
     if len(tickets) != len(payload.ticket_ids):
         raise HTTPException(status.HTTP_404_NOT_FOUND, "una o más boletas no existen")
 
+    # Sin seller_slug → tickets deben ser del pool general (seller_id IS NULL).
+    # Con seller_slug → tickets deben pertenecer a ese vendedor.
     unavailable = [
         t.number_label for t in tickets
         if not (
-            t.seller_id is None and t.customer_id is None
+            t.seller_id == expected_seller_id and t.customer_id is None
             and t.status == TicketStatus.AVAILABLE
         )
     ]
@@ -539,7 +617,11 @@ async def public_checkout(
         )
 
     # 3) Reservar (24h)
-    expires_at = await _ensure_reservations(db, tickets, customer.id)
+    # Si vino por link personal, la reserva se atribuye al vendedor
+    # (para que la comisión, notificaciones y trazabilidad vayan a él).
+    expires_at = await _ensure_reservations(
+        db, tickets, customer.id, seller_id=expected_seller_id,
+    )
 
     # 4) Precio total
     total_price = float(raffle.ticket_price) * len(tickets)
