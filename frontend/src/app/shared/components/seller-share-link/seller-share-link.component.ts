@@ -6,16 +6,112 @@ import {
 import { environment } from '@env/environment';
 import { ToastService } from '@core/services/toast.service';
 
+interface MessageTemplate {
+  key: string;
+  label: string;
+  emoji: string;
+  build: (ctx: { name: string; sellerName: string; raffleName: string; link: string; prize?: string }) => string;
+}
+
+/**
+ * Plantillas motivacionales de mensaje de WhatsApp. `[nombre]` queda
+ * como placeholder para que el vendedor lo reemplace al enviar (WhatsApp
+ * permite editar el mensaje antes de mandarlo).
+ *
+ * El vendedor elige la plantilla que mejor le funcione con su tipo de
+ * clientes: casual, persuasivo con propuesta de valor, urgencia,
+ * o testimonio corto y directo.
+ */
+const TEMPLATES: MessageTemplate[] = [
+  {
+    key: 'casual',
+    label: 'Casual',
+    emoji: '👋',
+    build: ({ sellerName, raffleName, link }) => (
+`¡Hola [nombre]! 👋
+
+Soy ${sellerName} y te tengo una oportunidad increíble: estoy vendiendo boletas para la rifa "${raffleName}".
+
+Te comparto el link para que veas los premios y elijas tu boleta favorita 👇
+
+${link}
+
+¡Cualquier pregunta me escribes! 💚`
+    ),
+  },
+  {
+    key: 'persuasivo',
+    label: 'Persuasivo',
+    emoji: '🎯',
+    build: ({ sellerName, raffleName, link }) => (
+`¡Hola [nombre]! 🎯
+
+Con solo una boleta puedes ganar increíbles premios de la rifa "${raffleName}". Es 100% transparente, con verificación pública y sorteo en vivo.
+
+Yo soy ${sellerName}, tu vendedor de confianza. Elige tu boleta favorita:
+
+${link}
+
+Recuerda: al comprar, ya estás jugando. Al no comprar, ya perdiste 😉`
+    ),
+  },
+  {
+    key: 'urgencia',
+    label: 'Urgencia',
+    emoji: '⏰',
+    build: ({ sellerName, raffleName, link }) => (
+`¡[nombre], quedan pocas boletas! ⏰
+
+Estoy vendiendo boletas de la rifa "${raffleName}" y se están agotando rápido. No te quedes por fuera.
+
+Elige tu número antes de que se lo lleven:
+${link}
+
+Soy ${sellerName} — pago 100% seguro en línea o transferencia con comprobante. 💚`
+    ),
+  },
+  {
+    key: 'directo',
+    label: 'Directo',
+    emoji: '🎟️',
+    build: ({ sellerName, raffleName, link }) => (
+`Hola [nombre], soy ${sellerName}.
+
+Te comparto el link de la rifa "${raffleName}" para que elijas tu boleta:
+
+${link}
+
+¡Éxito! 🎟️✨`
+    ),
+  },
+  {
+    key: 'motivacional',
+    label: 'Motivacional',
+    emoji: '🌟',
+    build: ({ sellerName, raffleName, link }) => (
+`¡[nombre], los ganadores no dudan! 🌟
+
+Hoy tienes la oportunidad de participar en la rifa "${raffleName}" y llevarte premios increíbles a casa. Cada boleta es una posibilidad más.
+
+Soy ${sellerName} y me encantaría verte como el próximo ganador:
+
+${link}
+
+¿Qué esperas? La suerte está de tu lado 🍀`
+    ),
+  },
+];
+
 /**
  * Bloque reutilizable para mostrar el link personal de un vendedor:
  *   https://<host>/rifa/:raffleId/comprar?v=<slug>
  *
- * Permite copiar al portapapeles y compartir por WhatsApp con mensaje
- * pre-cargado que incluye el nombre del vendedor y de la rifa.
+ * Con opciones para:
+ *  - Copiar link al portapapeles
+ *  - Compartir por WhatsApp con mensaje pre-cargado (elegible entre
+ *    5 plantillas motivacionales; el vendedor edita [nombre] al enviar).
  *
- * Se usa en:
- *   - /seller (dashboard del vendedor) — para que él comparta su link
- *   - /admin/sellers (listado admin) — para que el admin también lo tenga
+ * Se usa en /seller y en /admin/sellers/:id.
  */
 @Component({
   selector: 'app-seller-share-link',
@@ -34,6 +130,7 @@ import { ToastService } from '@core/services/toast.service';
             </div>
           </div>
         }
+
         <div class="share__url">
           <input class="share__input" type="text" [value]="l"
                  readonly (click)="selectAll($event)" />
@@ -55,6 +152,40 @@ import { ToastService } from '@core/services/toast.service';
             <span class="share__btn-label">WhatsApp</span>
           </a>
         </div>
+
+        <!-- Selector de plantilla -->
+        <div class="tpl">
+          <div class="tpl__label">
+            <span class="material-icons">chat_bubble_outline</span>
+            <span>Elige un tono de mensaje</span>
+          </div>
+          <div class="tpl__options" role="tablist">
+            @for (t of templates; track t.key) {
+              <button type="button" class="tpl__chip"
+                      role="tab"
+                      [class.tpl__chip--active]="selectedTemplate() === t.key"
+                      [attr.aria-selected]="selectedTemplate() === t.key"
+                      (click)="selectedTemplate.set(t.key)">
+                <span class="tpl__chip-emoji">{{ t.emoji }}</span>
+                <span>{{ t.label }}</span>
+              </button>
+            }
+          </div>
+        </div>
+
+        <!-- Preview del mensaje -->
+        <div class="preview">
+          <div class="preview__head">
+            <span class="material-icons">visibility</span>
+            <span>Así se verá el mensaje al abrir WhatsApp</span>
+          </div>
+          <div class="preview__box">{{ previewMessage() }}</div>
+          <p class="preview__hint">
+            💡 <strong>Tip:</strong> al enviar, WhatsApp te dejará editar el
+            mensaje. Solo reemplaza <code>[nombre]</code> por el nombre de tu
+            cliente y ya.
+          </p>
+        </div>
       </div>
     } @else if (!compact()) {
       <div class="share share--warn">
@@ -68,7 +199,7 @@ import { ToastService } from '@core/services/toast.service';
     :host { display: block; }
     .share {
       display: grid;
-      gap: 12px;
+      gap: 14px;
       padding: 16px 18px;
       background: var(--bg-hover, #1a2028);
       border: 1px solid var(--border, rgba(255,255,255,0.08));
@@ -155,6 +286,86 @@ import { ToastService } from '@core/services/toast.service';
       .share__btn { padding: 10px 12px; }
     }
 
+    /* ============ Selector de plantillas ============ */
+    .tpl { display: grid; gap: 8px; }
+    .tpl__label {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 11px;
+      color: var(--text-muted, #94a3b8);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-weight: 700;
+    }
+    .tpl__label .material-icons { font-size: 14px; color: var(--accent, #22c55e); }
+    .tpl__options {
+      display: flex; flex-wrap: wrap;
+      gap: 6px;
+    }
+    .tpl__chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 7px 12px;
+      background: var(--bg-input, #0f1622);
+      border: 1px solid var(--border, rgba(255,255,255,0.08));
+      border-radius: 999px;
+      color: var(--text-muted, #94a3b8);
+      font-family: inherit;
+      font-size: 12.5px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 120ms, border-color 120ms, color 120ms;
+    }
+    .tpl__chip:hover {
+      background: rgba(255,255,255,0.03);
+      border-color: rgba(255,255,255,0.16);
+      color: var(--text, #fff);
+    }
+    .tpl__chip--active {
+      background: rgba(34, 197, 94, 0.14);
+      border-color: var(--accent, #22c55e);
+      color: var(--text, #fff);
+    }
+    .tpl__chip--active:hover { background: rgba(34, 197, 94, 0.2); }
+    .tpl__chip-emoji { font-size: 14px; }
+
+    /* ============ Preview del mensaje ============ */
+    .preview { display: grid; gap: 8px; }
+    .preview__head {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 11px;
+      color: var(--text-muted, #94a3b8);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-weight: 700;
+    }
+    .preview__head .material-icons { font-size: 14px; color: var(--accent, #22c55e); }
+    .preview__box {
+      padding: 14px 16px;
+      background: var(--bg-input, #0f1622);
+      border: 1px solid var(--border, rgba(255,255,255,0.08));
+      border-radius: 12px;
+      color: var(--text, #fff);
+      font-size: 13.5px;
+      line-height: 1.55;
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-height: 280px;
+      overflow-y: auto;
+    }
+    .preview__hint {
+      margin: 0;
+      font-size: 12px;
+      color: var(--text-muted, #94a3b8);
+      line-height: 1.55;
+    }
+    .preview__hint code {
+      background: rgba(34, 197, 94, 0.12);
+      color: var(--accent, #22c55e);
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-family: 'JetBrains Mono', 'Menlo', ui-monospace, monospace;
+      font-size: 11.5px;
+    }
+
     .share--warn {
       display: flex; gap: 12px; align-items: center;
       padding: 12px 14px;
@@ -175,9 +386,10 @@ export class SellerShareLinkComponent {
   readonly raffleId = input.required<number>();
   readonly sellerName = input<string>('');
   readonly raffleName = input<string>('la rifa');
-  /** Vista compacta (sin header explicativo) — para tablas o cards pequeñas. */
   readonly compact = input<boolean>(false);
 
+  readonly templates = TEMPLATES;
+  readonly selectedTemplate = signal<string>('casual');
   readonly copied = signal(false);
 
   readonly link = computed<string | null>(() => {
@@ -188,20 +400,25 @@ export class SellerShareLinkComponent {
     return `${host}/rifa/${rid}/comprar?v=${s}`;
   });
 
-  readonly whatsappHref = computed<string>(() => {
+  readonly previewMessage = computed<string>(() => {
     const l = this.link();
-    if (!l) return '#';
-    const name = this.sellerName();
-    const raffle = this.raffleName();
-    const opener = name
-      ? `¡Hola! Soy ${name}. Estoy vendiendo boletas para la rifa "${raffle}".`
-      : `¡Hola! Te comparto el link para comprar boletas de la rifa "${raffle}".`;
-    const msg = `${opener}\n\nElige tu boleta favorita aquí:\n${l}`;
+    if (!l) return '';
+    const tpl = TEMPLATES.find((t) => t.key === this.selectedTemplate()) ?? TEMPLATES[0];
+    return tpl.build({
+      name: '[nombre]',
+      sellerName: this.sellerName() || 'tu vendedor',
+      raffleName: this.raffleName() || 'esta rifa',
+      link: l,
+    });
+  });
+
+  readonly whatsappHref = computed<string>(() => {
+    const msg = this.previewMessage();
+    if (!msg) return '#';
     return `https://wa.me/?text=${encodeURIComponent(msg)}`;
   });
 
   private publicHost(): string {
-    // Preferimos la URL pública configurada; si no, usamos el origin actual.
     const configured = environment.publicSiteUrl;
     if (configured) return configured.replace(/\/$/, '');
     return typeof window !== 'undefined' ? window.location.origin : '';
@@ -219,7 +436,6 @@ export class SellerShareLinkComponent {
       this.toast.success('Link copiado', 'Ya puedes pegarlo donde quieras.');
       setTimeout(() => this.copied.set(false), 1800);
     } catch {
-      // Fallback: seleccionar el input
       const input = document.querySelector<HTMLInputElement>('.share__input');
       input?.select();
       document.execCommand('copy');
