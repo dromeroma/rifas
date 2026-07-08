@@ -77,6 +77,9 @@ class Settings(BaseSettings):
     supabase_url: str = ""
     supabase_service_key: str = ""
     supabase_storage_bucket: str = "payment-proofs"
+    # Bucket público (no signed URL) para logos de rifas y assets de marca.
+    # Se sirve directamente por /storage/v1/object/public/<bucket>/<file>.
+    supabase_media_bucket: str = "raffle-media"
 
     @cached_property
     def cors_origins(self) -> List[str]:

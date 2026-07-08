@@ -149,3 +149,46 @@ def local_proof_path(proof_url: str) -> Path | None:
     if is_supabase_proof_url(proof_url):
         return None
     return Path(settings.upload_dir) / proof_url
+
+
+# ============ Media pública (logos de rifa) ============
+
+def upload_public_media(file: BinaryIO, original_filename: str, prefix: str = "raffles") -> str:
+    """Sube un archivo al bucket público de media (raffle-media) y devuelve
+    la URL pública directa (sin firmar). Útil para logos, banners, imágenes
+    de premios que van a mostrarse embebidas en el portal público.
+
+    Requiere `SUPABASE_SERVICE_KEY` configurado. Sin él, lanza RuntimeError
+    porque el bucket público solo tiene sentido en Supabase (el disco local
+    de Render no sirve estos assets a un CDN)."""
+    ext = os.path.splitext(original_filename)[1].lower()
+    if ext not in ALLOWED_EXTENSIONS or ext == ".pdf":
+        raise ValueError(f"extensión no permitida para media: {ext}")
+
+    if not storage_enabled():
+        raise RuntimeError(
+            "SUPABASE_SERVICE_KEY no configurado — no se puede subir media pública",
+        )
+
+    bucket = settings.supabase_media_bucket
+    filename = f"{prefix}/{secrets.token_hex(12)}{ext}"
+    url = f"{settings.supabase_url}/storage/v1/object/{bucket}/{filename}"
+
+    file.seek(0)
+    body = file.read()
+
+    headers = {
+        **_supabase_headers(),
+        "Content-Type": _CONTENT_TYPES.get(ext, "application/octet-stream"),
+        "x-upsert": "true",
+        "cache-control": "max-age=31536000",  # 1 año — inmutable
+    }
+    resp = httpx.post(url, content=body, headers=headers, timeout=60.0)
+    if resp.status_code >= 300:
+        logger.error(
+            "Supabase Storage media upload failed: %s %s",
+            resp.status_code, resp.text[:300],
+        )
+        raise RuntimeError(f"upload falló: HTTP {resp.status_code}")
+
+    return f"{settings.supabase_url}/storage/v1/object/public/{bucket}/{filename}"

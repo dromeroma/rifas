@@ -635,6 +635,46 @@ import { TicketActionsModalComponent } from '../seller/ticket-actions-modal.comp
           <app-input label="Email de contacto" type="email" [(ngModel)]="edit.responsible_email" name="responsible_email" icon="alternate_email" />
           <app-input label="Color primario (HEX)" [(ngModel)]="edit.primary_color" name="primary_color" icon="palette"
                       hint="Ej: #1e8e54 (verde). Se usa en la cancha de la boleta." />
+
+          <!-- Upload de imagen del premio (aparece en el portal público) -->
+          <div class="logo-field">
+            <span class="logo-field__label">
+              <span class="material-icons">image</span>
+              Imagen del premio (portal público)
+            </span>
+
+            @if (raffle()?.logo_url; as url) {
+              <div class="logo-field__preview">
+                <img [src]="url" alt="Logo actual" />
+                <div class="logo-field__actions">
+                  <small>Imagen actual</small>
+                  <button type="button" class="link-danger" (click)="removeLogo()"
+                          [disabled]="uploadingLogo()">
+                    <span class="material-icons">delete</span> Quitar
+                  </button>
+                </div>
+              </div>
+            }
+
+            <label class="logo-field__drop">
+              <input type="file" accept="image/png,image/jpeg,image/webp"
+                     (change)="onLogoSelected($event)"
+                     [disabled]="uploadingLogo()" />
+              @if (uploadingLogo()) {
+                <span class="logo-field__loader"></span>
+                Subiendo...
+              } @else {
+                <span class="material-icons">cloud_upload</span>
+                <strong>Subir imagen</strong>
+                <small>PNG / JPG / WebP · máx 5MB · fondo transparente recomendado</small>
+              }
+            </label>
+
+            @if (logoError()) {
+              <small class="logo-field__err">{{ logoError() }}</small>
+            }
+          </div>
+
           <label class="textarea-field">
             <span>Términos y condiciones (opcional)</span>
             <textarea rows="3" [(ngModel)]="edit.terms" name="terms"
@@ -673,6 +713,73 @@ import { TicketActionsModalComponent } from '../seller/ticket-actions-modal.comp
       resize: vertical;
     }
     .textarea-field textarea:focus { outline: 0; border-color: var(--accent); }
+
+    /* ============ Upload de logo/imagen del premio ============ */
+    .logo-field { display: grid; gap: var(--s-2); }
+    .logo-field__label {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 12px; font-weight: 500; color: var(--text-muted);
+    }
+    .logo-field__label .material-icons { font-size: 16px; }
+    .logo-field__preview {
+      display: flex; gap: 12px; align-items: center;
+      padding: 10px 12px;
+      background: var(--bg-hover);
+      border-radius: 8px;
+    }
+    .logo-field__preview img {
+      width: 72px; height: 72px;
+      object-fit: contain;
+      background: linear-gradient(135deg, #ffffff 0%, #f3f4f6 100%);
+      border-radius: 6px;
+      padding: 4px;
+      border: 1px solid var(--border);
+    }
+    .logo-field__actions {
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .logo-field__actions small { color: var(--text-muted); font-size: 11px; }
+    .link-danger {
+      display: inline-flex; align-items: center; gap: 4px;
+      background: transparent; border: none;
+      color: #ef4444; cursor: pointer;
+      font-size: 12px; font-weight: 500;
+      padding: 4px 0;
+    }
+    .link-danger:hover:not(:disabled) { text-decoration: underline; }
+    .link-danger:disabled { opacity: 0.5; cursor: not-allowed; }
+    .link-danger .material-icons { font-size: 14px; }
+
+    .logo-field__drop {
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 4px; padding: 20px 16px;
+      background: var(--bg-hover);
+      border: 1.5px dashed var(--border);
+      border-radius: 10px;
+      cursor: pointer;
+      text-align: center;
+      color: var(--text-muted);
+      transition: border-color var(--t-fast), background var(--t-fast);
+    }
+    .logo-field__drop:hover { border-color: var(--accent); background: var(--accent-soft); }
+    .logo-field__drop input[type="file"] { display: none; }
+    .logo-field__drop .material-icons { font-size: 32px; color: var(--accent); }
+    .logo-field__drop strong { color: var(--text); font-weight: 600; font-size: 14px; }
+    .logo-field__drop small { font-size: 11px; }
+    .logo-field__loader {
+      display: inline-block;
+      width: 24px; height: 24px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: logo-spin 0.8s linear infinite;
+    }
+    @keyframes logo-spin { to { transform: rotate(360deg); } }
+    .logo-field__err {
+      color: #ef4444; font-size: 12px;
+      display: inline-flex; align-items: center; gap: 4px;
+    }
 
     .textarea-field select {
       padding: 10px 12px;
@@ -1232,6 +1339,10 @@ export class RaffleDetailComponent implements OnInit {
   // Editar rifa
   editOpen = signal(false);
   savingEdit = signal(false);
+
+  // Upload logo/imagen del premio
+  uploadingLogo = signal(false);
+  logoError = signal<string | null>(null);
   edit: {
     name: string;
     lottery_name: string;
@@ -1473,6 +1584,53 @@ export class RaffleDetailComponent implements OnInit {
       error: (e) => {
         this.savingEdit.set(false);
         this.toast.error('No se pudo guardar', e?.error?.detail ?? 'Intenta de nuevo.');
+      },
+    });
+  }
+
+  onLogoSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    this.logoError.set(null);
+
+    if (file.size > 5 * 1024 * 1024) {
+      this.logoError.set('Archivo demasiado grande. Máx 5MB.');
+      input.value = '';
+      return;
+    }
+
+    const id = this.raffle()?.id;
+    if (!id) return;
+
+    this.uploadingLogo.set(true);
+    this.raffleSvc.uploadLogo(id, file).subscribe({
+      next: (updated) => {
+        this.raffle.set(updated);
+        this.uploadingLogo.set(false);
+        input.value = '';
+        this.toast.success('Imagen subida', 'Ya aparece en el portal público.');
+      },
+      error: (e) => {
+        this.uploadingLogo.set(false);
+        input.value = '';
+        const msg = e?.error?.detail ?? 'No se pudo subir la imagen.';
+        this.logoError.set(msg);
+        this.toast.error('Upload falló', msg);
+      },
+    });
+  }
+
+  removeLogo() {
+    const id = this.raffle()?.id;
+    if (!id) return;
+    this.raffleSvc.update(id, { logo_url: null }).subscribe({
+      next: (updated) => {
+        this.raffle.set(updated);
+        this.toast.success('Imagen removida', 'Ya no aparece en el portal público.');
+      },
+      error: (e) => {
+        this.toast.error('No se pudo remover', e?.error?.detail ?? 'Intenta de nuevo.');
       },
     });
   }

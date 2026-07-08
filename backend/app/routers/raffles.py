@@ -1,6 +1,6 @@
 from typing import Annotated, List
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -182,6 +182,64 @@ async def update_raffle(
         # `commission_tiers` (que tiene Decimal en amount_per_ticket) revienta
         # al escribirse en la columna JSONB del audit log.
         metadata=payload.model_dump(exclude_unset=True, mode="json"),
+    )
+    await db.commit()
+    await db.refresh(raffle, attribute_names=["prizes"])
+    return raffle
+
+
+@router.post("/{raffle_id}/logo", response_model=RaffleOut)
+async def upload_raffle_logo(
+    raffle_id: int,
+    request: Request,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    actor: Annotated[User, Depends(require_roles(UserRole.ADMIN))],
+    scope: Annotated[TenantScope, Depends(get_tenant_scope)],
+    file: UploadFile = File(..., description="Imagen del logo/premio (PNG/JPG/WebP, máx 10MB)"),
+):
+    """Sube una imagen a Supabase Storage (bucket público `raffle-media`)
+    y guarda la URL pública en `raffles.logo_url`. La imagen se ve en el
+    hero del portal público /rifa/:id/comprar.
+
+    Sin `SUPABASE_SERVICE_KEY` configurado retorna 503 y el admin puede
+    seguir usando URLs externas (Cloudinary, etc)."""
+    from app.services import storage_service
+
+    raffle = (await db.execute(select(Raffle).where(Raffle.id == raffle_id))).scalar_one_or_none()
+    if not raffle:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "rifa no encontrada")
+    assert_tenant_owns(scope, raffle.tenant_id)
+
+    if not storage_service.storage_enabled():
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            "Storage no configurado. Pide al soporte configurar SUPABASE_SERVICE_KEY, "
+            "o pega una URL externa manualmente en el campo logo_url.",
+        )
+
+    # Tamaño máximo: 5MB para logos (los premios normalmente son ligeros)
+    MAX_BYTES = 5 * 1024 * 1024
+    contents = await file.read()
+    if len(contents) > MAX_BYTES:
+        raise HTTPException(status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                            f"archivo demasiado grande ({len(contents) // 1024}KB). Máx 5MB.")
+
+    try:
+        from io import BytesIO
+        public_url = storage_service.upload_public_media(
+            BytesIO(contents), file.filename or "logo.png",
+            prefix=f"raffles/{raffle.id}",
+        )
+    except ValueError as e:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(e))
+    except RuntimeError as e:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(e))
+
+    raffle.logo_url = public_url
+    await log_action(
+        db, actor_id=actor.id, action="raffle.logo_upload",
+        entity_type="raffle", entity_id=raffle.id, request=request,
+        metadata={"logo_url": public_url, "filename": file.filename, "size_bytes": len(contents)},
     )
     await db.commit()
     await db.refresh(raffle, attribute_names=["prizes"])

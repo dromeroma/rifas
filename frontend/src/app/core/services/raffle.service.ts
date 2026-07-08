@@ -33,6 +33,12 @@ export class RaffleService {
     return this.http.patch<Raffle>(`${this.base}/${id}`, payload);
   }
 
+  uploadLogo(id: number, file: File): Observable<Raffle> {
+    const fd = new FormData();
+    fd.append('file', file);
+    return this.http.post<Raffle>(`${this.base}/${id}/logo`, fd);
+  }
+
   addPrize(raffleId: number, payload: PrizeCreatePayload): Observable<Prize> {
     return this.http.post<Prize>(`${this.base}/${raffleId}/prizes`, payload);
   }
