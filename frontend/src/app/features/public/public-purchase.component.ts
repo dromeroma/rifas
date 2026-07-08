@@ -69,9 +69,9 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
             </nav>
 
             <div class="topbar__actions">
-              <button class="btn btn--primary btn--sm" (click)="scrollTo('grid')">
+              <button class="btn btn--primary btn--sm topbar__cta" (click)="scrollTo('grid')">
                 <span class="material-icons-outlined">confirmation_number</span>
-                Comprar boleta
+                <span class="topbar__cta-label">Comprar boleta</span>
               </button>
             </div>
           </div>
@@ -736,8 +736,14 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
     }
     .topbar__inner {
       display: flex; align-items: center;
-      justify-content: space-between; gap: 24px;
+      justify-content: space-between; gap: 16px;
       padding: 14px 24px;
+    }
+    @media (max-width: 720px) {
+      .topbar__inner { padding: 12px 18px; }
+      .topbar__cta { padding: 8px 12px; }
+      .topbar__cta-label { display: none; }
+      .topbar__cta .material-icons-outlined { font-size: 20px; }
     }
     .brand {
       display: inline-flex; align-items: center; gap: 10px;
@@ -871,7 +877,7 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
         radial-gradient(ellipse 40% 40% at 20% 80%, rgba(34, 197, 94, 0.1) 0%, transparent 60%);
       pointer-events: none;
     }
-    @media (max-width: 720px) { .hero { padding: 32px 0; } }
+    @media (max-width: 720px) { .hero { padding: 24px 0 32px; } }
 
     .hero__grid {
       position: relative; z-index: 1;
@@ -881,8 +887,15 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
       align-items: center;
     }
     @media (max-width: 960px) {
-      .hero__grid { grid-template-columns: 1fr; gap: 40px; }
+      .hero__grid { grid-template-columns: 1fr; gap: 24px; }
       .hero__stage { order: -1; }
+    }
+    @media (max-width: 720px) {
+      .hero__badge { margin-bottom: 14px; padding: 5px 12px; font-size: 11px; }
+      .hero__desc { font-size: 15px; margin-bottom: 22px; }
+      .hero__ctas { margin-bottom: 22px; }
+      .hero__bullets { gap: 14px; }
+      .hero__bullets li { font-size: 13px; }
     }
 
     .hero__badge {
@@ -908,12 +921,15 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
 
     .hero__title {
       margin: 0 0 20px;
-      font-size: clamp(36px, 5vw, 60px);
+      font-size: clamp(30px, 5vw, 60px);
       line-height: 1.05;
       font-weight: 800;
       letter-spacing: -0.03em;
       color: var(--text);
+      word-wrap: break-word;
+      overflow-wrap: break-word;
     }
+    @media (max-width: 400px) { .hero__title { font-size: 28px; } }
     .hero__title em {
       font-style: normal;
       color: var(--brand-glow);
@@ -962,7 +978,8 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
       justify-content: center;
       min-height: 560px;
     }
-    @media (max-width: 960px) { .hero__stage { min-height: 400px; } }
+    @media (max-width: 960px) { .hero__stage { min-height: 380px; } }
+    @media (max-width: 480px) { .hero__stage { min-height: 300px; } }
 
     .stage__product {
       position: relative;
@@ -994,6 +1011,9 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
       filter: drop-shadow(0 40px 50px rgba(0,0,0,0.55))
               drop-shadow(0 0 60px rgba(34, 197, 94, 0.25));
     }
+    @media (max-width: 480px) {
+      .stage__product img { max-height: 300px; }
+    }
     .stage__fallback {
       position: relative;
       z-index: 1;
@@ -1005,10 +1025,10 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
     /* Card flotante de boleta — más compacta */
     .ticket-card {
       position: absolute;
-      bottom: 8%;
-      left: 2%;
+      bottom: 4%;
+      left: 4%;
       z-index: 3;
-      width: min(260px, 78%);
+      width: min(240px, 68%);
       background: rgba(4, 22, 19, 0.9);
       backdrop-filter: blur(16px);
       -webkit-backdrop-filter: blur(16px);
@@ -1089,7 +1109,31 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
       }
     }
     @media (max-width: 640px) {
-      .statsbar { grid-template-columns: 1fr; gap: 16px; padding: 16px; }
+      .statsbar {
+        grid-template-columns: 1fr 1fr;
+        gap: 14px 12px;
+        padding: 16px;
+      }
+      .statsbar__progress {
+        grid-column: 1 / -1;
+        padding-top: 12px;
+        border-top: 1px solid var(--border);
+      }
+      .statsbar__countdown {
+        grid-column: 1 / -1;
+        align-items: flex-start;
+        padding-top: 12px;
+        border-top: 1px solid var(--border);
+      }
+      .cd-values { gap: 8px; }
+      .cd-unit { min-width: 34px; }
+      .cd-unit span { font-size: 18px; }
+      .cd-unit small { font-size: 9px; letter-spacing: 0.05em; }
+      .cd-sep { font-size: 16px; }
+      .stat-value { font-size: 20px; }
+      .stat-label { font-size: 11px; }
+      .stat-icon { width: 38px; height: 38px; }
+      .stat-icon .material-icons-outlined { font-size: 20px; }
     }
 
     .statsbar__stat {
@@ -1204,6 +1248,12 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
       gap: 20px; margin-bottom: 28px; flex-wrap: wrap;
     }
     .section-head-row h2 { margin-bottom: 4px; }
+    @media (max-width: 720px) {
+      .section-head-row { gap: 8px; margin-bottom: 20px; }
+      .section-head-row h2 { font-size: 22px; }
+      .legend { gap: 4px; }
+      .legend__item { padding: 4px 8px; font-size: 10px; }
+    }
 
     .link-arrow {
       display: inline-flex; align-items: center; gap: 6px;
@@ -1223,6 +1273,17 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
       gap: 16px;
+    }
+    @media (max-width: 720px) {
+      .prizes-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+      }
+      .prize-card { padding: 14px; }
+      .prize-card__body h3 { font-size: 14px; }
+      .prize-card__body p { font-size: 12px; }
+      .prize-card__num { font-size: 10px; padding: 3px 8px; margin-bottom: 10px; }
+      .prize-card__emoji { font-size: 42px; }
     }
     .prize-card {
       position: relative;
@@ -1292,7 +1353,15 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
       gap: 24px;
     }
     @media (max-width: 900px) { .how-grid { grid-template-columns: repeat(2, 1fr); gap: 32px 20px; } }
-    @media (max-width: 540px) { .how-grid { grid-template-columns: 1fr; } }
+    @media (max-width: 540px) {
+      .how-grid { grid-template-columns: repeat(2, 1fr); gap: 24px 12px; }
+      .how-step__icon { width: 60px; height: 60px; }
+      .how-step__icon .material-icons-outlined { font-size: 26px; }
+      .how-step__icon-wrap { margin-bottom: 28px; }
+      .how-step h3 { font-size: 14px; }
+      .how-step p { font-size: 12px; }
+      .how-step__num { font-size: 12px; margin-bottom: 6px; }
+    }
 
     .how-step { text-align: center; position: relative; }
     .how-step__icon-wrap {
@@ -1433,6 +1502,11 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
       grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
       gap: 8px;
     }
+    @media (max-width: 720px) {
+      .grid { grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 6px; }
+      .ticket { padding: 12px 4px; font-size: 13px; border-radius: 10px; }
+      .ticket__check { width: 14px; height: 14px; font-size: 11px; top: 4px; right: 4px; }
+    }
     .grid--skeleton { pointer-events: none; }
 
     .ticket {
@@ -1518,6 +1592,14 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
     .picker__bar-count { font-size: 13px; color: var(--text-muted); font-weight: 500; }
     .picker__bar-total { font-size: 17px; font-weight: 600; }
     .picker__bar-total strong { color: var(--brand-glow); font-weight: 800; }
+    @media (max-width: 720px) {
+      .picker__bar { bottom: 12px; padding: 0 12px; }
+      .picker__bar-inner { padding: 12px 14px; gap: 10px; }
+      .picker__bar-count { font-size: 11px; }
+      .picker__bar-total { font-size: 14px; }
+      .picker__bar-inner .btn { padding: 10px 14px; font-size: 13px; }
+      .picker__bar-inner .btn .material-icons-outlined { font-size: 16px; }
+    }
 
     /* ============================================================
        FEATURES
@@ -1533,8 +1615,14 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
       border-radius: var(--r-lg);
       backdrop-filter: blur(6px);
     }
-    @media (max-width: 900px) { .features { grid-template-columns: repeat(2, 1fr); } }
-    @media (max-width: 540px) { .features { grid-template-columns: 1fr; } }
+    @media (max-width: 900px) { .features { grid-template-columns: repeat(2, 1fr); gap: 16px; padding: 20px; } }
+    @media (max-width: 480px) {
+      .features { grid-template-columns: 1fr; gap: 14px; padding: 16px; }
+      .feature__icon { width: 40px; height: 40px; }
+      .feature__icon .material-icons-outlined { font-size: 20px; }
+      .feature h3 { font-size: 13px; }
+      .feature p { font-size: 12px; }
+    }
     .feature {
       display: flex; gap: 14px; align-items: flex-start;
     }
@@ -1567,6 +1655,7 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
     .faq__q {
       display: flex; justify-content: space-between; align-items: center;
       padding: 18px 22px;
+      gap: 12px;
       cursor: pointer;
       font-size: 15px;
       font-weight: 500;
@@ -1575,6 +1664,10 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
       color: var(--text);
     }
     .faq__q::-webkit-details-marker { display: none; }
+    @media (max-width: 720px) {
+      .faq__q { padding: 16px 18px; font-size: 14px; }
+      .faq__a { padding: 0 18px 16px; font-size: 13.5px; }
+    }
     .faq__chev {
       font-size: 20px;
       color: var(--text-muted);
@@ -1614,7 +1707,7 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
        ============================================================ */
     .whatsapp-fab {
       position: fixed;
-      bottom: 24px; right: 24px;
+      bottom: 20px; right: 20px;
       z-index: 50;
       display: grid; place-items: center;
       width: 56px; height: 56px;
@@ -1631,7 +1724,8 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
       box-shadow: 0 16px 32px rgba(37, 211, 102, 0.55);
     }
     @media (max-width: 720px) {
-      .whatsapp-fab { bottom: 90px; right: 16px; width: 50px; height: 50px; }
+      .whatsapp-fab { width: 48px; height: 48px; bottom: 16px; right: 16px; }
+      .whatsapp-fab svg { width: 24px; height: 24px; }
     }
 
     /* ============================================================
