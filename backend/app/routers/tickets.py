@@ -86,6 +86,41 @@ async def _verify_ticket_tenancy(db: AsyncSession, ticket_id: int, scope: Tenant
     return ticket
 
 
+async def _verify_customer_belongs_to_seller(
+    db: AsyncSession, customer_id: int | None, seller_id: int,
+) -> None:
+    """Defensa en profundidad: además de que el vendedor no VE clientes ajenos
+    en la UI (customers.py filtra por propiedad), verificamos aquí que no pueda
+    reservarles boletas por API directa. Un cliente "pertenece" al vendedor si:
+      - él lo creó (created_by_user_id == seller_id), o
+      - ya le vendió/reservó al menos una boleta previa.
+    Si customer_id es None, no aplica (boleta reservada sin cliente asociado).
+    """
+    if customer_id is None:
+        return
+    from app.models.customer import Customer
+    from sqlalchemy import exists as sql_exists, or_
+
+    ok = await db.scalar(
+        select(sql_exists().where(
+            Customer.id == customer_id,
+            or_(
+                Customer.created_by_user_id == seller_id,
+                sql_exists().where(
+                    Ticket.customer_id == Customer.id,
+                    Ticket.seller_id == seller_id,
+                ),
+            ),
+        ))
+    )
+    if not ok:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            "no puedes reservar boletas a un cliente que no es tuyo. "
+            "Registra al cliente antes de venderle.",
+        )
+
+
 @router.get("/raffles/{raffle_id}/tickets", response_model=List[TicketSummary])
 async def list_tickets(
     raffle_id: int,
@@ -140,6 +175,8 @@ async def reserve_package_endpoint(
 
     # Verificar tenancy
     await _verify_raffle_tenancy(db, payload.raffle_id, scope)
+    # Defensa en profundidad: el vendedor NO puede reservar para clientes ajenos
+    await _verify_customer_belongs_to_seller(db, payload.customer_id, actor.id)
 
     tickets = await reserve_package(
         db,
@@ -199,6 +236,8 @@ async def reserve(
     scope: Annotated[TenantScope, Depends(get_tenant_scope)],
 ):
     await _verify_ticket_tenancy(db, ticket_id, scope)
+    # Defensa en profundidad: el vendedor NO puede reservar para clientes ajenos
+    await _verify_customer_belongs_to_seller(db, payload.customer_id, actor.id)
     reservation = await reserve_ticket(
         db, ticket_id=ticket_id, seller_id=actor.id, customer_id=payload.customer_id
     )

@@ -23,17 +23,23 @@ async def list_customers(
     q: str | None = Query(default=None, description="búsqueda por nombre, documento o teléfono"),
     mine: bool = Query(
         default=False,
-        description="Si es vendedor, devuelve solo los clientes con boletas reservadas/vendidas por él",
+        description="[DEPRECATED — sellers ya filtran siempre por propiedad] "
+                    "Antes se usaba para pedir solo los clientes propios; ahora es implícito.",
     ),
 ):
     query = select(Customer).order_by(Customer.id.desc())
     if scope.tenant_id is not None:
         query = query.where(Customer.tenant_id == scope.tenant_id)
 
-    # Un vendedor con mine=true ve "sus clientes": tanto los que él registró
-    # (created_by_user_id == su id) como aquellos a los que les ha reservado
-    # o vendido al menos una boleta.
-    if mine and actor.role == UserRole.SELLER:
+    # Isolación por vendedor: los SELLERS SIEMPRE ven solo SUS clientes,
+    # sin importar el flag mine (que quedó como legacy). "Sus clientes" son:
+    #   - los que él registró (created_by_user_id == actor.id), o
+    #   - aquellos a los que les ha reservado/vendido al menos una boleta
+    #     (Ticket.seller_id == actor.id).
+    # Motivo: evitar que un vendedor asigne por error una boleta a un cliente
+    # de otro vendedor.
+    # ADMIN y SUPER_ADMIN siguen viendo todos los clientes del tenant.
+    if actor.role == UserRole.SELLER:
         has_my_ticket = exists().where(
             Ticket.customer_id == Customer.id,
             Ticket.seller_id == actor.id,
@@ -88,11 +94,28 @@ async def create_customer(
 async def get_customer(
     customer_id: int,
     db: Annotated[AsyncSession, Depends(get_db)],
-    _actor: Annotated[User, Depends(require_roles(UserRole.SELLER, UserRole.ADMIN, UserRole.SUPER_ADMIN))],
+    actor: Annotated[User, Depends(require_roles(UserRole.SELLER, UserRole.ADMIN, UserRole.SUPER_ADMIN))],
     scope: Annotated[TenantScope, Depends(get_tenant_scope)],
 ):
     c = (await db.execute(select(Customer).where(Customer.id == customer_id))).scalar_one_or_none()
     if not c:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "cliente no encontrado")
     assert_tenant_owns(scope, c.tenant_id)
+
+    # Isolación seller: un vendedor solo puede ver clientes propios (creados
+    # por él o que le hayan comprado al menos una boleta). Sin este check,
+    # un seller podría acceder por ID a clientes de otros vendedores.
+    # Retorna 404 (no 403) para no revelar que el cliente existe.
+    if actor.role == UserRole.SELLER:
+        is_mine = c.created_by_user_id == actor.id
+        if not is_mine:
+            has_my_ticket = await db.scalar(
+                select(exists().where(
+                    Ticket.customer_id == c.id,
+                    Ticket.seller_id == actor.id,
+                ))
+            )
+            if not has_my_ticket:
+                raise HTTPException(status.HTTP_404_NOT_FOUND, "cliente no encontrado")
+
     return c
