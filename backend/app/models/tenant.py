@@ -52,6 +52,23 @@ class Tenant(Base, TimestampMixin):
         Integer, nullable=True,
     )
 
+    # ========== Configuración Wompi (venta pública online) ==========
+    # Las llaves privadas están cifradas con Fernet (ver services/crypto_service).
+    # Solo se descifran al momento de crear el checkout link.
+    wompi_public_key: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    wompi_private_key_enc: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    wompi_webhook_secret: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    wompi_integrity_key: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    # 'sandbox' o 'production'. Determina la URL base del API de Wompi.
+    wompi_env: Mapped[str] = mapped_column(String(20), default="sandbox", nullable=False)
+
+    # ========== Branding del portal público ==========
+    brand_logo_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    brand_primary_color: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    contact_whatsapp: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    email_from: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    terms_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+
     # Relaciones inversas (lazy="select" para no cargar a menos que se pida)
     users: Mapped[list["User"]] = relationship(back_populates="tenant", lazy="select")
     raffles: Mapped[list["Raffle"]] = relationship(back_populates="tenant", lazy="select")

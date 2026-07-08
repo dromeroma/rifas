@@ -13,7 +13,8 @@ from app.core.exceptions import (
     TicketUnavailableError,
 )
 from app.routers import (
-    admin, assignments, audit, auth, customers, payments, public, raffles,
+    admin, assignments, audit, auth, customers, payments, public,
+    public_sales, public_sales_admin, raffles,
     stats, tenants, tickets, users, verify,
 )
 
@@ -78,4 +79,6 @@ app.include_router(admin.router)
 app.include_router(verify.router)
 app.include_router(verify.short_router)  # /v/{code} → redirect a /r/:id?b=code
 app.include_router(public.router)
+app.include_router(public_sales.router)         # /public/raffles/:id/available, checkout, webhook, auth
+app.include_router(public_sales_admin.router)   # /admin/public-sales/*
 app.include_router(tenants.router)

@@ -103,6 +103,30 @@ class Raffle(Base, TimestampMixin):
     responsible_email: Mapped[str | None] = mapped_column(String(150), nullable=True)
     terms: Mapped[str | None] = mapped_column(Text, nullable=True)
 
+    # ========== Venta pública / online ==========
+    # Si true, la rifa es visible en el portal público y (opcionalmente)
+    # los clientes pueden comprar directamente sin pasar por un vendedor.
+    # Toggle-able por el admin de la rifa en cualquier momento.
+    is_public: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    # Habilita checkout por Wompi. Requiere que el tenant tenga credenciales
+    # Wompi configuradas.
+    enable_online_purchase: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    # Habilita que el cliente suba comprobante de transferencia manual (Nequi/
+    # Daviplata/Bancolombia). El admin lo revisa y aprueba.
+    enable_manual_transfer: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    # Umbral de % pagado que dispara la notificación al admin para que
+    # defina fecha del sorteo. Configurable por rifa (default 80).
+    draw_threshold_pct: Mapped[int] = mapped_column(Integer, default=80, nullable=False)
+    # Cuando fue enviada la notificación de threshold alcanzado (para no
+    # spamear si el % sigue subiendo).
+    draw_notified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Marca que el admin ya confirmó la fecha del sorteo. Cuando se marca
+    # true, se notifica a los clientes vía email/WhatsApp con la fecha.
+    draw_date_scheduled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    # Mensaje libre que aparece en la landing pública de la rifa (bienvenida
+    # personalizada del organizador).
+    public_welcome_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+
     prizes: Mapped[list["Prize"]] = relationship(
         back_populates="raffle", cascade="all, delete-orphan", order_by="Prize.draw_date"
     )

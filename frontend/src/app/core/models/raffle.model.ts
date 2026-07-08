@@ -67,6 +67,13 @@ export interface Raffle {
   responsible_phone?: string | null;
   responsible_email?: string | null;
   terms?: string | null;
+  /** Venta pública online — configurable por rifa. */
+  is_public?: boolean;
+  enable_online_purchase?: boolean;
+  enable_manual_transfer?: boolean;
+  draw_threshold_pct?: number;
+  draw_date_scheduled?: boolean;
+  public_welcome_message?: string | null;
   prizes: Prize[];
 }
 

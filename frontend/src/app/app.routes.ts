@@ -51,6 +51,32 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./features/customer/my-tickets.component').then((m) => m.MyTicketsComponent),
   },
+
+  // ============ VENTA PÚBLICA ONLINE (Wompi + magic link) ============
+  {
+    // Landing con grid de boletas disponibles + checkout.
+    path: 'rifa/:id/comprar',
+    loadComponent: () =>
+      import('./features/public/public-purchase.component').then(
+        (m) => m.PublicPurchaseComponent,
+      ),
+  },
+  {
+    // Resultado del pago Wompi (redirect target). :reference = tx.reference
+    path: 'rifa/:id/pago/:reference',
+    loadComponent: () =>
+      import('./features/public/payment-result.component').then(
+        (m) => m.PaymentResultComponent,
+      ),
+  },
+  {
+    // Portal cliente (magic link auth). Accede con ?t=<token> o email.
+    path: 'mi-cuenta',
+    loadComponent: () =>
+      import('./features/public/customer-portal.component').then(
+        (m) => m.CustomerPortalComponent,
+      ),
+  },
   {
     path: 'subscription-expired',
     canActivate: [authGuard],

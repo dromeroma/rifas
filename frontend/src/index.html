@@ -372,7 +372,7 @@
     // el bg dark normal carga al instante.
     (function () {
       var p = location.pathname || '/';
-      var isPublic = /^\/(r|rifa|rifas|verify|mi-boleta)(\/|$|\?)/.test(p) || p === '/';
+      var isPublic = /^\/(r|rifa|rifas|verify|mi-boleta|mi-cuenta)(\/|$|\?)/.test(p) || p === '/';
       if (isPublic) {
         var splash = document.getElementById('public-splash');
         if (splash) splash.style.display = 'flex';

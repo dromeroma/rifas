@@ -104,6 +104,7 @@ export class AdminShellComponent implements OnInit {
     { path: '/admin/assignments', icon: 'assignment_ind',  label: 'Asignaciones', roles: ['admin'] },
     { path: '/admin/sellers',     icon: 'badge',           label: 'Vendedores',   roles: ['admin'] },
     { path: '/admin/payments',    icon: 'payments',        label: 'Pagos',        roles: ['admin'] },
+    { path: '/admin/publico',     icon: 'storefront',      label: 'Venta pública', roles: ['admin'] },
     { path: '/admin/audit',       icon: 'history',         label: 'Auditoría',    roles: ['super_admin', 'admin'] },
   ];
 

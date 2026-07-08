@@ -17,6 +17,7 @@ export const ADMIN_ROUTES: Routes = [
       { path: 'assignments', loadComponent: () => import('./assignments.component').then((m) => m.AssignmentsComponent) },
       { path: 'payments', loadComponent: () => import('./payments.component').then((m) => m.PaymentsComponent) },
       { path: 'audit', loadComponent: () => import('./audit.component').then((m) => m.AuditComponent) },
+      { path: 'publico', loadComponent: () => import('./public-sales-config.component').then((m) => m.PublicSalesConfigComponent) },
     ],
   },
 ];

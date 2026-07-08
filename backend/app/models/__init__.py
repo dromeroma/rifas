@@ -11,3 +11,10 @@ from app.models.tenant import Tenant  # noqa: F401
 from app.models.ticket import Ticket, TicketStatus  # noqa: F401
 from app.models.ticket_number import TicketNumber  # noqa: F401
 from app.models.user import User, UserRole  # noqa: F401
+from app.models.public_sales import (  # noqa: F401
+    CustomerAuthToken,
+    ManualTransferSubmission,
+    Referral,
+    WompiTransaction,
+    WompiTransactionTicket,
+)
