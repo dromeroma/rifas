@@ -9,31 +9,33 @@ import {
   AvailableTicket,
   PublicRaffleOverview,
   PublicSalesService,
+  PublicTicketDetail,
   TicketLookup,
 } from '@core/services/public-sales.service';
 import { ThemeService } from '@core/services/theme.service';
+import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-design.component';
 
 /**
- * Portal PÚBLICO de compra online de boletas.
+ * Portal PÚBLICO de compra online de boletas — v3 premium.
  *
- * Ruta: /rifa/:id/comprar
+ * Estructura visual (storytelling):
+ *   1. Hero full-bleed con TV protagonista (imagen grande + halo + partículas)
+ *   2. Grid de premios como cards prominentes
+ *   3. Cómo funciona (3 pasos visuales)
+ *   4. Buscador por número
+ *   5. Grid de boletas con preview modal (ver diseño real antes de reservar)
+ *   6. Footer con marca
  *
- * Flujo:
- *   1. Hero premium con nombre, premios, %vendido y card del premio
- *   2. Buscador por número: cliente escribe "2565" y le decimos si está
- *      disponible / vendida / reservada / asignada a vendedor
- *   3. Grid de boletas disponibles (solo las que NO tienen seller humano)
- *   4. Cliente selecciona 1-10 boletas
- *   5. Modal con formulario (fondo blanco, letra oscura — legible)
- *   6. Redirige a Wompi o abre flujo manual
- *
- * Vendedor: en compras online NO hay vendedor humano (seller_id NULL),
- * la venta queda directamente asociada al tenant/organizador.
+ * Flujo compra:
+ *   - Cliente explora sin compromiso (click en boleta → preview del diseño)
+ *   - Desde el preview: "Reservar y pagar" pre-selecciona esa boleta y abre checkout
+ *   - O selecciona varias en el grid → "Continuar al pago" → modal formulario
+ *   - Wompi (si configurado) o transferencia manual (comprobante)
  */
 @Component({
   selector: 'app-public-purchase',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, TicketDesignComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <main class="page">
@@ -53,25 +55,25 @@ import { ThemeService } from '@core/services/theme.service';
         <!-- Toggle claro/oscuro flotante -->
         <button class="theme-toggle" type="button"
                 (click)="theme.toggle()"
-                [attr.aria-label]="theme.isDark() ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'"
+                [attr.aria-label]="theme.isDark() ? 'Modo claro' : 'Modo oscuro'"
                 [title]="theme.isDark() ? 'Modo claro' : 'Modo oscuro'">
           <span class="material-icons">{{ theme.isDark() ? 'light_mode' : 'dark_mode' }}</span>
         </button>
 
-        <!-- ============ HERO PREMIUM ============ -->
-        <header class="hero">
-          <!-- Ornamentos decorativos -->
-          <div class="hero__glow hero__glow--gold"></div>
-          <div class="hero__glow hero__glow--emerald"></div>
-          <div class="hero__stars" aria-hidden="true">
-            <span></span><span></span><span></span><span></span>
-            <span></span><span></span><span></span><span></span>
+        <!-- ============ HERO FULL-BLEED ============ -->
+        <section class="hero">
+          <div class="hero__bg">
+            <div class="hero__mesh"></div>
+            <div class="hero__spotlight"></div>
+            <div class="hero__stars">
+              @for (i of [1,2,3,4,5,6,7,8,9,10,11,12]; track i) {
+                <span></span>
+              }
+            </div>
           </div>
 
-          <div class="hero__grid">
-
-            <!-- COL izquierda: info + premios + stats -->
-            <div class="hero__info">
+          <div class="hero__inner">
+            <div class="hero__text">
               <div class="badge">
                 <span class="badge__dot"></span>
                 <span>Rifa activa</span>
@@ -94,25 +96,6 @@ import { ThemeService } from '@core/services/theme.service';
                 </div>
               }
 
-              <!-- STRIP de premios: cards horizontales sobre gold accent -->
-              @if (r.prizes.length) {
-                <div class="prize-strip">
-                  @for (p of r.prizes; track p.position; let idx = $index) {
-                    <div class="prize-mini" [class.prize-mini--top]="idx === 0">
-                      <div class="prize-mini__emoji">{{ prizeEmoji(p.name) }}</div>
-                      <div class="prize-mini__body">
-                        <small>{{ idx === 0 ? 'Premio mayor' : 'Premio ' + (idx + 1) }}</small>
-                        <strong>{{ p.name }}</strong>
-                        @if (p.draw_date) {
-                          <em>sorteo · {{ formatDate(p.draw_date) }}</em>
-                        }
-                      </div>
-                    </div>
-                  }
-                </div>
-              }
-
-              <!-- STATS -->
               <div class="hero__stats">
                 <div class="stat">
                   <strong>\${{ formatNumber(r.ticket_price) }}</strong>
@@ -125,46 +108,117 @@ import { ThemeService } from '@core/services/theme.service';
                 @if (r.show_draw_date && r.final_draw_date) {
                   <div class="stat">
                     <strong>{{ formatDate(r.final_draw_date) }}</strong>
-                    <small>último sorteo</small>
+                    <small>sorteo final</small>
                   </div>
                 }
               </div>
 
-              <div class="progress" [attr.aria-label]="r.sold_pct + '% vendido'">
+              <div class="progress">
                 <div class="progress__bar" [style.width.%]="r.sold_pct"></div>
+              </div>
+
+              <div class="hero__ctas">
+                <button class="btn primary btn--xl" (click)="scrollToGrid()">
+                  <span class="material-icons">grid_on</span>
+                  Elige tu boleta
+                </button>
+                <button class="btn ghost-light btn--xl" (click)="scrollToSearch()">
+                  <span class="material-icons">search</span>
+                  Buscar número
+                </button>
               </div>
             </div>
 
-            <!-- COL derecha: display luxe del premio mayor -->
-            <aside class="hero__display">
-              <div class="hero__display-frame">
+            <div class="hero__stage">
+              <div class="stage__halo"></div>
+              <div class="stage__floor"></div>
+              <div class="stage__frame">
                 @if (r.logo_url) {
-                  <img [src]="r.logo_url" [alt]="topPrizeName()"
-                       class="hero__display-img" />
+                  <img [src]="r.logo_url" [alt]="topPrizeName()" class="stage__img" />
                 } @else {
-                  <div class="hero__display-fallback">
-                    <div class="hero__display-emoji">{{ heroPrizeEmoji() || '🏆' }}</div>
-                  </div>
+                  <div class="stage__fallback">{{ heroPrizeEmoji() }}</div>
                 }
-                <div class="hero__display-glow"></div>
               </div>
-
-              <div class="hero__display-ribbon">
+              <div class="stage__ribbon">
                 <span class="material-icons">emoji_events</span>
                 <span>{{ topPrizeName() }}</span>
               </div>
-            </aside>
+              <div class="stage__sparkle stage__sparkle--1">✨</div>
+              <div class="stage__sparkle stage__sparkle--2">✨</div>
+              <div class="stage__sparkle stage__sparkle--3">⭐</div>
+            </div>
           </div>
-        </header>
 
+          <div class="hero__scroll">
+            <span class="material-icons">expand_more</span>
+          </div>
+        </section>
 
-        <!-- BUSCADOR POR NÚMERO -->
-        <section class="search-card">
+        <!-- ============ GRID DE PREMIOS ============ -->
+        @if (r.prizes.length) {
+          <section class="prizes-showcase">
+            <div class="section-head">
+              <span class="section-tag">🏆 Los premios</span>
+              <h2>Gana con cada boleta que compras</h2>
+              <p>Múltiples chances de ganar en diferentes sorteos.</p>
+            </div>
+
+            <div class="prizes-grid">
+              @for (p of r.prizes; track p.position; let idx = $index) {
+                <article class="prize-card" [class.prize-card--top]="idx === 0">
+                  @if (idx === 0) { <div class="prize-card__crown">👑</div> }
+                  <div class="prize-card__emoji">{{ prizeEmoji(p.name) }}</div>
+                  <div class="prize-card__pos">
+                    {{ idx === 0 ? 'Premio mayor' : 'Premio ' + (idx + 1) }}
+                  </div>
+                  <h3>{{ p.name }}</h3>
+                  @if (p.draw_date) {
+                    <div class="prize-card__date">
+                      <span class="material-icons">event</span>
+                      {{ formatDate(p.draw_date) }}
+                    </div>
+                  }
+                </article>
+              }
+            </div>
+          </section>
+        }
+
+        <!-- ============ CÓMO FUNCIONA ============ -->
+        <section class="steps">
+          <div class="section-head">
+            <span class="section-tag">📋 Fácil y rápido</span>
+            <h2>Cómo funciona</h2>
+          </div>
+          <div class="steps__grid">
+            <div class="step">
+              <div class="step__num">1</div>
+              <span class="material-icons">confirmation_number</span>
+              <h3>Elige tu boleta</h3>
+              <p>Explora todas las boletas disponibles y ve el diseño antes de reservar.</p>
+            </div>
+            <div class="step">
+              <div class="step__num">2</div>
+              <span class="material-icons">payments</span>
+              <h3>Paga en línea</h3>
+              <p>Con Nequi, PSE, tarjeta o transferencia con comprobante. Reserva de 24 horas.</p>
+            </div>
+            <div class="step">
+              <div class="step__num">3</div>
+              <span class="material-icons">emoji_events</span>
+              <h3>Gana premios</h3>
+              <p>Cuando se sortee, recibes notificación por correo y WhatsApp si ganaste.</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- ============ BUSCADOR POR NÚMERO ============ -->
+        <section class="search-card" #searchSection id="search-section">
           <div class="search-card__head">
             <span class="material-icons">search</span>
             <div>
               <h2>¿Buscas un número en específico?</h2>
-              <p>Escribe el número (ej: <strong>2565</strong>) y te decimos si está disponible.</p>
+              <p>Escribe el número (ej: <strong>{{ searchPlaceholder() }}</strong>) y te decimos si está disponible.</p>
             </div>
           </div>
           <form class="search-form" (ngSubmit)="doSearch()">
@@ -176,7 +230,7 @@ import { ThemeService } from '@core/services/theme.service';
               [placeholder]="'Ej: ' + searchPlaceholder()"
               [min]="1"
               inputmode="numeric" />
-            <button type="submit" class="btn primary" [disabled]="searching()">
+            <button type="submit" class="btn primary btn--lg" [disabled]="searching()">
               @if (searching()) {
                 <span class="btn__spin"></span> Buscando...
               } @else {
@@ -194,15 +248,22 @@ import { ThemeService } from '@core/services/theme.service';
                  : sr.status === 'assigned' ? 'person_search'
                  : 'help_outline' }}
               </span>
-              <div>
+              <div class="search-result__body">
                 <strong>Boleta {{ sr.number_label }}</strong>
                 <p>{{ sr.message }}</p>
                 @if (sr.status === 'available' && sr.ticket_id) {
-                  <button type="button" class="btn primary btn--sm"
-                          (click)="selectFromSearch(sr.ticket_id!)">
-                    <span class="material-icons">add_shopping_cart</span>
-                    Reservar esta boleta
-                  </button>
+                  <div class="search-result__actions">
+                    <button type="button" class="btn primary btn--sm"
+                            (click)="openTicketPreviewById(sr.ticket_id!)">
+                      <span class="material-icons">visibility</span>
+                      Ver la boleta
+                    </button>
+                    <button type="button" class="btn ghost btn--sm"
+                            (click)="selectFromSearch(sr.ticket_id!)">
+                      <span class="material-icons">add_shopping_cart</span>
+                      Reservar directo
+                    </button>
+                  </div>
                 }
               </div>
               <button class="search-result__close" (click)="clearSearch()"
@@ -211,12 +272,13 @@ import { ThemeService } from '@core/services/theme.service';
           }
         </section>
 
-        <!-- GRID DE BOLETAS -->
-        <section class="picker">
+        <!-- ============ GRID DE BOLETAS ============ -->
+        <section class="picker" #gridSection id="grid-section">
           <div class="picker__head">
             <div>
-              <h2>Elige tu boleta</h2>
-              <p class="muted">Toca los números que quieres reservar.</p>
+              <span class="section-tag">🎟️ Todas las boletas</span>
+              <h2>Elige tu boleta favorita</h2>
+              <p class="muted">Haz clic en una boleta para ver su diseño antes de reservar.</p>
             </div>
             <div class="picker__legend">
               <span class="chip chip--free">Disponible</span>
@@ -225,7 +287,11 @@ import { ThemeService } from '@core/services/theme.service';
           </div>
 
           @if (loadingTickets()) {
-            <p class="muted">Cargando boletas disponibles...</p>
+            <div class="grid-skeleton">
+              @for (i of [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]; track i) {
+                <div class="skeleton-cell"></div>
+              }
+            </div>
           } @else if (!available().length) {
             <div class="empty">
               <span class="material-icons big">confirmation_number</span>
@@ -240,7 +306,7 @@ import { ThemeService } from '@core/services/theme.service';
                         class="cell"
                         [class.cell--selected]="isSelected(t.id)"
                         [class.cell--pulse]="pulseTicketId() === t.id"
-                        (click)="toggle(t.id)">
+                        (click)="openTicketPreview(t)">
                   {{ t.number_label }}
                 </button>
               }
@@ -268,11 +334,56 @@ import { ThemeService } from '@core/services/theme.service';
             <span>Boletera</span>
           </div>
           <p>Compra segura · Verificación pública de tus boletas · Sorteo con Lotería.</p>
+          @if (r.lottery_name) {
+            <p class="foot__lot">Juega con: <strong>{{ r.lottery_name }}</strong></p>
+          }
         </footer>
 
       }
 
-      <!-- MODAL CHECKOUT -->
+      <!-- ============ MODAL PREVIEW DE BOLETA ============ -->
+      @if (previewOpen() && previewData(); as pd) {
+        <div class="modal modal--preview" (click)="closePreview()">
+          <div class="modal__card modal__card--wide" (click)="$event.stopPropagation()">
+            <button class="modal__close" (click)="closePreview()" aria-label="Cerrar">×</button>
+            <div class="preview-head">
+              <h2>Boleta {{ pd.ticket.label }}</h2>
+              <p>Este es el diseño exacto que recibirás. Los 20 números son únicos para esta boleta.</p>
+            </div>
+
+            <div class="preview-ticket">
+              <app-ticket-design
+                [ticket]="previewTicket()!"
+                [raffleName]="pd.raffle.name"
+                [prizes]="previewPrizes()"
+                [primaryColor]="pd.raffle.primary_color || '#1b8b3b'"
+                [ticketPrice]="overview()?.ticket_price ?? null"
+                [responsibleName]="pd.raffle.responsible_name"
+                [responsiblePhone]="pd.raffle.responsible_phone" />
+            </div>
+
+            <div class="preview-actions">
+              @if (isSelected(previewTicketId()!)) {
+                <button class="btn ghost btn--lg" (click)="removeFromSelection(previewTicketId()!)">
+                  <span class="material-icons">remove_shopping_cart</span>
+                  Quitar de la selección
+                </button>
+              } @else {
+                <button class="btn primary btn--lg" (click)="selectAndClosePreview()">
+                  <span class="material-icons">add_shopping_cart</span>
+                  Reservar esta boleta
+                </button>
+              }
+              <button class="btn ghost btn--lg" (click)="reserveAndCheckoutNow()">
+                <span class="material-icons">bolt</span>
+                Reservar y pagar ya
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- MODAL CHECKOUT (formulario cliente) -->
       @if (checkoutOpen()) {
         <div class="modal" (click)="closeCheckout()">
           <div class="modal__card" (click)="$event.stopPropagation()">
@@ -354,15 +465,16 @@ import { ThemeService } from '@core/services/theme.service';
       font-family: 'Inter', system-ui, sans-serif;
 
       --pg-bg:
-        radial-gradient(circle at 20% 0%, rgba(201, 169, 110, 0.25), transparent 40%),
-        radial-gradient(circle at 80% 100%, rgba(30, 199, 123, 0.18), transparent 45%),
+        radial-gradient(ellipse at 20% 0%, rgba(201, 169, 110, 0.18), transparent 45%),
+        radial-gradient(ellipse at 80% 100%, rgba(30, 199, 123, 0.12), transparent 50%),
         linear-gradient(180deg, #faf6ee 0%, #f0e5c8 100%);
       --pg-text: #1a2942;
       --pg-muted: #6b7280;
+      --heading: #1a2942;
 
       --card-bg: #ffffff;
-      --card-border: rgba(201, 169, 110, 0.12);
-      --card-shadow: 0 4px 24px rgba(26, 41, 66, 0.06);
+      --card-border: rgba(201, 169, 110, 0.15);
+      --card-shadow: 0 4px 24px rgba(26, 41, 66, 0.08);
 
       --input-bg: #ffffff;
       --input-text: #1a2942;
@@ -381,7 +493,7 @@ import { ThemeService } from '@core/services/theme.service';
       --toggle-text: #1a2942;
       --toggle-border: rgba(201, 169, 110, 0.35);
 
-      --heading: #1a2942;
+      --section-alt-bg: rgba(255, 255, 255, 0.6);
 
       background: var(--pg-bg);
       color: var(--pg-text);
@@ -390,22 +502,23 @@ import { ThemeService } from '@core/services/theme.service';
     /* ============ TEMA OSCURO ============ */
     :host-context([data-theme="dark"]) {
       --pg-bg:
-        radial-gradient(circle at 20% 0%, rgba(201, 169, 110, 0.2), transparent 45%),
-        radial-gradient(circle at 80% 100%, rgba(30, 199, 123, 0.15), transparent 50%),
-        linear-gradient(180deg, #0a1424 0%, #142240 100%);
+        radial-gradient(ellipse at 20% 0%, rgba(201, 169, 110, 0.15), transparent 45%),
+        radial-gradient(ellipse at 80% 100%, rgba(30, 199, 123, 0.1), transparent 50%),
+        linear-gradient(180deg, #0a1424 0%, #0f1e38 100%);
       --pg-text: #f8f1e3;
-      --pg-muted: rgba(248, 241, 227, 0.6);
+      --pg-muted: rgba(248, 241, 227, 0.55);
+      --heading: #f8f1e3;
 
-      --card-bg: linear-gradient(180deg, rgba(20, 34, 64, 0.75) 0%, rgba(15, 26, 46, 0.75) 100%);
+      --card-bg: linear-gradient(180deg, rgba(20, 34, 64, 0.7) 0%, rgba(15, 26, 46, 0.7) 100%);
       --card-border: rgba(201, 169, 110, 0.25);
-      --card-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+      --card-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
 
       --input-bg: rgba(10, 20, 36, 0.7);
       --input-text: #f8f1e3;
       --input-border: rgba(201, 169, 110, 0.25);
       --input-placeholder: rgba(248, 241, 227, 0.4);
 
-      --cell-bg: linear-gradient(180deg, rgba(30, 48, 87, 0.6) 0%, rgba(20, 34, 64, 0.6) 100%);
+      --cell-bg: linear-gradient(180deg, rgba(30, 48, 87, 0.55) 0%, rgba(20, 34, 64, 0.55) 100%);
       --cell-bg-hover: rgba(30, 48, 87, 0.9);
       --cell-text: #f8f1e3;
       --cell-border: rgba(201, 169, 110, 0.25);
@@ -417,10 +530,10 @@ import { ThemeService } from '@core/services/theme.service';
       --toggle-text: #e8c98a;
       --toggle-border: rgba(232, 201, 138, 0.35);
 
-      --heading: #f8f1e3;
+      --section-alt-bg: rgba(15, 26, 46, 0.4);
     }
 
-    .page { max-width: 1080px; margin: 0 auto; padding: 24px 16px 60px; position: relative; }
+    .page { position: relative; }
 
     /* ============ TOGGLE claro/oscuro ============ */
     .theme-toggle {
@@ -450,7 +563,7 @@ import { ThemeService } from '@core/services/theme.service';
 
     .state {
       text-align: center;
-      padding: 80px 20px;
+      padding: 120px 20px;
       color: var(--pg-muted);
     }
     .spinner {
@@ -464,96 +577,116 @@ import { ThemeService } from '@core/services/theme.service';
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* ============ HERO PREMIUM v2 ============ */
+    /* ============================================================
+       HERO FULL-BLEED — el TV es la estrella
+       ============================================================ */
     .hero {
       position: relative;
+      min-height: 720px;
+      padding: 60px 24px 40px;
       background:
-        radial-gradient(circle at 100% 0%, rgba(201, 169, 110, 0.22), transparent 55%),
-        radial-gradient(circle at 0% 100%, rgba(30, 199, 123, 0.15), transparent 55%),
-        linear-gradient(135deg, #0a1424 0%, #142240 40%, #1e3057 100%);
+        radial-gradient(ellipse at 30% 40%, #1e3057 0%, transparent 50%),
+        radial-gradient(ellipse at 70% 60%, #0f1a2e 0%, transparent 60%),
+        linear-gradient(135deg, #050a14 0%, #0a1424 60%, #0f1e38 100%);
       color: #f8f1e3;
-      border-radius: 28px;
-      padding: 48px 40px;
-      margin-bottom: 32px;
-      box-shadow:
-        0 40px 100px -30px rgba(10, 20, 36, 0.7),
-        0 0 0 1px rgba(201, 169, 110, 0.18),
-        inset 0 1px 0 rgba(255, 255, 255, 0.05);
       overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
     }
-    @media (max-width: 720px) { .hero { padding: 28px 22px; border-radius: 22px; } }
+    @media (max-width: 900px) { .hero { min-height: auto; padding: 48px 20px 32px; } }
 
-    /* Glow decorativos animados */
-    .hero__glow {
+    /* Mesh gradient + luces + partículas */
+    .hero__bg { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+    .hero__mesh {
       position: absolute;
-      border-radius: 50%;
+      inset: -20%;
+      background:
+        radial-gradient(circle at 15% 30%, rgba(232, 201, 138, 0.35) 0%, transparent 40%),
+        radial-gradient(circle at 85% 70%, rgba(30, 199, 123, 0.3) 0%, transparent 40%),
+        radial-gradient(circle at 50% 100%, rgba(201, 169, 110, 0.25) 0%, transparent 60%);
       filter: blur(60px);
-      pointer-events: none;
-      animation: glow-drift 12s ease-in-out infinite;
+      opacity: 0.8;
+      animation: mesh-drift 18s ease-in-out infinite;
     }
-    .hero__glow--gold {
-      width: 380px; height: 380px;
-      top: -140px; right: -100px;
-      background: radial-gradient(circle, rgba(232, 201, 138, 0.45) 0%, transparent 65%);
-    }
-    .hero__glow--emerald {
-      width: 320px; height: 320px;
-      bottom: -120px; left: -80px;
-      background: radial-gradient(circle, rgba(30, 199, 123, 0.4) 0%, transparent 65%);
-      animation-delay: -6s;
-    }
-    @keyframes glow-drift {
-      0%, 100% { transform: translate(0, 0); opacity: 0.85; }
-      50% { transform: translate(30px, -20px); opacity: 1; }
+    @keyframes mesh-drift {
+      0%, 100% { transform: translate(0, 0) scale(1); }
+      33% { transform: translate(-30px, 20px) scale(1.05); }
+      66% { transform: translate(20px, -20px) scale(0.98); }
     }
 
-    /* Estrellas / partículas sutiles */
-    .hero__stars {
-      position: absolute; inset: 0;
-      pointer-events: none;
-      overflow: hidden;
+    /* Foco central para dar profundidad */
+    .hero__spotlight {
+      position: absolute;
+      top: 50%; right: 25%;
+      width: 700px; height: 700px;
+      transform: translate(50%, -50%);
+      background: radial-gradient(circle,
+        rgba(232, 201, 138, 0.28) 0%,
+        rgba(232, 201, 138, 0.1) 30%,
+        transparent 60%);
+      filter: blur(30px);
+      animation: spotlight-pulse 5s ease-in-out infinite;
     }
+    @keyframes spotlight-pulse {
+      0%, 100% { opacity: 0.6; transform: translate(50%, -50%) scale(1); }
+      50% { opacity: 1; transform: translate(50%, -50%) scale(1.05); }
+    }
+
+    /* Partículas doradas titilando */
     .hero__stars span {
       position: absolute;
-      width: 3px; height: 3px;
+      width: 4px; height: 4px;
       background: #e8c98a;
       border-radius: 50%;
-      box-shadow: 0 0 8px rgba(232, 201, 138, 0.8);
+      box-shadow: 0 0 10px rgba(232, 201, 138, 0.9);
       animation: twinkle 3s ease-in-out infinite;
     }
-    .hero__stars span:nth-child(1) { top: 12%; left: 8%; animation-delay: 0s; }
-    .hero__stars span:nth-child(2) { top: 22%; left: 42%; animation-delay: 0.4s; }
-    .hero__stars span:nth-child(3) { top: 68%; left: 12%; animation-delay: 0.8s; }
-    .hero__stars span:nth-child(4) { top: 84%; left: 38%; animation-delay: 1.2s; }
-    .hero__stars span:nth-child(5) { top: 18%; left: 78%; animation-delay: 0.2s; }
-    .hero__stars span:nth-child(6) { top: 46%; left: 88%; animation-delay: 0.6s; }
-    .hero__stars span:nth-child(7) { top: 74%; left: 72%; animation-delay: 1.0s; }
-    .hero__stars span:nth-child(8) { top: 92%; left: 62%; animation-delay: 1.4s; }
-    @keyframes twinkle { 0%,100% { opacity: 0.3; transform: scale(1); } 50% { opacity: 1; transform: scale(1.4); } }
+    .hero__stars span:nth-child(1)  { top: 8%;  left: 12%; animation-delay: 0.0s; }
+    .hero__stars span:nth-child(2)  { top: 18%; left: 42%; animation-delay: 0.3s; }
+    .hero__stars span:nth-child(3)  { top: 68%; left: 8%;  animation-delay: 0.6s; }
+    .hero__stars span:nth-child(4)  { top: 88%; left: 38%; animation-delay: 0.9s; }
+    .hero__stars span:nth-child(5)  { top: 14%; left: 78%; animation-delay: 0.2s; }
+    .hero__stars span:nth-child(6)  { top: 42%; left: 92%; animation-delay: 0.7s; width: 3px; height: 3px; }
+    .hero__stars span:nth-child(7)  { top: 74%; left: 68%; animation-delay: 1.1s; }
+    .hero__stars span:nth-child(8)  { top: 92%; left: 82%; animation-delay: 1.4s; }
+    .hero__stars span:nth-child(9)  { top: 32%; left: 18%; animation-delay: 0.5s; width: 3px; height: 3px; }
+    .hero__stars span:nth-child(10) { top: 56%; left: 55%; animation-delay: 1.6s; width: 3px; height: 3px; }
+    .hero__stars span:nth-child(11) { top: 22%; left: 62%; animation-delay: 0.8s; }
+    .hero__stars span:nth-child(12) { top: 82%; left: 12%; animation-delay: 1.2s; }
+    @keyframes twinkle { 0%,100% { opacity: 0.3; transform: scale(1); } 50% { opacity: 1; transform: scale(1.5); } }
 
-    .hero__grid {
+    .hero__inner {
       position: relative;
-      display: grid;
-      grid-template-columns: 1.35fr 1fr;
-      gap: 40px;
-      align-items: center;
       z-index: 2;
+      max-width: 1280px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr 1.1fr;
+      gap: 48px;
+      align-items: center;
+      width: 100%;
     }
-    @media (max-width: 900px) { .hero__grid { grid-template-columns: 1fr; gap: 32px; } }
+    @media (max-width: 900px) { .hero__inner { grid-template-columns: 1fr; gap: 32px; } }
+
+    /* Text side */
+    .hero__text { max-width: 560px; }
+    @media (max-width: 900px) { .hero__text { max-width: none; } }
 
     .badge {
       display: inline-flex; align-items: center; gap: 8px;
-      padding: 7px 16px;
-      background: linear-gradient(135deg, rgba(30, 199, 123, 0.22) 0%, rgba(201, 169, 110, 0.18) 100%);
+      padding: 8px 18px;
+      background: linear-gradient(135deg, rgba(30, 199, 123, 0.22) 0%, rgba(232, 201, 138, 0.18) 100%);
       color: #f8f1e3;
-      border: 1px solid rgba(201, 169, 110, 0.4);
+      border: 1px solid rgba(232, 201, 138, 0.4);
       border-radius: 999px;
       font-size: 12px;
       font-weight: 700;
-      margin-bottom: 20px;
-      letter-spacing: 0.04em;
+      margin-bottom: 24px;
+      letter-spacing: 0.06em;
       text-transform: uppercase;
-      backdrop-filter: blur(4px);
+      backdrop-filter: blur(8px);
+      box-shadow: 0 6px 20px rgba(232, 201, 138, 0.15);
     }
     .badge__dot {
       width: 8px; height: 8px;
@@ -566,25 +699,30 @@ import { ThemeService } from '@core/services/theme.service';
     @keyframes badge-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.6; } }
 
     .hero__title {
-      margin: 0 0 14px;
-      font-size: 40px;
-      line-height: 1.05;
+      margin: 0 0 20px;
+      font-size: clamp(36px, 5vw, 60px);
+      line-height: 1.02;
       color: #fff;
-      font-weight: 800;
-      letter-spacing: -0.02em;
-      background: linear-gradient(180deg, #ffffff 0%, #f8f1e3 100%);
+      font-weight: 900;
+      letter-spacing: -0.03em;
+      background: linear-gradient(180deg, #ffffff 0%, #f8f1e3 60%, #e8c98a 120%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
-      text-shadow: 0 4px 30px rgba(232, 201, 138, 0.15);
+      text-shadow: 0 4px 40px rgba(232, 201, 138, 0.2);
     }
-    @media (max-width: 720px) { .hero__title { font-size: 28px; } }
-    .hero__desc { margin: 0 0 18px; color: rgba(248, 241, 227, 0.85); font-size: 15px; line-height: 1.5; }
+    .hero__desc {
+      margin: 0 0 24px;
+      color: rgba(248, 241, 227, 0.85);
+      font-size: 17px;
+      line-height: 1.5;
+      max-width: 500px;
+    }
 
     .welcome {
       display: flex; gap: 12px; align-items: flex-start;
-      padding: 14px 18px; margin: 16px 0 20px;
-      background: linear-gradient(90deg, rgba(232, 201, 138, 0.15) 0%, rgba(232, 201, 138, 0.05) 100%);
+      padding: 14px 18px; margin: 20px 0 24px;
+      background: linear-gradient(90deg, rgba(232, 201, 138, 0.15) 0%, rgba(232, 201, 138, 0.03) 100%);
       border-left: 3px solid #e8c98a;
       border-radius: 10px;
       backdrop-filter: blur(4px);
@@ -592,82 +730,34 @@ import { ThemeService } from '@core/services/theme.service';
     .welcome .material-icons { color: #e8c98a; }
     .welcome p { margin: 0; font-size: 14px; }
 
-    /* ============ Strip de premios (mini-cards) ============ */
-    .prize-strip {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-      gap: 10px;
-      margin: 20px 0 24px;
+    .hero__stats {
+      display: flex; gap: 32px; margin: 28px 0 20px;
+      flex-wrap: wrap;
     }
-    .prize-mini {
-      position: relative;
-      display: flex; gap: 10px; align-items: center;
-      padding: 12px 14px;
-      background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 100%);
-      border: 1px solid rgba(201, 169, 110, 0.25);
-      border-radius: 12px;
-      backdrop-filter: blur(6px);
-      transition: transform 0.15s, border-color 0.15s;
-    }
-    .prize-mini:hover { transform: translateY(-2px); border-color: rgba(232, 201, 138, 0.5); }
-    .prize-mini--top {
-      background: linear-gradient(135deg, rgba(232, 201, 138, 0.2) 0%, rgba(201, 169, 110, 0.08) 100%);
-      border-color: rgba(232, 201, 138, 0.6);
-      box-shadow: 0 0 20px rgba(232, 201, 138, 0.15);
-    }
-    .prize-mini__emoji {
-      font-size: 28px;
-      line-height: 1;
-      flex-shrink: 0;
-      filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4));
-    }
-    .prize-mini__body { display: flex; flex-direction: column; min-width: 0; }
-    .prize-mini__body small {
-      color: #e8c98a;
-      font-size: 10px;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      font-weight: 700;
-    }
-    .prize-mini__body strong {
-      color: #fff;
-      font-size: 13px;
-      font-weight: 700;
-      line-height: 1.2;
-      margin-top: 2px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-    }
-    .prize-mini__body em {
-      color: rgba(248, 241, 227, 0.55);
-      font-style: normal;
-      font-size: 10px;
-      margin-top: 2px;
-    }
-
-    /* ============ Stats + progreso ============ */
-    .hero__stats { display: flex; gap: 24px; margin: 20px 0 14px; flex-wrap: wrap; }
-    .stat { flex: 1; min-width: 110px; }
     .stat strong {
       display: block;
-      font-size: 28px;
+      font-size: clamp(24px, 3vw, 34px);
       color: #fff;
       font-weight: 800;
       letter-spacing: -0.01em;
       font-variant-numeric: tabular-nums;
     }
-    .stat small { color: rgba(248, 241, 227, 0.65); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; }
+    .stat small {
+      color: rgba(248, 241, 227, 0.65);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      font-weight: 700;
+    }
 
     .progress {
       height: 12px;
-      background: rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.1);
       border-radius: 999px;
       overflow: hidden;
       box-shadow: inset 0 1px 4px rgba(0,0,0,0.35);
       position: relative;
+      margin-bottom: 32px;
     }
     .progress__bar {
       height: 100%;
@@ -676,6 +766,7 @@ import { ThemeService } from '@core/services/theme.service';
       transition: width 0.6s ease;
       border-radius: 999px;
       position: relative;
+      min-width: 8px;
     }
     .progress__bar::after {
       content: '';
@@ -688,119 +779,283 @@ import { ThemeService } from '@core/services/theme.service';
       100% { transform: translateX(100%); }
     }
 
-    /* ============ Display luxe del premio mayor ============ */
-    .hero__display {
-      position: relative;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 16px;
+    .hero__ctas {
+      display: flex; gap: 12px; flex-wrap: wrap;
+      margin-top: 8px;
     }
-    .hero__display-frame {
+
+    /* ============ STAGE del TV ============ */
+    .hero__stage {
       position: relative;
-      width: 100%;
-      aspect-ratio: 4 / 3;
-      background:
-        radial-gradient(ellipse at center, rgba(232, 201, 138, 0.2) 0%, transparent 60%),
-        linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.01) 100%);
-      border: 1.5px solid rgba(232, 201, 138, 0.35);
-      border-radius: 20px;
-      padding: 24px;
       display: flex;
       align-items: center;
       justify-content: center;
-      overflow: hidden;
-      box-shadow:
-        inset 0 1px 0 rgba(255,255,255,0.08),
-        0 20px 60px -20px rgba(10, 20, 36, 0.6);
+      min-height: 480px;
+      padding: 20px;
     }
-    /* Halo dorado detrás del producto */
-    .hero__display-glow {
-      position: absolute;
-      inset: 20% 15%;
-      background: radial-gradient(circle, rgba(232, 201, 138, 0.35) 0%, transparent 70%);
-      filter: blur(20px);
-      z-index: 0;
-      animation: display-pulse 4s ease-in-out infinite;
-    }
-    @keyframes display-pulse { 0%,100% { opacity: 0.7; transform: scale(1); } 50% { opacity: 1; transform: scale(1.05); } }
+    @media (max-width: 900px) { .hero__stage { min-height: 340px; padding: 10px; } }
 
-    .hero__display-img {
-      position: relative;
+    .stage__halo {
+      position: absolute;
+      inset: 5% 8%;
+      background:
+        radial-gradient(ellipse at center,
+          rgba(232, 201, 138, 0.4) 0%,
+          rgba(232, 201, 138, 0.15) 30%,
+          transparent 65%);
+      filter: blur(30px);
+      animation: halo-pulse 4s ease-in-out infinite;
+    }
+    @keyframes halo-pulse {
+      0%,100% { opacity: 0.7; transform: scale(1); }
+      50% { opacity: 1; transform: scale(1.1); }
+    }
+
+    .stage__floor {
+      position: absolute;
+      bottom: 12%; left: 50%;
+      transform: translateX(-50%);
+      width: 60%;
+      height: 60px;
+      background: radial-gradient(ellipse at center, rgba(0,0,0,0.5) 0%, transparent 70%);
+      filter: blur(15px);
       z-index: 1;
+    }
+
+    .stage__frame {
+      position: relative;
+      z-index: 2;
+      width: 100%;
+      max-width: 640px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .stage__img {
       max-width: 100%;
-      max-height: 100%;
+      max-height: 480px;
       object-fit: contain;
-      filter: drop-shadow(0 20px 30px rgba(0,0,0,0.5));
-      animation: float 4s ease-in-out infinite;
+      filter:
+        drop-shadow(0 30px 40px rgba(0, 0, 0, 0.6))
+        drop-shadow(0 0 60px rgba(232, 201, 138, 0.2));
+      animation: float 5s ease-in-out infinite;
     }
     @keyframes float {
       0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-8px); }
+      50% { transform: translateY(-12px); }
     }
 
-    .hero__display-fallback {
-      position: relative;
-      z-index: 1;
-      text-align: center;
-    }
-    .hero__display-emoji {
-      font-size: 140px;
+    .stage__fallback {
+      font-size: clamp(120px, 20vw, 220px);
       line-height: 1;
-      filter: drop-shadow(0 20px 32px rgba(0,0,0,0.5));
-      animation: float 4s ease-in-out infinite;
+      filter: drop-shadow(0 20px 40px rgba(0, 0, 0, 0.5));
+      animation: float 5s ease-in-out infinite;
     }
-    @media (max-width: 720px) { .hero__display-emoji { font-size: 100px; } }
 
-    .hero__display-ribbon {
-      display: inline-flex;
-      align-items: center; gap: 8px;
-      padding: 10px 20px;
+    .stage__ribbon {
+      position: absolute;
+      bottom: 4%;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 3;
+      display: inline-flex; align-items: center; gap: 10px;
+      padding: 12px 24px;
       background: linear-gradient(90deg, #c9a96e 0%, #e8c98a 50%, #c9a96e 100%);
       background-size: 200% 100%;
       color: #1a2942;
-      font-size: 12px;
+      font-size: 13px;
       font-weight: 800;
       border-radius: 999px;
       text-transform: uppercase;
       letter-spacing: 0.08em;
       box-shadow:
-        0 8px 20px rgba(201, 169, 110, 0.5),
-        inset 0 1px 0 rgba(255,255,255,0.4);
+        0 12px 30px rgba(0, 0, 0, 0.4),
+        0 0 40px rgba(232, 201, 138, 0.4),
+        inset 0 1px 0 rgba(255,255,255,0.5);
       animation: ribbon-shimmer 3s linear infinite;
-      max-width: 100%;
-    }
-    @keyframes ribbon-shimmer { to { background-position: 200% 0; } }
-    .hero__display-ribbon .material-icons { font-size: 16px; }
-    .hero__display-ribbon span:not(.material-icons) {
+      white-space: nowrap;
+      max-width: calc(100% - 40px);
       overflow: hidden;
       text-overflow: ellipsis;
-      white-space: nowrap;
-      max-width: 320px;
+    }
+    @keyframes ribbon-shimmer { to { background-position: 200% 0; } }
+    .stage__ribbon .material-icons { font-size: 18px; }
+
+    .stage__sparkle {
+      position: absolute;
+      font-size: 32px;
+      z-index: 3;
+      animation: sparkle-float 4s ease-in-out infinite;
+      filter: drop-shadow(0 0 10px rgba(232, 201, 138, 0.8));
+    }
+    .stage__sparkle--1 { top: 15%; right: 15%; animation-delay: 0s; }
+    .stage__sparkle--2 { top: 25%; left: 8%; animation-delay: 1.2s; font-size: 26px; }
+    .stage__sparkle--3 { bottom: 30%; right: 5%; animation-delay: 2s; font-size: 22px; }
+    @keyframes sparkle-float {
+      0%, 100% { transform: translateY(0) rotate(0deg); opacity: 0.9; }
+      50% { transform: translateY(-15px) rotate(15deg); opacity: 1; }
     }
 
-    /* ============ SECCIONES (buscador + picker) ============ */
-    .search-card, .picker {
-      background: var(--card-bg);
-      border-radius: 20px;
-      padding: 24px 28px;
-      margin-bottom: 24px;
-      box-shadow: var(--card-shadow), 0 0 0 1px var(--card-border);
-      backdrop-filter: blur(6px);
+    .hero__scroll {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: rgba(232, 201, 138, 0.6);
+      z-index: 3;
+      animation: scroll-bounce 2s ease-in-out infinite;
+    }
+    .hero__scroll .material-icons { font-size: 32px; }
+    @keyframes scroll-bounce {
+      0%, 100% { transform: translate(-50%, 0); }
+      50% { transform: translate(-50%, 8px); }
+    }
+
+    /* ============================================================
+       SECCIONES CENTRADAS
+       ============================================================ */
+    .prizes-showcase, .steps, .search-card, .picker {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 60px 24px;
     }
     @media (max-width: 720px) {
-      .search-card, .picker { padding: 20px; border-radius: 16px; }
+      .prizes-showcase, .steps, .search-card, .picker { padding: 40px 20px; }
     }
 
-    .search-card h2, .picker h2 {
-      margin: 0 0 12px; font-size: 20px; font-weight: 700; color: var(--heading);
-      display: inline-flex; align-items: center; gap: 8px;
+    .section-head { text-align: center; margin-bottom: 40px; }
+    .section-tag {
+      display: inline-block;
+      padding: 6px 16px;
+      background: linear-gradient(135deg, rgba(30, 199, 123, 0.15) 0%, rgba(232, 201, 138, 0.12) 100%);
+      color: var(--pg-text);
+      border: 1px solid var(--card-border);
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      margin-bottom: 16px;
     }
+    .section-head h2 {
+      margin: 0 0 8px;
+      font-size: clamp(24px, 4vw, 36px);
+      font-weight: 800;
+      color: var(--heading);
+      letter-spacing: -0.02em;
+    }
+    .section-head p { margin: 0; color: var(--pg-muted); font-size: 15px; }
+
+    /* ============ PREMIOS GRID ============ */
+    .prizes-showcase { background: var(--section-alt-bg); }
+    .prizes-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 20px;
+    }
+    .prize-card {
+      position: relative;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 20px;
+      padding: 32px 24px 28px;
+      text-align: center;
+      box-shadow: var(--card-shadow);
+      transition: transform 0.2s, box-shadow 0.2s;
+      backdrop-filter: blur(6px);
+    }
+    .prize-card:hover { transform: translateY(-6px); box-shadow: 0 20px 40px rgba(201, 169, 110, 0.25); }
+    .prize-card--top {
+      border-color: rgba(232, 201, 138, 0.6);
+      background:
+        radial-gradient(ellipse at top, rgba(232, 201, 138, 0.15) 0%, transparent 60%),
+        var(--card-bg);
+      box-shadow:
+        0 12px 30px rgba(201, 169, 110, 0.25),
+        0 0 0 1px rgba(232, 201, 138, 0.4);
+    }
+    .prize-card__crown {
+      position: absolute;
+      top: -14px; left: 50%;
+      transform: translateX(-50%);
+      font-size: 26px;
+      background: linear-gradient(135deg, #c9a96e 0%, #e8c98a 100%);
+      width: 44px; height: 44px;
+      display: grid; place-items: center;
+      border-radius: 50%;
+      box-shadow: 0 8px 20px rgba(201, 169, 110, 0.5);
+    }
+    .prize-card__emoji { font-size: 72px; line-height: 1; margin-bottom: 12px; filter: drop-shadow(0 6px 12px rgba(0,0,0,0.15)); }
+    .prize-card__pos {
+      display: inline-block;
+      padding: 4px 12px;
+      background: linear-gradient(135deg, #c9a96e 0%, #e8c98a 100%);
+      color: #1a2942;
+      font-size: 11px;
+      font-weight: 700;
+      border-radius: 999px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 12px;
+    }
+    .prize-card h3 {
+      margin: 0 0 12px;
+      font-size: 18px;
+      color: var(--heading);
+      font-weight: 700;
+    }
+    .prize-card__date {
+      display: inline-flex; align-items: center; gap: 4px;
+      color: var(--pg-muted);
+      font-size: 12px;
+    }
+    .prize-card__date .material-icons { font-size: 14px; }
+
+    /* ============ CÓMO FUNCIONA ============ */
+    .steps__grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 20px;
+      margin-top: 12px;
+    }
+    .step {
+      position: relative;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 20px;
+      padding: 40px 24px 24px;
+      text-align: center;
+      box-shadow: var(--card-shadow);
+    }
+    .step__num {
+      position: absolute;
+      top: -18px; left: 50%;
+      transform: translateX(-50%);
+      width: 36px; height: 36px;
+      display: grid; place-items: center;
+      background: linear-gradient(135deg, #1ec77b 0%, #16a366 100%);
+      color: #fff;
+      font-weight: 900;
+      border-radius: 50%;
+      font-size: 15px;
+      box-shadow: 0 8px 20px rgba(30, 199, 123, 0.4);
+    }
+    .step .material-icons { font-size: 44px; color: #c9a96e; margin-bottom: 8px; }
+    .step h3 { margin: 8px 0 6px; font-size: 17px; color: var(--heading); }
+    .step p { margin: 0; color: var(--pg-muted); font-size: 13px; line-height: 1.5; }
 
     /* ============ BUSCADOR ============ */
-    .search-card__head {
+    .search-card { background: var(--section-alt-bg); }
+    .search-card > .search-card__head {
+      max-width: 720px;
+      margin: 0 auto 20px;
       display: flex; gap: 14px; align-items: flex-start;
-      margin-bottom: 16px;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 20px;
+      padding: 24px;
+      box-shadow: var(--card-shadow);
     }
     .search-card__head .material-icons {
       font-size: 32px;
@@ -808,20 +1063,25 @@ import { ThemeService } from '@core/services/theme.service';
       background: rgba(201, 169, 110, 0.14);
       padding: 8px;
       border-radius: 12px;
+      flex-shrink: 0;
     }
-    .search-card__head h2 { margin: 0 0 2px; font-size: 17px; }
+    .search-card__head h2 { margin: 0 0 4px; font-size: 18px; color: var(--heading); }
     .search-card__head p { margin: 0; color: var(--pg-muted); font-size: 13px; }
 
-    .search-form { display: flex; gap: 10px; flex-wrap: wrap; }
+    .search-form {
+      max-width: 720px;
+      margin: 0 auto;
+      display: flex; gap: 10px; flex-wrap: wrap;
+    }
     .search-input {
       flex: 1;
-      min-width: 160px;
-      padding: 14px 18px;
+      min-width: 200px;
+      padding: 16px 22px;
       background: var(--input-bg);
       color: var(--input-text);
       border: 1.5px solid var(--input-border);
       border-radius: 12px;
-      font-size: 17px;
+      font-size: 19px;
       font-weight: 700;
       font-variant-numeric: tabular-nums;
       transition: border-color 0.15s, box-shadow 0.15s;
@@ -843,16 +1103,21 @@ import { ThemeService } from '@core/services/theme.service';
     }
 
     .search-result {
+      max-width: 720px;
+      margin: 20px auto 0;
       position: relative;
       display: flex; gap: 14px; align-items: flex-start;
-      padding: 16px 18px; margin-top: 16px;
-      border-radius: 12px;
+      padding: 20px 22px;
+      background: var(--card-bg);
+      border-radius: 14px;
       border-left: 4px solid;
+      box-shadow: var(--card-shadow);
     }
-    .search-result .material-icons { font-size: 28px; margin-top: 2px; }
-    .search-result strong { display: block; font-size: 15px; margin-bottom: 4px; }
-    .search-result strong { color: var(--heading); }
-    .search-result p { margin: 0 0 8px; font-size: 13px; color: var(--pg-text); opacity: 0.85; }
+    .search-result__body { flex: 1; }
+    .search-result .material-icons { font-size: 32px; margin-top: 2px; }
+    .search-result strong { display: block; font-size: 16px; margin-bottom: 6px; color: var(--heading); }
+    .search-result p { margin: 0 0 12px; font-size: 14px; color: var(--pg-text); opacity: 0.85; }
+    .search-result__actions { display: flex; gap: 8px; flex-wrap: wrap; }
     .search-result__close {
       position: absolute;
       top: 8px; right: 10px;
@@ -861,62 +1126,62 @@ import { ThemeService } from '@core/services/theme.service';
       color: var(--pg-muted); cursor: pointer;
       padding: 4px 8px;
     }
-    .search-result--available {
-      background: linear-gradient(90deg, rgba(30, 199, 123, 0.1), rgba(30, 199, 123, 0.02));
-      border-color: #1ec77b;
-    }
+    .search-result--available { border-color: #1ec77b; }
     .search-result--available .material-icons { color: #0b8a4a; }
-    .search-result--sold {
-      background: linear-gradient(90deg, rgba(239, 68, 68, 0.1), rgba(239, 68, 68, 0.02));
-      border-color: #ef4444;
-    }
+    .search-result--sold { border-color: #ef4444; }
     .search-result--sold .material-icons { color: #b91c1c; }
-    .search-result--reserved {
-      background: linear-gradient(90deg, rgba(245, 158, 11, 0.1), rgba(245, 158, 11, 0.02));
-      border-color: #f59e0b;
-    }
+    .search-result--reserved { border-color: #f59e0b; }
     .search-result--reserved .material-icons { color: #b45309; }
-    .search-result--assigned {
-      background: linear-gradient(90deg, rgba(59, 130, 246, 0.1), rgba(59, 130, 246, 0.02));
-      border-color: #3b82f6;
-    }
+    .search-result--assigned { border-color: #3b82f6; }
     .search-result--assigned .material-icons { color: #1d4ed8; }
-    .search-result--not_found {
-      background: linear-gradient(90deg, rgba(107, 114, 128, 0.1), rgba(107, 114, 128, 0.02));
-      border-color: #6b7280;
-    }
+    .search-result--not_found { border-color: #6b7280; }
     .search-result--not_found .material-icons { color: #4b5563; }
 
     /* ============ PICKER + GRID ============ */
     .picker__head {
       display: flex; justify-content: space-between; align-items: flex-start;
-      flex-wrap: wrap; gap: 10px; margin-bottom: 20px;
+      flex-wrap: wrap; gap: 16px; margin-bottom: 28px;
     }
+    .picker__head h2 { margin: 4px 0 4px; font-size: 26px; color: var(--heading); font-weight: 800; letter-spacing: -0.02em; }
     .picker__head p { margin: 0; }
     .picker__legend { display: flex; gap: 8px; }
     .chip {
-      padding: 5px 12px;
+      padding: 6px 14px;
       border-radius: 999px;
       font-size: 11px;
       font-weight: 700;
-      letter-spacing: 0.03em;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
     }
-    .chip--free { background: #e5f7ee; color: #0b8a4a; border: 1px solid rgba(30, 199, 123, 0.35); }
-    .chip--sel { background: #1ec77b; color: #fff; }
+    .chip--free { background: rgba(30, 199, 123, 0.12); color: #0b8a4a; border: 1px solid rgba(30, 199, 123, 0.35); }
+    .chip--sel { background: linear-gradient(135deg, #1ec77b 0%, #16a366 100%); color: #fff; }
 
     .empty {
       text-align: center;
-      padding: 40px 20px;
+      padding: 60px 20px;
       color: var(--pg-muted);
     }
-    .empty .big { font-size: 56px; color: #c9a96e; opacity: 0.6; margin-bottom: 12px; }
+    .empty .big { font-size: 72px; color: #c9a96e; opacity: 0.6; margin-bottom: 12px; }
 
     .grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
       gap: 10px;
       margin-bottom: 20px;
     }
+    .grid-skeleton {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
+      gap: 10px;
+    }
+    .skeleton-cell {
+      height: 54px;
+      background: linear-gradient(90deg, rgba(201, 169, 110, 0.08) 0%, rgba(201, 169, 110, 0.18) 50%, rgba(201, 169, 110, 0.08) 100%);
+      background-size: 200% 100%;
+      border-radius: 10px;
+      animation: skel 1.4s linear infinite;
+    }
+    @keyframes skel { to { background-position: -200% 0; } }
     .cell {
       padding: 14px 4px;
       background: var(--cell-bg);
@@ -943,30 +1208,33 @@ import { ThemeService } from '@core/services/theme.service';
       border-color: #0b8a4a !important;
       box-shadow: 0 6px 16px rgba(30, 199, 123, 0.4);
     }
-    .cell--pulse {
-      animation: cell-pulse 1.4s ease-in-out 2;
-    }
+    .cell--pulse { animation: cell-pulse 1.4s ease-in-out 2; }
     @keyframes cell-pulse {
       0%,100% { transform: scale(1); box-shadow: 0 6px 16px rgba(30, 199, 123, 0.4); }
       50% { transform: scale(1.12); box-shadow: 0 10px 24px rgba(30, 199, 123, 0.6); }
     }
 
     .summary {
+      position: sticky;
+      bottom: 16px;
       display: flex; justify-content: space-between; align-items: center;
-      padding: 20px 24px; margin-top: 20px;
+      padding: 20px 24px; margin-top: 24px;
       background: var(--summary-bg);
-      border-radius: 14px;
+      border-radius: 16px;
       font-size: 15px;
       flex-wrap: wrap; gap: 14px;
       border: 1px solid var(--summary-border);
       color: var(--pg-text);
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
+      backdrop-filter: blur(10px);
     }
     .summary__info strong { color: var(--heading); }
 
+    /* ============ BOTONES ============ */
     .btn {
       display: inline-flex; align-items: center; gap: 8px;
       padding: 12px 22px;
-      border-radius: 10px;
+      border-radius: 12px;
       font-size: 14px;
       font-weight: 700;
       cursor: pointer;
@@ -979,12 +1247,12 @@ import { ThemeService } from '@core/services/theme.service';
     .btn.primary {
       background: linear-gradient(135deg, #1ec77b 0%, #16a366 100%);
       color: #fff;
-      box-shadow: 0 4px 14px rgba(30, 199, 123, 0.3);
+      box-shadow: 0 6px 20px rgba(30, 199, 123, 0.35);
     }
     .btn.primary:hover:not(:disabled) {
       transform: translateY(-1px);
       filter: brightness(1.08);
-      box-shadow: 0 8px 20px rgba(30, 199, 123, 0.45);
+      box-shadow: 0 10px 26px rgba(30, 199, 123, 0.5);
     }
     .btn.ghost {
       background: transparent;
@@ -992,7 +1260,18 @@ import { ThemeService } from '@core/services/theme.service';
       color: var(--pg-text);
     }
     .btn.ghost:hover:not(:disabled) { background: rgba(127, 127, 127, 0.08); }
+    .btn.ghost-light {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(232, 201, 138, 0.4);
+      color: #f8f1e3;
+      backdrop-filter: blur(6px);
+    }
+    .btn.ghost-light:hover:not(:disabled) {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: rgba(232, 201, 138, 0.7);
+    }
     .btn--lg { padding: 16px 28px; font-size: 15px; }
+    .btn--xl { padding: 18px 32px; font-size: 16px; border-radius: 14px; }
     .btn--sm { padding: 8px 14px; font-size: 13px; }
     .btn .material-icons { font-size: 18px; }
 
@@ -1001,26 +1280,30 @@ import { ThemeService } from '@core/services/theme.service';
       text-align: center;
       color: var(--pg-muted);
       font-size: 12px;
-      padding: 24px 0 8px;
+      padding: 40px 20px;
+      max-width: 720px;
+      margin: 0 auto;
     }
     .foot__brand {
       display: inline-flex; align-items: center; gap: 8px;
       font-weight: 800;
       color: var(--heading);
-      margin-bottom: 4px;
+      font-size: 14px;
+      margin-bottom: 8px;
     }
     .foot__dot {
       width: 8px; height: 8px; background: #1ec77b;
       border-radius: 50%;
       box-shadow: 0 0 0 4px rgba(30, 199, 123, 0.25);
     }
-    .foot p { margin: 0; }
+    .foot p { margin: 0 0 4px; }
+    .foot__lot { margin-top: 8px !important; }
 
     /* ============ MODAL ============ */
     .modal {
       position: fixed; inset: 0;
-      background: rgba(10, 14, 12, 0.65);
-      backdrop-filter: blur(4px);
+      background: rgba(10, 14, 12, 0.75);
+      backdrop-filter: blur(6px);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -1043,6 +1326,7 @@ import { ThemeService } from '@core/services/theme.service';
       border: 1px solid var(--card-border);
       backdrop-filter: blur(10px);
     }
+    .modal__card--wide { max-width: 620px; padding: 24px 20px; }
     .modal__close {
       position: absolute;
       top: 12px; right: 14px;
@@ -1051,16 +1335,30 @@ import { ThemeService } from '@core/services/theme.service';
       color: var(--pg-muted); cursor: pointer;
       padding: 4px 10px;
       border-radius: 8px;
+      z-index: 2;
     }
     .modal__close:hover { background: rgba(127,127,127,0.1); color: var(--heading); }
     .modal__card h2 { margin: 0 0 6px; font-size: 22px; color: var(--heading); }
     .modal__lead { margin: 0 0 8px; color: var(--pg-muted); font-size: 14px; }
 
-    /* ============ FORMULARIO — legibilidad garantizada ============
-       Problema anterior: en algunos navegadores el input heredaba estilos
-       oscuros (color: white + background: dark) del contexto padre y el
-       texto tipeado no se veía. Ahora forzamos !important para blindar
-       el look en cualquier tema del navegador. */
+    /* ============ PREVIEW ============ */
+    .preview-head { text-align: center; margin-bottom: 16px; padding-top: 6px; }
+    .preview-head h2 { font-size: 22px; margin-bottom: 4px; color: var(--heading); }
+    .preview-head p { margin: 0; color: var(--pg-muted); font-size: 13px; }
+    .preview-ticket {
+      display: flex;
+      justify-content: center;
+      padding: 8px 0 16px;
+    }
+    .preview-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding-top: 8px;
+      border-top: 1px solid var(--card-border);
+    }
+
+    /* ============ FORMULARIO ============ */
     .form { display: grid; gap: 14px; margin-top: 20px; }
     .field { display: grid; gap: 6px; }
     .field span {
@@ -1068,9 +1366,6 @@ import { ThemeService } from '@core/services/theme.service';
       color: var(--pg-muted); text-transform: uppercase; font-size: 11px;
     }
     .field input {
-      /* Colores por theme — variables + !important para blindar contra
-         estilos oscuros que hereden del contexto padre (ej si el user
-         viene desde el admin con --input-bg dark heredado). */
       background: var(--input-bg) !important;
       color: var(--input-text) !important;
       -webkit-text-fill-color: var(--input-text) !important;
@@ -1082,18 +1377,12 @@ import { ThemeService } from '@core/services/theme.service';
       font-family: inherit;
       transition: border-color 0.15s, box-shadow 0.15s;
     }
-    .field input::placeholder {
-      color: var(--input-placeholder) !important;
-      opacity: 1;
-    }
+    .field input::placeholder { color: var(--input-placeholder) !important; opacity: 1; }
     .field input:focus {
       outline: none;
       border-color: #1ec77b;
       box-shadow: 0 0 0 4px rgba(30, 199, 123, 0.15);
     }
-    /* Chrome autofill: usa un box-shadow del color del theme para evitar
-       el amarillo default de Chrome. Referenciamos color-mix para el
-       modo dark, con fallback al blanco. */
     .field input:-webkit-autofill,
     .field input:-webkit-autofill:hover,
     .field input:-webkit-autofill:focus {
@@ -1142,6 +1431,12 @@ export class PublicPurchaseComponent implements OnInit {
   searchResult = signal<TicketLookup | null>(null);
   pulseTicketId = signal<number | null>(null);
 
+  // Preview de boleta (modal con diseño real de cancha + números)
+  previewOpen = signal(false);
+  previewLoading = signal(false);
+  previewData = signal<PublicTicketDetail | null>(null);
+  previewTicketId = signal<number | null>(null);
+
   form = {
     customer_document: '',
     customer_name: '',
@@ -1166,7 +1461,6 @@ export class PublicPurchaseComponent implements OnInit {
       .join(', ');
   });
 
-  /** Placeholder del buscador: un número de ejemplo con el ancho correcto. */
   searchPlaceholder = computed(() => {
     const r = this.overview();
     if (!r) return '2565';
@@ -1174,14 +1468,40 @@ export class PublicPurchaseComponent implements OnInit {
     return String(example);
   });
 
-  /** Nombre del premio mayor (primero por posición). */
   topPrizeName = computed(() => {
     const r = this.overview();
     if (!r?.prizes?.length) return '';
     return [...r.prizes].sort((a, b) => a.position - b.position)[0].name;
   });
 
-  /** Heurística general: mapea el nombre del premio a un emoji visual. */
+  /** Adapta la PublicTicketDetail al modelo Ticket que TicketDesignComponent
+   *  espera. Solo mapea los campos que el diseño usa. */
+  previewTicket = computed(() => {
+    const pd = this.previewData();
+    if (!pd) return null;
+    return {
+      id: 0,
+      raffle_id: pd.raffle.id,
+      number_label: pd.ticket.label,
+      code: pd.ticket.code,
+      status: 'available' as const,
+      seller_id: null,
+      customer_id: null,
+      numbers: pd.ticket.numbers.map((n, idx) => ({ number: n, position: idx })),
+    };
+  });
+
+  previewPrizes = computed(() => {
+    const pd = this.previewData();
+    if (!pd) return [];
+    return pd.prizes.map((p, idx) => ({
+      position: idx + 1,
+      name: p.name,
+      draw_date: p.draw_date,
+      winning_number: p.winning_number,
+    }));
+  });
+
   prizeEmoji(name: string): string {
     const n = (name || '').toLowerCase();
     if (!n) return '🏆';
@@ -1198,15 +1518,10 @@ export class PublicPurchaseComponent implements OnInit {
     if (/(consola|ps5|xbox|nintendo)/.test(n)) return '🎮';
     if (/(reloj|smartwatch)/.test(n)) return '⌚';
     if (/(cámara|camara)/.test(n)) return '📷';
-    if (/(mesa|silla|mueble)/.test(n)) return '🪑';
     return '🏆';
   }
 
-  /** Emoji del premio mayor — solo se muestra si la rifa NO tiene logo_url. */
-  heroPrizeEmoji = computed(() => {
-    const name = this.topPrizeName();
-    return name ? this.prizeEmoji(name) : '🏆';
-  });
+  heroPrizeEmoji = computed(() => this.prizeEmoji(this.topPrizeName()));
 
   ngOnInit(): void {
     const id = Number(this.route.snapshot.paramMap.get('id'));
@@ -1243,17 +1558,63 @@ export class PublicPurchaseComponent implements OnInit {
     });
   }
 
-  isSelected(id: number): boolean { return this.selected().has(id); }
+  isSelected(id: number | null): boolean { return id != null && this.selected().has(id); }
 
   toggle(id: number) {
     const set = new Set(this.selected());
-    if (set.has(id)) {
-      set.delete(id);
-    } else {
-      if (set.size >= 10) return;
-      set.add(id);
-    }
+    if (set.has(id)) set.delete(id);
+    else if (set.size < 10) set.add(id);
     this.selected.set(set);
+  }
+
+  removeFromSelection(id: number) {
+    const set = new Set(this.selected());
+    set.delete(id);
+    this.selected.set(set);
+  }
+
+  /** Al hacer clic en una celda del grid, abre el modal de preview con el
+   *  diseño real de la boleta (los 20 números en la cancha). */
+  openTicketPreview(t: AvailableTicket) {
+    this.previewTicketId.set(t.id);
+    this.previewOpen.set(true);
+    this.previewLoading.set(true);
+    this.previewData.set(null);
+    this.svc.ticketDetail(t.code).subscribe({
+      next: (d) => { this.previewData.set(d); this.previewLoading.set(false); },
+      error: () => { this.previewLoading.set(false); this.closePreview(); },
+    });
+  }
+
+  openTicketPreviewById(ticketId: number) {
+    const t = this.available().find((x) => x.id === ticketId);
+    if (t) this.openTicketPreview(t);
+  }
+
+  closePreview() {
+    this.previewOpen.set(false);
+    this.previewData.set(null);
+    this.previewTicketId.set(null);
+  }
+
+  /** Agrega la boleta previewed a la selección y cierra el modal. */
+  selectAndClosePreview() {
+    const id = this.previewTicketId();
+    if (id != null) this.toggle(id);
+    this.closePreview();
+  }
+
+  /** Camino rápido: reserva la boleta previewed y abre checkout ya. */
+  reserveAndCheckoutNow() {
+    const id = this.previewTicketId();
+    if (id == null) return;
+    if (!this.selected().has(id)) {
+      const set = new Set(this.selected());
+      set.add(id);
+      this.selected.set(set);
+    }
+    this.closePreview();
+    setTimeout(() => this.openCheckout(), 100);
   }
 
   doSearch() {
@@ -1285,17 +1646,21 @@ export class PublicPurchaseComponent implements OnInit {
     this.searchInput = '';
   }
 
-  /** Cuando el usuario encuentra una boleta disponible y toca "Reservar". */
   selectFromSearch(ticketId: number) {
-    // Agregar al set (respetando cap de 10)
     const set = new Set(this.selected());
     if (!set.has(ticketId) && set.size < 10) {
       set.add(ticketId);
       this.selected.set(set);
     }
     this.scrollToTicket(ticketId);
-    // Si la boleta no estaba en el grid renderizado (por paginación futura),
-    // igual la incluyo — el checkout la valida por ID en backend.
+  }
+
+  scrollToGrid() {
+    document.getElementById('grid-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  scrollToSearch() {
+    document.getElementById('search-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   private scrollToTicket(ticketId: number) {
@@ -1321,9 +1686,7 @@ export class PublicPurchaseComponent implements OnInit {
     this.submitting.set(true);
 
     let referralCode: string | undefined;
-    try {
-      referralCode = localStorage.getItem('boletera_referral_code') || undefined;
-    } catch {}
+    try { referralCode = localStorage.getItem('boletera_referral_code') || undefined; } catch {}
 
     const ticket_ids = Array.from(this.selected());
     this.svc.checkout(this.raffleId, {
@@ -1344,12 +1707,8 @@ export class PublicPurchaseComponent implements OnInit {
             raffle_id: this.raffleId,
           }));
         } catch {}
-
-        if (resp.checkout_url) {
-          window.location.href = resp.checkout_url;
-        } else {
-          this.router.navigate(['/rifa', this.raffleId, 'pago', resp.reference]);
-        }
+        if (resp.checkout_url) window.location.href = resp.checkout_url;
+        else this.router.navigate(['/rifa', this.raffleId, 'pago', resp.reference]);
       },
       error: (e) => {
         this.submitError.set(e?.error?.detail ?? 'No se pudo iniciar el checkout');

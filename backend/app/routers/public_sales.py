@@ -66,6 +66,7 @@ MAX_CONCURRENT_RESERVATIONS_PER_CUSTOMER = 10
 class AvailableTicketOut(BaseModel):
     id: int
     number_label: str
+    code: str  # para poder hacer preview via /verify/:code sin exponer más
 
 
 class RafflePublicOverview(BaseModel):
@@ -348,7 +349,7 @@ async def public_available_tickets(
         .limit(limit)
     )
     tickets = (await db.execute(q)).scalars().all()
-    return [AvailableTicketOut(id=t.id, number_label=t.number_label) for t in tickets]
+    return [AvailableTicketOut(id=t.id, number_label=t.number_label, code=t.code) for t in tickets]
 
 
 class TicketLookupOut(BaseModel):

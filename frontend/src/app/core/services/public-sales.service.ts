@@ -32,6 +32,34 @@ export interface PublicRaffleOverview {
 export interface AvailableTicket {
   id: number;
   number_label: string;
+  code: string;
+}
+
+export interface PublicTicketDetail {
+  valid: boolean;
+  raffle: {
+    id: number;
+    name: string;
+    final_draw_date: string;
+    lottery_name: string | null;
+    responsible_name: string | null;
+    responsible_phone: string | null;
+    responsible_email: string | null;
+    terms: string | null;
+    primary_color: string | null;
+  };
+  ticket: {
+    label: string;
+    code: string;
+    is_paid: boolean;
+    is_winner: boolean;
+    numbers: string[];
+  };
+  prizes: Array<{
+    name: string;
+    draw_date: string;
+    winning_number: string | null;
+  }>;
 }
 
 export interface TicketLookup {
@@ -109,6 +137,12 @@ export class PublicSalesService {
     const q = encodeURIComponent(number.trim());
     return this.http.get<TicketLookup>(
       `${this.api}/public/raffles/${raffleId}/lookup?number=${q}`,
+    );
+  }
+
+  ticketDetail(code: string): Observable<PublicTicketDetail> {
+    return this.http.get<PublicTicketDetail>(
+      `${this.api}/verify/${encodeURIComponent(code)}`,
     );
   }
 
