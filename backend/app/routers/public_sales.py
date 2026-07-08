@@ -353,17 +353,21 @@ async def public_available_tickets(
 
 
 class TicketLookupOut(BaseModel):
-    """Resultado de buscar una boleta por su número.
+    """Resultado de buscar un número dentro de los 20 números que juega
+    cada boleta.
 
     status:
-      - available  → disponible pública. Devuelve ticket_id para seleccionar.
-      - reserved   → reservada por otro comprador (24h).
-      - sold       → ya pagada.
-      - assigned   → asignada a un vendedor humano (fuera del pool público).
-      - not_found  → ese número no existe en la rifa.
+      - available  → el número está en una boleta disponible pública.
+                     Devuelve ticket_id + number_label para seleccionarla.
+      - reserved   → el número lo tiene una boleta reservada por otro comprador.
+      - sold       → el número lo tiene una boleta ya pagada.
+      - assigned   → el número lo tiene una boleta asignada a vendedor humano
+                     (fuera del pool público).
+      - not_found  → ese número no existe en ninguna boleta de la rifa.
     """
     status: str
-    number_label: str
+    number_label: str      # label de la boleta que contiene el número (ej "241")
+    matched_number: str    # el número que buscó el cliente (ej "6906")
     ticket_id: int | None = None
     message: str
 
@@ -372,74 +376,92 @@ class TicketLookupOut(BaseModel):
 async def public_lookup_ticket(
     raffle_id: int,
     db: Annotated[AsyncSession, Depends(get_db)],
-    number: str = Query(..., min_length=1, max_length=20, description="Número a buscar (ej 2565)"),
+    number: str = Query(..., min_length=1, max_length=20,
+                        description="Número a buscar dentro de los 20 números de cada boleta"),
 ):
-    """Busca una boleta por su número (label). Solo compara el valor
-    numérico — 25, 025 y 0025 encuentran la misma boleta si el padding
-    coincide con el ancho de la rifa."""
+    """Busca un número (ej '6906') DENTRO de los 20 números que juega cada
+    boleta y devuelve la boleta que lo contiene junto con su estado
+    (disponible / reservada / vendida / asignada).
+
+    Tolera padding: '421', '0421', '00421' encuentran el mismo número si
+    todos representan el mismo valor entero.
+    """
+    from app.models.ticket_number import TicketNumber
+
     raffle = (await db.execute(
         select(Raffle).where(Raffle.id == raffle_id, Raffle.is_public.is_(True))
     )).scalar_one_or_none()
     if not raffle:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "rifa no encontrada")
 
-    # Normalizar: input viene como string ("2565" o "02565"). Comparo
-    # contra number_label con CAST INTEGER para tolerar padding distinto.
     try:
         n = int(number.strip())
     except ValueError:
         return TicketLookupOut(
-            status="not_found", number_label=number,
+            status="not_found", number_label="", matched_number=number,
             message=f"'{number}' no es un número válido.",
         )
     if n < raffle.number_min or n > raffle.number_max:
         return TicketLookupOut(
-            status="not_found", number_label=str(n),
-            message=f"El número {n} está fuera del rango de esta rifa "
+            status="not_found", number_label="", matched_number=str(n),
+            message=f"El número {n} está fuera del rango de la rifa "
                     f"({raffle.number_min}-{raffle.number_max}).",
         )
 
-    t = (await db.execute(
-        select(Ticket).where(
-            Ticket.raffle_id == raffle_id,
-            cast(Ticket.number_label, Integer) == n,
+    # Busca en ticket_numbers.number (cast a integer para tolerar padding).
+    row = (await db.execute(
+        select(TicketNumber, Ticket)
+        .join(Ticket, Ticket.id == TicketNumber.ticket_id)
+        .where(
+            TicketNumber.raffle_id == raffle_id,
+            cast(TicketNumber.number, Integer) == n,
         )
-    )).scalars().first()
-    if not t:
+        .limit(1)
+    )).first()
+    if not row:
         return TicketLookupOut(
-            status="not_found", number_label=str(n),
-            message=f"La boleta {n} no existe en esta rifa.",
+            status="not_found", number_label="", matched_number=str(n),
+            message=f"El número {n} no está en ninguna boleta de esta rifa.",
         )
 
+    tn, t = row
     label = t.number_label
-    # 1) Vendida (pagada / ganadora)
+    matched = tn.number  # con padding original ("0421")
+
+    # 1) Vendida
     if t.status in (TicketStatus.PAID, TicketStatus.WINNING):
         return TicketLookupOut(
-            status="sold", number_label=label, message=f"La boleta {label} ya fue vendida.",
+            status="sold", number_label=label, matched_number=matched,
+            message=f"El número {matched} está en la boleta {label}, "
+                    f"pero ya fue vendida.",
         )
-    # 2) Reservada (por otro comprador o pending_payment)
+    # 2) Reservada
     if t.status in (TicketStatus.RESERVED, TicketStatus.PENDING_PAYMENT, TicketStatus.PARTIALLY_PAID):
         return TicketLookupOut(
-            status="reserved", number_label=label,
-            message=f"La boleta {label} está reservada por otro comprador. Vuelve más tarde.",
+            status="reserved", number_label=label, matched_number=matched,
+            message=f"El número {matched} está en la boleta {label}, "
+                    f"pero está reservada por otro comprador.",
         )
     # 3) Asignada a vendedor humano
     if t.seller_id is not None:
         return TicketLookupOut(
-            status="assigned", number_label=label,
-            message=f"La boleta {label} la vende un vendedor autorizado. "
-                    f"Cómprala directamente con él/ella.",
+            status="assigned", number_label=label, matched_number=matched,
+            message=f"El número {matched} está en la boleta {label}, "
+                    f"que la vende un vendedor autorizado.",
         )
     # 4) Disponible pública
     if t.status == TicketStatus.AVAILABLE and t.customer_id is None:
         return TicketLookupOut(
-            status="available", number_label=label, ticket_id=t.id,
-            message=f"¡La boleta {label} está disponible!",
+            status="available", number_label=label, matched_number=matched,
+            ticket_id=t.id,
+            message=f"¡El número {matched} está en la boleta {label} y "
+                    f"está disponible! Puedes reservarla ya.",
         )
     # Fallback (expired u otro)
     return TicketLookupOut(
-        status="reserved", number_label=label,
-        message=f"La boleta {label} no está disponible en este momento.",
+        status="reserved", number_label=label, matched_number=matched,
+        message=f"El número {matched} está en la boleta {label}, "
+                f"pero no está disponible en este momento.",
     )
 
 

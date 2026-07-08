@@ -64,7 +64,11 @@ export interface PublicTicketDetail {
 
 export interface TicketLookup {
   status: 'available' | 'sold' | 'reserved' | 'assigned' | 'not_found';
+  /** Label de la boleta que CONTIENE el número buscado (ej "241"). Vacío
+   *  si el número no está en ninguna boleta. */
   number_label: string;
+  /** El número exacto que buscó el cliente (ej "6906"), con padding original. */
+  matched_number: string;
   ticket_id: number | null;
   message: string;
 }

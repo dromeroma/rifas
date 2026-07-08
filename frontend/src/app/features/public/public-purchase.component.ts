@@ -330,7 +330,7 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
               <span class="search__icon material-icons-outlined">search</span>
               <input type="number" class="search__input"
                      [(ngModel)]="searchInput" name="searchInput"
-                     [placeholder]="'Buscar número (ej ' + searchPlaceholder() + ')'"
+                     [placeholder]="'Busca tu número (ej ' + searchPlaceholder() + ')'"
                      inputmode="numeric" />
               <button type="submit" class="btn btn--primary" [disabled]="searching()">
                 @if (searching()) {
@@ -340,6 +340,10 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
                 }
               </button>
             </form>
+            <p class="search__hint muted">
+              Escribe un número (ej: {{ searchPlaceholder() }}) y te decimos
+              en qué boleta está jugando y si aún está disponible.
+            </p>
 
             @if (searchResult(); as sr) {
               <div class="search-result" [attr.data-status]="sr.status">
@@ -351,14 +355,22 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
                    : 'help_outline' }}
                 </span>
                 <div class="search-result__body">
-                  <strong>Boleta {{ sr.number_label }}</strong>
+                  @if (sr.status === 'not_found') {
+                    <strong>Número {{ sr.matched_number }} no encontrado</strong>
+                  } @else if (sr.status === 'available') {
+                    <strong>
+                      Número {{ sr.matched_number }} disponible en la boleta {{ sr.number_label }}
+                    </strong>
+                  } @else {
+                    <strong>Boleta {{ sr.number_label }} no disponible</strong>
+                  }
                   <p>{{ sr.message }}</p>
                 </div>
                 @if (sr.status === 'available' && sr.ticket_id) {
                   <div class="search-result__actions">
                     <button class="btn btn--ghost btn--sm"
                             (click)="openTicketPreviewById(sr.ticket_id!)">
-                      Ver diseño
+                      Ver boleta
                     </button>
                     <button class="btn btn--primary btn--sm"
                             (click)="selectFromSearch(sr.ticket_id!)">
@@ -1466,6 +1478,11 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
       -webkit-appearance: none; margin: 0;
     }
     .search__input::placeholder { color: var(--text-dim); }
+    .search__hint {
+      margin: 4px 4px 16px;
+      font-size: 12.5px;
+      line-height: 1.5;
+    }
 
     .search-result {
       display: flex; align-items: flex-start; gap: 14px;
@@ -2168,8 +2185,9 @@ export class PublicPurchaseComponent implements OnInit, OnDestroy {
       error: () => {
         this.searching.set(false);
         this.searchResult.set({
-          status: 'not_found', number_label: q, ticket_id: null,
-          message: 'No pudimos buscar ese número.',
+          status: 'not_found', number_label: '', matched_number: q,
+          ticket_id: null,
+          message: 'No pudimos buscar ese número. Intenta de nuevo.',
         });
       },
     });
