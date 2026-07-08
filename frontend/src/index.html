@@ -3,6 +3,15 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <!-- CRÍTICO: base href="/" hace que las URLs relativas de <script> y assets
+       (main-*.js, chunk-*.js, polyfills-*.js, favicon.svg, manifest.webmanifest)
+       resuelvan SIEMPRE desde la raíz del sitio, no relativas a la ruta actual.
+       Sin esto, al entrar directo por URL con múltiples segmentos como
+       /rifa/3/comprar, el navegador pedía /rifa/3/main-Q22J6HGD.js — Vercel
+       respondía con index.html (SPA fallback) en lugar de JS, Chrome rechazaba
+       el módulo por MIME type "text/html", Angular nunca bootstrappeaba y el
+       splash quedaba pegado en loop infinito. -->
+  <base href="/">
 
   <!-- ============================================================
        SEO PRINCIPAL
