@@ -36,8 +36,13 @@ const DEFAULT_API_URL = 'https://rifas-nehd.onrender.com';
 const DEFAULT_WHATSAPP_NUMBER = '573135487605';
 const DEFAULT_WHATSAPP_MESSAGE =
   'Hola Boletera, quiero más información para administrar mis rifas con su plataforma.';
+// URL pública del portal de compra para armar los links personales de
+// vendedores (?v=<slug>). En desarrollo se deja vacío para que el
+// SellerShareLinkComponent use window.location.origin.
+const DEFAULT_PUBLIC_SITE_URL = 'https://rifas-beta.vercel.app';
 
 const apiUrl = process.env.API_URL || DEFAULT_API_URL;
+const publicSiteUrl = process.env.PUBLIC_SITE_URL || DEFAULT_PUBLIC_SITE_URL;
 
 // Extrae un literal string de un environment.ts existente. Devuelve null si
 // no encuentra la propiedad. Esto nos deja preservar valores que el dev cambió
@@ -62,24 +67,28 @@ const prodContent = `export const environment = {
   production: true,
   apiUrl: ${JSON.stringify(apiUrl)},
   version: ${JSON.stringify(version)},
+  // URL pública del portal (para armar links personales de vendedores).
+  publicSiteUrl: ${JSON.stringify(publicSiteUrl)},
   // Número de WhatsApp en formato internacional sin espacios ni +.
   whatsappNumber: ${JSON.stringify(whatsappNumber)},
   whatsappDefaultMessage: ${JSON.stringify(whatsappDefaultMessage)},
 };
 `;
 writeFileSync(envProd, prodContent, 'utf8');
-console.log(`[inject-env] environment.prod.ts → apiUrl=${apiUrl}, version=${version}, whatsapp=${whatsappNumber}`);
+console.log(`[inject-env] environment.prod.ts → apiUrl=${apiUrl}, version=${version}, whatsapp=${whatsappNumber}, publicSite=${publicSiteUrl}`);
 
 // En desarrollo: preserva apiUrl que el dev haya configurado (típicamente
 // localhost), pero refresca version y whatsapp con los mismos defaults.
 if (existsSync(envDev)) {
   const existingDevApi = readStringField(envDev, 'apiUrl') || 'http://localhost:8000';
+  const existingDevSite = readStringField(envDev, 'publicSiteUrl');  // vacío en dev
   const existingDevWa = readStringField(envDev, 'whatsappNumber') || whatsappNumber;
   const existingDevMsg = readStringField(envDev, 'whatsappDefaultMessage') || whatsappDefaultMessage;
   const devContent = `export const environment = {
   production: false,
   apiUrl: ${JSON.stringify(existingDevApi)},
   version: ${JSON.stringify(version)},
+  publicSiteUrl: ${JSON.stringify(existingDevSite ?? '')},
   whatsappNumber: ${JSON.stringify(existingDevWa)},
   whatsappDefaultMessage: ${JSON.stringify(existingDevMsg)},
 };
