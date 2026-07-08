@@ -16,21 +16,12 @@ import {
 import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-design.component';
 
 /**
- * Portal PÚBLICO de compra online — v4 SaaS premium.
+ * Portal PÚBLICO — v5 landing SaaS verde inspirado en el brand Boletera.
  *
- * Estilo: dark theme fijo (#0B0B0D), inspirado en Linear / Stripe / Vercel.
- * Tipografía Inter, acento dorado #D4AF37 solo en CTA y estados activos.
- * Selector de boletas como componente protagonista.
- *
- * Estructura:
- *   Topbar (brand + estado rifa)
- *   Hero balanceado (contenido + product card compact)
- *   Countdown timer
- *   Selector protagonista con 4 estados (available/selected/reserved/sold)
- *   Grid de premios (cards uniformes)
- *   Pasos (3 cards simples con iconos)
- *   FAQ (acordeón nativo)
- *   Footer minimal
+ * Paleta verde oscuro con acento verde brillante. Layout tipo Vercel /
+ * Framer con card de boleta flotante sobre el TV en el hero,
+ * stats bar horizontal con countdown, grid de premios con productos,
+ * pasos numerados y features cards.
  */
 @Component({
   selector: 'app-public-purchase',
@@ -52,183 +43,293 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
 
         <!-- ============ TOPBAR ============ -->
         <header class="topbar">
-          <div class="topbar__inner">
+          <div class="container topbar__inner">
             <a routerLink="/" class="brand">
-              <span class="brand__dot"></span>
+              <span class="brand__logo">
+                <svg viewBox="0 0 32 32" width="32" height="32">
+                  <rect x="2" y="2" width="28" height="28" rx="8" fill="url(#brandg)"/>
+                  <path d="M10 12h9a3 3 0 0 1 0 6h-9zm0 6h11a3 3 0 0 1 0 6H10z"
+                        fill="#0a2820" stroke="#0a2820" stroke-width="0.5"/>
+                  <defs>
+                    <linearGradient id="brandg" x1="0" y1="0" x2="32" y2="32">
+                      <stop offset="0" stop-color="#22e695"/>
+                      <stop offset="1" stop-color="#0eaa66"/>
+                    </linearGradient>
+                  </defs>
+                </svg>
+              </span>
               <span class="brand__name">Boletera</span>
             </a>
+
+            <nav class="topbar__nav">
+              <a class="nav-link" (click)="scrollTo('prizes')">Premios</a>
+              <a class="nav-link" (click)="scrollTo('how')">Cómo funciona</a>
+              <a class="nav-link" (click)="scrollTo('faq')">Preguntas</a>
+              <a class="nav-link" (click)="scrollTo('grid')">Verificar boleta</a>
+            </nav>
+
             <div class="topbar__actions">
-              <span class="badge badge--live">
-                <span class="badge__pulse"></span>
-                Rifa activa
-              </span>
+              <button class="btn btn--primary btn--sm" (click)="scrollTo('grid')">
+                <span class="material-icons-outlined">confirmation_number</span>
+                Comprar boleta
+              </button>
             </div>
           </div>
         </header>
 
         <!-- ============ HERO ============ -->
         <section class="hero">
+          <div class="hero__bg" aria-hidden="true"></div>
           <div class="container hero__grid">
             <div class="hero__content">
-              <div class="hero__meta">
-                <span class="pill">
-                  {{ r.prizes.length }} premios
-                </span>
-                @if (r.show_draw_date && r.final_draw_date) {
-                  <span class="pill pill--muted">
-                    <span class="material-icons-outlined">event</span>
-                    Sorteo {{ formatDate(r.final_draw_date) }}
+              <div class="hero__badge">
+                <span class="hero__badge-dot"></span>
+                <span>Hecho en Colombia · Rifa activa</span>
+              </div>
+
+              <h1 class="hero__title">
+                Tu rifa, <em>profesional</em><br>
+                desde el primer ticket.
+              </h1>
+
+              <p class="hero__desc">
+                {{ r.description || 'Compra tu boleta con transparencia total: boletas únicas con QR, verificación pública, pagos con comprobante y notificación automática al ganador. Sin filas, sin trámites.' }}
+              </p>
+
+              <div class="hero__ctas">
+                <button class="btn btn--primary btn--lg" (click)="scrollTo('grid')">
+                  <span class="material-icons-outlined">rocket_launch</span>
+                  Comprar mi boleta
+                </button>
+                <button class="btn btn--play btn--lg" (click)="scrollTo('how')">
+                  <span class="hero__play-icon">
+                    <span class="material-icons-outlined">play_arrow</span>
                   </span>
+                  Ver cómo funciona
+                </button>
+              </div>
+
+              <ul class="hero__bullets">
+                <li><span class="material-icons-outlined">check</span> Boletas únicas con QR</li>
+                <li><span class="material-icons-outlined">check</span> Verificación pública</li>
+                <li><span class="material-icons-outlined">check</span> Pago 100% seguro</li>
+              </ul>
+            </div>
+
+            <aside class="hero__stage">
+              <div class="stage__product">
+                @if (r.logo_url) {
+                  <img [src]="r.logo_url" [alt]="topPrizeName()" />
+                } @else {
+                  <div class="stage__fallback">📺</div>
                 }
               </div>
 
-              <h1 class="h-display">{{ r.name }}</h1>
-
-              @if (r.description) {
-                <p class="h-lead">{{ r.description }}</p>
-              } @else {
-                <p class="h-lead">
-                  Compra tu boleta digital. Transparencia total, verificación pública
-                  y notificación instantánea.
-                </p>
-              }
-
-              <div class="stats">
-                <div class="stat">
-                  <div class="stat__value">\${{ formatNumber(r.ticket_price) }}</div>
-                  <div class="stat__label">Precio por boleta</div>
+              <!-- Card flotante de boleta ejemplo -->
+              <div class="ticket-card">
+                <div class="ticket-card__head">
+                  <span class="ticket-card__label">Nº {{ sampleTicket().label }}</span>
+                  <span class="ticket-card__code">{{ sampleTicket().code }}</span>
                 </div>
-                <div class="stat__sep"></div>
-                <div class="stat">
-                  <div class="stat__value">{{ r.total_tickets }}</div>
-                  <div class="stat__label">Boletas totales</div>
+                <div class="ticket-card__grid">
+                  @for (n of sampleTicket().numbers; track $index) {
+                    <span class="ticket-card__num">{{ n }}</span>
+                  }
                 </div>
-                <div class="stat__sep"></div>
-                <div class="stat">
-                  <div class="stat__value">{{ availableCount() }}</div>
-                  <div class="stat__label">Disponibles</div>
+                <div class="ticket-card__foot">
+                  @if (r.final_draw_date && r.show_draw_date) {
+                    Sorteo final · {{ formatDateShort(r.final_draw_date) }}
+                  } @else {
+                    Sorteo con {{ r.lottery_name || 'Lotería oficial' }}
+                  }
                 </div>
               </div>
-
-              <div class="progress">
-                <div class="progress__track">
-                  <div class="progress__bar" [style.width.%]="r.sold_pct"></div>
-                </div>
-                <div class="progress__meta">
-                  <span>{{ r.sold_pct }}% vendido</span>
-                  <span class="muted">{{ availableCount() }} boletas disponibles</span>
-                </div>
-              </div>
-
-              <div class="cta-row">
-                <button class="btn btn--gold btn--lg" (click)="scrollToGrid()">
-                  Elegir boleta
-                  <span class="material-icons-outlined">arrow_forward</span>
-                </button>
-                <button class="btn btn--ghost btn--lg" (click)="scrollToPrizes()">
-                  Ver premios
-                </button>
-              </div>
-            </div>
-
-            <aside class="hero__product">
-              @if (r.logo_url) {
-                <div class="product-card">
-                  <div class="product-card__label">Premio mayor</div>
-                  <div class="product-card__media">
-                    <img [src]="r.logo_url" [alt]="topPrizeName()" />
-                  </div>
-                  <div class="product-card__body">
-                    <h3>{{ topPrizeName() }}</h3>
-                    @if (r.prizes[0]?.draw_date) {
-                      <p class="muted">
-                        <span class="material-icons-outlined">event</span>
-                        {{ formatDate(r.prizes[0].draw_date!) }}
-                      </p>
-                    }
-                  </div>
-                </div>
-              } @else {
-                <div class="product-card product-card--empty">
-                  <div class="product-card__label">Premio mayor</div>
-                  <div class="product-card__body">
-                    <h3>{{ topPrizeName() }}</h3>
-                  </div>
-                </div>
-              }
             </aside>
           </div>
         </section>
 
-        <!-- ============ COUNTDOWN ============ -->
-        @if (countdown(); as c) {
-          <section class="countdown-wrap">
-            <div class="container countdown">
-              <div class="countdown__title">
-                <span class="material-icons-outlined">schedule</span>
-                Sorteo en
+        <!-- ============ STATS BAR ============ -->
+        <section class="statsbar-wrap">
+          <div class="container">
+            <div class="statsbar">
+              <div class="statsbar__stat">
+                <div class="stat-icon">
+                  <span class="material-icons-outlined">confirmation_number</span>
+                </div>
+                <div>
+                  <div class="stat-value">{{ r.total_tickets }}</div>
+                  <div class="stat-label">Boletas totales</div>
+                </div>
               </div>
-              <div class="countdown__values">
-                <div class="cd-unit">
-                  <span class="cd-unit__value">{{ c.days }}</span>
-                  <span class="cd-unit__label">Días</span>
+
+              <div class="statsbar__stat">
+                <div class="stat-icon">
+                  <span class="material-icons-outlined">shopping_bag</span>
                 </div>
-                <div class="cd-unit">
-                  <span class="cd-unit__value">{{ c.hours }}</span>
-                  <span class="cd-unit__label">Horas</span>
+                <div>
+                  <div class="stat-value">{{ soldCount() }}</div>
+                  <div class="stat-label">Boletas vendidas</div>
                 </div>
-                <div class="cd-unit">
-                  <span class="cd-unit__value">{{ c.minutes }}</span>
-                  <span class="cd-unit__label">Minutos</span>
+              </div>
+
+              <div class="statsbar__stat">
+                <div class="stat-icon">
+                  <span class="material-icons-outlined">inventory_2</span>
                 </div>
-                <div class="cd-unit">
-                  <span class="cd-unit__value">{{ c.seconds }}</span>
-                  <span class="cd-unit__label">Segundos</span>
+                <div>
+                  <div class="stat-value">{{ availableCount() }}</div>
+                  <div class="stat-label">Disponibles</div>
                 </div>
+              </div>
+
+              <div class="statsbar__progress">
+                <div class="statsbar__progress-head">
+                  <span class="statsbar__progress-pct">{{ r.sold_pct }}% vendido</span>
+                </div>
+                <div class="statsbar__progress-track">
+                  <div class="statsbar__progress-bar" [style.width.%]="r.sold_pct"></div>
+                </div>
+                <div class="statsbar__progress-note">¡No te quedes por fuera!</div>
+              </div>
+
+              @if (countdown(); as c) {
+                <div class="statsbar__countdown">
+                  <div class="cd-title">Sorteo en:</div>
+                  <div class="cd-values">
+                    <div class="cd-unit"><span>{{ c.days }}</span><small>Días</small></div>
+                    <span class="cd-sep">:</span>
+                    <div class="cd-unit"><span>{{ c.hours }}</span><small>Horas</small></div>
+                    <span class="cd-sep">:</span>
+                    <div class="cd-unit"><span>{{ c.minutes }}</span><small>Minutos</small></div>
+                    <span class="cd-sep">:</span>
+                    <div class="cd-unit"><span>{{ c.seconds }}</span><small>Segundos</small></div>
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+        </section>
+
+        <!-- ============ PREMIOS ============ -->
+        @if (r.prizes.length) {
+          <section class="section" id="prizes">
+            <div class="container">
+              <div class="section-head-row">
+                <div>
+                  <h2 class="h-section">Premios increíbles</h2>
+                  <p class="muted">Cada boleta juega por todos los premios en diferentes fechas.</p>
+                </div>
+                <a class="link-arrow" (click)="scrollTo('grid')">
+                  Ver todos <span class="material-icons-outlined">arrow_forward</span>
+                </a>
+              </div>
+
+              <div class="prizes-grid">
+                @for (p of r.prizes; track p.position; let idx = $index) {
+                  <article class="prize-card" [class.prize-card--top]="idx === 0">
+                    <div class="prize-card__num">{{ (idx + 1) < 10 ? '0' : '' }}{{ idx + 1 }}</div>
+                    <div class="prize-card__media">
+                      @if (idx === 0 && r.logo_url) {
+                        <img [src]="r.logo_url" [alt]="p.name" />
+                      } @else {
+                        <div class="prize-card__emoji">{{ prizeEmoji(p.name) }}</div>
+                      }
+                    </div>
+                    <div class="prize-card__body">
+                      <h3>{{ p.name }}</h3>
+                      <p class="muted">
+                        {{ idx === 0 ? 'Premio mayor' : idx === 1 ? 'Segundo premio' : idx === 2 ? 'Tercer premio' : 'Cuarto premio' }}
+                      </p>
+                    </div>
+                  </article>
+                }
               </div>
             </div>
           </section>
         }
 
-        <!-- ============ SELECTOR DE BOLETAS (protagonista) ============ -->
-        <section class="picker" id="grid-section">
+        <!-- ============ CÓMO PARTICIPAR ============ -->
+        <section class="section section--how" id="how">
           <div class="container">
-            <div class="picker__head">
+            <div class="section-head">
+              <h2 class="h-section">¿Cómo participar?</h2>
+              <p class="muted">4 pasos simples para conseguir tu boleta.</p>
+            </div>
+
+            <div class="how-grid">
+              <article class="how-step">
+                <div class="how-step__icon-wrap">
+                  <div class="how-step__icon">
+                    <span class="material-icons-outlined">confirmation_number</span>
+                  </div>
+                  <div class="how-step__connector"></div>
+                </div>
+                <div class="how-step__num">1</div>
+                <h3>Elige tus boletas</h3>
+                <p class="muted">Selecciona la cantidad y tus números favoritos.</p>
+              </article>
+
+              <article class="how-step">
+                <div class="how-step__icon-wrap">
+                  <div class="how-step__icon">
+                    <span class="material-icons-outlined">credit_card</span>
+                  </div>
+                  <div class="how-step__connector"></div>
+                </div>
+                <div class="how-step__num">2</div>
+                <h3>Realiza tu pago</h3>
+                <p class="muted">Pago 100% seguro en línea con Nequi, PSE o tarjeta.</p>
+              </article>
+
+              <article class="how-step">
+                <div class="how-step__icon-wrap">
+                  <div class="how-step__icon">
+                    <span class="material-icons-outlined">verified</span>
+                  </div>
+                  <div class="how-step__connector"></div>
+                </div>
+                <div class="how-step__num">3</div>
+                <h3>Recibe tu comprobante</h3>
+                <p class="muted">Te llega al correo y WhatsApp con tu QR.</p>
+              </article>
+
+              <article class="how-step">
+                <div class="how-step__icon-wrap">
+                  <div class="how-step__icon">
+                    <span class="material-icons-outlined">card_giftcard</span>
+                  </div>
+                </div>
+                <div class="how-step__num">4</div>
+                <h3>¡Ya estás participando!</h3>
+                <p class="muted">Espera el sorteo en vivo y gana increíbles premios.</p>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <!-- ============ SELECTOR DE BOLETAS ============ -->
+        <section class="section section--picker" id="grid">
+          <div class="container">
+            <div class="section-head-row">
               <div>
-                <span class="pill pill--muted">Selector</span>
                 <h2 class="h-section">Elige tu boleta</h2>
-                <p class="muted">
-                  Toca una boleta para ver su diseño. Puedes seleccionar hasta 10.
-                </p>
+                <p class="muted">Toca una boleta para ver su diseño. Puedes seleccionar hasta 10.</p>
               </div>
               <div class="legend">
-                <span class="legend__item">
-                  <span class="legend__dot legend__dot--available"></span>
-                  Disponible
-                </span>
-                <span class="legend__item">
-                  <span class="legend__dot legend__dot--selected"></span>
-                  Seleccionada
-                </span>
-                <span class="legend__item">
-                  <span class="legend__dot legend__dot--reserved"></span>
-                  Reservada
-                </span>
-                <span class="legend__item">
-                  <span class="legend__dot legend__dot--sold"></span>
-                  Vendida
-                </span>
+                <span class="legend__item"><span class="dot dot--free"></span> Disponible</span>
+                <span class="legend__item"><span class="dot dot--sel"></span> Seleccionada</span>
+                <span class="legend__item"><span class="dot dot--res"></span> Reservada</span>
+                <span class="legend__item"><span class="dot dot--sold"></span> Vendida</span>
               </div>
             </div>
 
-            <!-- Buscador inline -->
             <form class="search" (ngSubmit)="doSearch()">
               <span class="search__icon material-icons-outlined">search</span>
               <input type="number" class="search__input"
                      [(ngModel)]="searchInput" name="searchInput"
                      [placeholder]="'Buscar número (ej ' + searchPlaceholder() + ')'"
                      inputmode="numeric" />
-              <button type="submit" class="btn btn--gold" [disabled]="searching()">
+              <button type="submit" class="btn btn--primary" [disabled]="searching()">
                 @if (searching()) {
                   <span class="btn__spin"></span>
                 } @else {
@@ -256,14 +357,13 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
                             (click)="openTicketPreviewById(sr.ticket_id!)">
                       Ver diseño
                     </button>
-                    <button class="btn btn--gold btn--sm"
+                    <button class="btn btn--primary btn--sm"
                             (click)="selectFromSearch(sr.ticket_id!)">
                       Reservar
                     </button>
                   </div>
                 }
-                <button class="search-result__close" (click)="clearSearch()"
-                        aria-label="Cerrar">
+                <button class="search-result__close" (click)="clearSearch()" aria-label="Cerrar">
                   <span class="material-icons-outlined">close</span>
                 </button>
               </div>
@@ -277,7 +377,7 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
               </div>
             } @else if (!available().length) {
               <div class="empty">
-                <span class="empty__icon material-icons-outlined">inbox</span>
+                <span class="material-icons-outlined empty__icon">inbox</span>
                 <h3>No hay boletas disponibles</h3>
                 <p class="muted">Todas están asignadas o vendidas.</p>
               </div>
@@ -300,19 +400,18 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
             }
           </div>
 
-          <!-- Footer sticky con selección -->
           @if (selected().size > 0) {
             <div class="picker__bar">
               <div class="container picker__bar-inner">
                 <div class="picker__bar-info">
                   <div class="picker__bar-count">
-                    {{ selected().size }} {{ selected().size === 1 ? 'boleta' : 'boletas' }}
+                    {{ selected().size }} {{ selected().size === 1 ? 'boleta seleccionada' : 'boletas seleccionadas' }}
                   </div>
                   <div class="picker__bar-total">
                     Total <strong>\${{ formatNumber(totalPrice()) }}</strong>
                   </div>
                 </div>
-                <button class="btn btn--gold btn--lg" (click)="openCheckout()">
+                <button class="btn btn--primary btn--lg" (click)="openCheckout()">
                   Continuar al pago
                   <span class="material-icons-outlined">arrow_forward</span>
                 </button>
@@ -321,90 +420,59 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
           }
         </section>
 
-        <!-- ============ PREMIOS ============ -->
-        @if (r.prizes.length) {
-          <section class="section" id="prizes-section">
-            <div class="container">
-              <div class="section__head">
-                <span class="pill pill--muted">Premios</span>
-                <h2 class="h-section">{{ r.prizes.length }} oportunidades de ganar</h2>
-                <p class="h-lead-sm">
-                  Cada boleta juega por todos los premios en fechas distintas.
-                </p>
-              </div>
-              <div class="prizes-grid">
-                @for (p of r.prizes; track p.position; let idx = $index) {
-                  <article class="prize-card" [class.prize-card--top]="idx === 0">
-                    <div class="prize-card__head">
-                      <div class="prize-card__num">
-                        {{ (idx + 1) < 10 ? '0' : '' }}{{ idx + 1 }}
-                      </div>
-                      @if (idx === 0) {
-                        <span class="prize-card__tag">Premio mayor</span>
-                      }
-                    </div>
-                    <h3 class="prize-card__title">{{ p.name }}</h3>
-                    @if (p.draw_date) {
-                      <div class="prize-card__meta">
-                        <span class="material-icons-outlined">event</span>
-                        {{ formatDate(p.draw_date) }}
-                      </div>
-                    }
-                  </article>
-                }
-              </div>
-            </div>
-          </section>
-        }
-
-        <!-- ============ CÓMO FUNCIONA ============ -->
-        <section class="section">
+        <!-- ============ FEATURES ============ -->
+        <section class="features-wrap">
           <div class="container">
-            <div class="section__head">
-              <span class="pill pill--muted">Proceso</span>
-              <h2 class="h-section">Comprar en 3 pasos</h2>
-            </div>
-            <div class="steps">
-              <article class="step">
-                <div class="step__icon">
-                  <span class="material-icons-outlined">grid_view</span>
+            <div class="features">
+              <div class="feature">
+                <div class="feature__icon">
+                  <span class="material-icons-outlined">verified_user</span>
                 </div>
-                <div class="step__num">01</div>
-                <h3>Elige tu boleta</h3>
-                <p class="muted">
-                  Explora las disponibles y ve el diseño real antes de reservar.
-                </p>
-              </article>
-              <article class="step">
-                <div class="step__icon">
-                  <span class="material-icons-outlined">credit_card</span>
+                <div>
+                  <h3>Transparencia total</h3>
+                  <p class="muted">Mostramos todo el proceso de forma pública.</p>
                 </div>
-                <div class="step__num">02</div>
-                <h3>Paga en línea</h3>
-                <p class="muted">
-                  Nequi, PSE, tarjeta o transferencia con comprobante. Reserva 24h.
-                </p>
-              </article>
-              <article class="step">
-                <div class="step__icon">
-                  <span class="material-icons-outlined">verified</span>
+              </div>
+
+              <div class="feature">
+                <div class="feature__icon">
+                  <span class="material-icons-outlined">videocam</span>
                 </div>
-                <div class="step__num">03</div>
-                <h3>Verificación pública</h3>
-                <p class="muted">
-                  Te notificamos por correo y WhatsApp. Verifica tu boleta con un QR.
-                </p>
-              </article>
+                <div>
+                  <h3>Sorteos en vivo</h3>
+                  <p class="muted">Transmisión en vivo por nuestras redes.</p>
+                </div>
+              </div>
+
+              <div class="feature">
+                <div class="feature__icon">
+                  <span class="material-icons-outlined">workspace_premium</span>
+                </div>
+                <div>
+                  <h3>Ganadores verificados</h3>
+                  <p class="muted">Publicamos los ganadores con prueba y evidencia.</p>
+                </div>
+              </div>
+
+              <div class="feature">
+                <div class="feature__icon">
+                  <span class="material-icons-outlined">support_agent</span>
+                </div>
+                <div>
+                  <h3>Atención personalizada</h3>
+                  <p class="muted">Estamos para ayudarte en todo momento.</p>
+                </div>
+              </div>
             </div>
           </div>
         </section>
 
         <!-- ============ FAQ ============ -->
-        <section class="section">
+        <section class="section" id="faq">
           <div class="container container--narrow">
-            <div class="section__head">
-              <span class="pill pill--muted">Preguntas frecuentes</span>
-              <h2 class="h-section">Todo lo que necesitas saber</h2>
+            <div class="section-head">
+              <h2 class="h-section">Preguntas frecuentes</h2>
+              <p class="muted">Todo lo que necesitas saber antes de comprar.</p>
             </div>
             <div class="faq">
               @for (q of faq; track q.q) {
@@ -413,9 +481,7 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
                     <span>{{ q.q }}</span>
                     <span class="faq__chev material-icons-outlined">expand_more</span>
                   </summary>
-                  <div class="faq__a">
-                    <p>{{ q.a }}</p>
-                  </div>
+                  <div class="faq__a"><p>{{ q.a }}</p></div>
                 </details>
               }
             </div>
@@ -426,14 +492,16 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
         <footer class="foot">
           <div class="container foot__inner">
             <div class="foot__brand">
-              <span class="brand__dot"></span>
+              <span class="brand__logo brand__logo--sm">
+                <svg viewBox="0 0 32 32" width="24" height="24">
+                  <rect x="2" y="2" width="28" height="28" rx="8" fill="#22c55e"/>
+                  <path d="M10 12h9a3 3 0 0 1 0 6h-9zm0 6h11a3 3 0 0 1 0 6H10z" fill="#0a2820"/>
+                </svg>
+              </span>
               <span>Boletera</span>
             </div>
             <div class="foot__meta">
-              @if (r.lottery_name) {
-                <span>Juega con {{ r.lottery_name }}</span>
-                <span class="foot__sep">·</span>
-              }
+              @if (r.lottery_name) { <span>Juega con {{ r.lottery_name }}</span><span class="foot__sep">·</span> }
               <span>Compra segura</span>
               <span class="foot__sep">·</span>
               <span>Verificación pública</span>
@@ -441,37 +509,42 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
           </div>
         </footer>
 
+        <!-- Botón flotante WhatsApp -->
+        <a class="whatsapp-fab" [href]="whatsappHref()" target="_blank" rel="noopener"
+           aria-label="Contactar por WhatsApp" title="Contactar por WhatsApp">
+          <svg viewBox="0 0 32 32" width="28" height="28" fill="currentColor">
+            <path d="M16 3C9.4 3 4 8.4 4 15c0 2.3.6 4.5 1.8 6.4L4 29l7.8-2.6c1.8 1 3.9 1.6 6.2 1.6h.1c6.6 0 12-5.4 12-12S22.6 3 16 3zm7 17.1c-.3.8-1.6 1.6-2.2 1.7-.6.1-1.3.1-2.1-.1-.5-.1-1.1-.3-1.9-.6-3.3-1.4-5.4-4.7-5.6-4.9-.2-.2-1.4-1.8-1.4-3.5s.9-2.5 1.2-2.8c.3-.3.7-.4.9-.4h.6c.2 0 .5 0 .7.5.3.6.9 2.1 1 2.3.1.1.1.3.1.5s-.1.4-.2.6c-.2.2-.3.4-.5.6-.2.2-.4.4-.2.7.2.3.9 1.4 1.9 2.3 1.3 1.1 2.4 1.5 2.7 1.6.3.2.5.1.7-.1.2-.2.8-1 1.1-1.3.3-.3.5-.3.9-.2.4.1 2.3 1.1 2.7 1.3.4.2.7.3.8.4.1.4.1.9-.2 1.4z"/>
+          </svg>
+        </a>
+
       }
 
-      <!-- ============ MODAL PREVIEW DE BOLETA ============ -->
+      <!-- ============ MODAL PREVIEW ============ -->
       @if (previewOpen() && previewData(); as pd) {
         <div class="modal" (click)="closePreview()">
           <div class="modal__card modal__card--wide" (click)="$event.stopPropagation()">
             <div class="modal__head">
               <div>
-                <div class="pill pill--muted">Boleta {{ pd.ticket.label }}</div>
+                <div class="pill">Boleta {{ pd.ticket.label }}</div>
                 <h2>Diseño de tu boleta</h2>
               </div>
               <button class="icon-btn" (click)="closePreview()" aria-label="Cerrar">
                 <span class="material-icons-outlined">close</span>
               </button>
             </div>
-
             <div class="preview-ticket">
               <app-ticket-design
                 [ticket]="previewTicket()!"
                 [raffleName]="pd.raffle.name"
                 [prizes]="previewPrizes()"
-                [primaryColor]="pd.raffle.primary_color || '#1b8b3b'"
+                [primaryColor]="pd.raffle.primary_color || '#22c55e'"
                 [ticketPrice]="overview()?.ticket_price ?? null"
                 [responsibleName]="pd.raffle.responsible_name"
                 [responsiblePhone]="pd.raffle.responsible_phone" />
             </div>
-
             <div class="modal__actions">
               @if (isSelected(previewTicketId()!)) {
-                <button class="btn btn--ghost btn--lg"
-                        (click)="removeFromSelection(previewTicketId()!)">
+                <button class="btn btn--ghost btn--lg" (click)="removeFromSelection(previewTicketId()!)">
                   Quitar de la selección
                 </button>
               } @else {
@@ -479,7 +552,7 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
                   Agregar a mi selección
                 </button>
               }
-              <button class="btn btn--gold btn--lg" (click)="reserveAndCheckoutNow()">
+              <button class="btn btn--primary btn--lg" (click)="reserveAndCheckoutNow()">
                 Reservar y pagar
                 <span class="material-icons-outlined">arrow_forward</span>
               </button>
@@ -494,19 +567,18 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
           <div class="modal__card" (click)="$event.stopPropagation()">
             <div class="modal__head">
               <div>
-                <div class="pill pill--muted">Checkout</div>
+                <div class="pill">Checkout</div>
                 <h2>Completar compra</h2>
                 <p class="muted">
                   <strong>{{ selected().size }}</strong>
-                  {{ selected().size === 1 ? 'boleta' : 'boletas' }}
-                  · Total <strong>\${{ formatNumber(totalPrice()) }}</strong>
+                  {{ selected().size === 1 ? 'boleta' : 'boletas' }} ·
+                  Total <strong>\${{ formatNumber(totalPrice()) }}</strong>
                 </p>
               </div>
               <button class="icon-btn" (click)="closeCheckout()" aria-label="Cerrar">
                 <span class="material-icons-outlined">close</span>
               </button>
             </div>
-
             <form class="form" (ngSubmit)="submit()" autocomplete="on">
               <label class="field">
                 <span class="field__label">Cédula</span>
@@ -540,7 +612,7 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
               </label>
 
               @if (overview()?.enable_online_purchase) {
-                <button type="submit" class="btn btn--gold btn--lg btn--block"
+                <button type="submit" class="btn btn--primary btn--lg btn--block"
                         [disabled]="submitting()">
                   @if (submitting()) {
                     <span class="btn__spin"></span> Redirigiendo…
@@ -549,9 +621,7 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
                     <span class="material-icons-outlined">arrow_forward</span>
                   }
                 </button>
-                <small class="muted center">
-                  Nequi · PSE · Bancolombia · Tarjeta
-                </small>
+                <small class="muted center">Nequi · PSE · Bancolombia · Tarjeta</small>
               }
 
               @if (overview()?.enable_manual_transfer) {
@@ -578,81 +648,74 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
   `,
   styles: [`
     /* ============================================================
-       SISTEMA DE DISEÑO — SaaS premium dark
+       Paleta verde Boletera
        ============================================================ */
     :host {
-      --bg:            #0B0B0D;
-      --surface:       #111214;
-      --surface-2:     #1B1C20;
-      --card:          #1B1C20;
-      --card-hover:    #22232A;
-      --border:        rgba(255, 255, 255, 0.08);
-      --border-strong: rgba(255, 255, 255, 0.14);
-      --text:          #FFFFFF;
-      --text-muted:    #B5B7BE;
-      --text-dim:      #6E7079;
+      --bg:          #041613;
+      --surface:     #082820;
+      --surface-2:   #0a3126;
+      --card:        rgba(10, 49, 38, 0.55);
+      --card-solid:  #0a3126;
+      --border:      rgba(34, 197, 94, 0.12);
+      --border-md:   rgba(34, 197, 94, 0.22);
+      --border-str:  rgba(34, 197, 94, 0.4);
 
-      --gold:          #D4AF37;
-      --gold-hover:    #E4C15A;
-      --gold-soft:     rgba(212, 175, 55, 0.12);
+      --text:        #ffffff;
+      --text-muted:  #9dbdaa;
+      --text-dim:    #6a8578;
 
-      --green:         #16a34a;
-      --red:           #ef4444;
-      --amber:         #f59e0b;
-      --blue:          #3b82f6;
+      --brand:       #22c55e;
+      --brand-glow:  #4ade80;
+      --brand-soft:  rgba(34, 197, 94, 0.15);
+      --brand-dark:  #16a34a;
 
-      --shadow-sm:     0 1px 2px rgba(0,0,0,0.4);
-      --shadow-md:     0 8px 24px rgba(0,0,0,0.35);
-      --shadow-lg:     0 20px 60px rgba(0,0,0,0.5);
+      --amber:       #f59e0b;
+      --red:         #ef4444;
+      --blue:        #3b82f6;
 
-      --r-sm:  10px;
-      --r-md:  14px;
-      --r-lg:  20px;
-      --r-xl:  24px;
+      --shadow-sm:   0 2px 4px rgba(0,0,0,.3);
+      --shadow-md:   0 8px 24px rgba(0,0,0,.3);
+      --shadow-lg:   0 24px 60px rgba(0,0,0,.4);
 
-      --t-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+      --r-sm: 10px;
+      --r-md: 14px;
+      --r-lg: 20px;
+      --r-xl: 24px;
+
+      --t-fast: 160ms cubic-bezier(0.4, 0, 0.2, 1);
       --t-med:  240ms cubic-bezier(0.4, 0, 0.2, 1);
 
       display: block;
-      background: var(--bg);
+      min-height: 100vh;
+      background:
+        radial-gradient(ellipse 100% 60% at 50% 0%, rgba(34, 197, 94, 0.16) 0%, transparent 70%),
+        radial-gradient(ellipse 80% 40% at 100% 20%, rgba(34, 197, 94, 0.08) 0%, transparent 60%),
+        var(--bg);
       color: var(--text);
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
-      min-height: 100vh;
       font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
     }
-
     * { box-sizing: border-box; }
 
-    .app {
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
+    .app { min-height: 100vh; display: flex; flex-direction: column; }
 
-    .container {
-      width: 100%;
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 0 24px;
-    }
-    .container--narrow { max-width: 760px; }
-    @media (max-width: 720px) { .container { padding: 0 20px; } }
+    .container { width: 100%; max-width: 1240px; margin: 0 auto; padding: 0 24px; }
+    .container--narrow { max-width: 780px; }
+    @media (max-width: 720px) { .container { padding: 0 18px; } }
 
-    .muted { color: var(--text-muted); }
+    .muted { color: var(--text-muted); font-size: 14px; }
     .center { text-align: center; display: block; }
 
-    /* ============ Loader ============ */
     .page-loader {
       display: grid; place-items: center;
-      min-height: 100vh;
-      gap: 20px;
+      min-height: 100vh; gap: 20px;
     }
     .page-loader__spinner {
       width: 32px; height: 32px;
       border: 2px solid var(--border);
-      border-top-color: var(--gold);
+      border-top-color: var(--brand);
       border-radius: 50%;
       animation: spin 700ms linear infinite;
     }
@@ -662,826 +725,116 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
        TOPBAR
        ============================================================ */
     .topbar {
-      position: sticky;
-      top: 0;
-      z-index: 40;
-      background: rgba(11, 11, 13, 0.72);
+      position: sticky; top: 0; z-index: 40;
+      background: rgba(4, 22, 19, 0.72);
       backdrop-filter: saturate(180%) blur(20px);
       -webkit-backdrop-filter: saturate(180%) blur(20px);
       border-bottom: 1px solid var(--border);
     }
     .topbar__inner {
-      max-width: 1200px;
-      margin: 0 auto;
+      display: flex; align-items: center;
+      justify-content: space-between; gap: 24px;
       padding: 14px 24px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
     }
     .brand {
-      display: inline-flex;
-      align-items: center;
-      gap: 10px;
-      color: var(--text);
-      text-decoration: none;
-      font-weight: 700;
-      font-size: 15px;
-      letter-spacing: -0.01em;
-    }
-    .brand__dot {
-      width: 8px; height: 8px;
-      background: var(--gold);
-      border-radius: 50%;
-      box-shadow: 0 0 12px var(--gold);
-    }
-    .brand__name { color: var(--text); }
-
-    /* ============================================================
-       BADGES / PILLS
-       ============================================================ */
-    .pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 5px 12px;
-      background: var(--gold-soft);
-      color: var(--gold);
-      border: 1px solid rgba(212, 175, 55, 0.25);
-      border-radius: 999px;
-      font-size: 11px;
-      font-weight: 600;
-      letter-spacing: 0.02em;
-      line-height: 1.2;
-    }
-    .pill--muted {
-      background: rgba(255, 255, 255, 0.04);
-      color: var(--text-muted);
-      border-color: var(--border);
-    }
-    .pill .material-icons-outlined { font-size: 14px; }
-
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 6px 12px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 999px;
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--text-muted);
-      line-height: 1.2;
-    }
-    .badge--live { color: var(--text); }
-    .badge__pulse {
-      width: 6px; height: 6px;
-      background: var(--green);
-      border-radius: 50%;
-      box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.25);
-      animation: pulse 1.6s ease-in-out infinite;
-    }
-    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-
-    /* ============================================================
-       HERO
-       ============================================================ */
-    .hero {
-      padding: 72px 0 40px;
-      position: relative;
-      overflow: hidden;
-    }
-    .hero::before {
-      content: '';
-      position: absolute;
-      top: -200px; left: 50%;
-      transform: translateX(-50%);
-      width: 900px; height: 500px;
-      background: radial-gradient(ellipse at center, rgba(212, 175, 55, 0.06) 0%, transparent 70%);
-      pointer-events: none;
-    }
-    @media (max-width: 720px) { .hero { padding: 40px 0 32px; } }
-
-    .hero__grid {
-      display: grid;
-      grid-template-columns: 1.15fr 1fr;
-      gap: 56px;
-      align-items: center;
-      position: relative;
-      z-index: 1;
-    }
-    @media (max-width: 900px) {
-      .hero__grid { grid-template-columns: 1fr; gap: 40px; }
-      .hero__product { order: -1; }
-    }
-
-    .hero__meta {
-      display: flex; gap: 8px; margin-bottom: 24px;
-      flex-wrap: wrap;
-    }
-
-    .h-display {
-      margin: 0 0 20px;
-      font-size: clamp(36px, 5vw, 56px);
-      line-height: 1.05;
-      font-weight: 700;
-      letter-spacing: -0.03em;
-      color: var(--text);
-    }
-
-    .h-lead {
-      margin: 0 0 32px;
-      font-size: 17px;
-      line-height: 1.55;
-      color: var(--text-muted);
-      max-width: 520px;
-    }
-    .h-lead-sm { font-size: 15px; margin: 8px 0 0; color: var(--text-muted); }
-
-    /* ============ Stats ============ */
-    .stats {
-      display: flex;
-      align-items: stretch;
-      gap: 28px;
-      padding: 24px 0;
-      border-top: 1px solid var(--border);
-      border-bottom: 1px solid var(--border);
-      margin-bottom: 28px;
-    }
-    .stat { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-    .stat__value {
-      font-size: 24px;
-      font-weight: 700;
-      color: var(--text);
+      display: inline-flex; align-items: center; gap: 10px;
+      color: var(--text); text-decoration: none;
+      font-weight: 700; font-size: 17px;
       letter-spacing: -0.02em;
-      font-variant-numeric: tabular-nums;
-      line-height: 1;
     }
-    .stat__label {
-      font-size: 12px;
-      color: var(--text-muted);
-      font-weight: 500;
-    }
-    .stat__sep {
-      width: 1px;
-      background: var(--border);
-    }
-    @media (max-width: 540px) {
-      .stats { flex-wrap: wrap; gap: 20px; }
-      .stat__sep { display: none; }
-      .stat { min-width: 45%; }
-    }
+    .brand__logo { display: grid; place-items: center; }
+    .brand__logo--sm svg { width: 22px; height: 22px; }
 
-    /* ============ Progress ============ */
-    .progress { margin-bottom: 32px; }
-    .progress__track {
-      height: 6px;
-      background: rgba(255, 255, 255, 0.06);
-      border-radius: 999px;
-      overflow: hidden;
-    }
-    .progress__bar {
-      height: 100%;
-      background: linear-gradient(90deg, var(--gold) 0%, var(--gold-hover) 100%);
-      border-radius: 999px;
-      transition: width 400ms ease;
-    }
-    .progress__meta {
-      display: flex; justify-content: space-between;
-      margin-top: 10px;
-      font-size: 12px;
-      color: var(--text);
-    }
-
-    .cta-row {
-      display: flex; gap: 10px; flex-wrap: wrap;
-    }
-
-    /* ============ Product card (hero right) ============ */
-    .hero__product { display: flex; justify-content: center; }
-    .product-card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: var(--r-xl);
-      padding: 20px;
-      width: 100%;
-      max-width: 460px;
-      box-shadow: var(--shadow-md);
-      position: relative;
-      overflow: hidden;
-      transition: border-color var(--t-med);
-    }
-    .product-card:hover { border-color: var(--border-strong); }
-    .product-card__label {
-      display: inline-flex;
-      padding: 4px 10px;
-      background: var(--gold-soft);
-      color: var(--gold);
-      border-radius: 999px;
-      font-size: 11px;
-      font-weight: 600;
-      margin-bottom: 16px;
-      letter-spacing: 0.02em;
-    }
-    .product-card__media {
-      background:
-        radial-gradient(ellipse at center, rgba(212, 175, 55, 0.08) 0%, transparent 60%),
-        var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--r-lg);
-      padding: 24px;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      aspect-ratio: 4 / 3;
-      margin-bottom: 16px;
-    }
-    .product-card__media img {
-      max-width: 100%;
-      max-height: 100%;
-      object-fit: contain;
-      transition: transform 500ms cubic-bezier(0.4, 0, 0.2, 1);
-    }
-    .product-card:hover .product-card__media img { transform: scale(1.03); }
-    .product-card__body h3 {
-      margin: 0 0 6px;
-      font-size: 17px;
-      font-weight: 600;
-      letter-spacing: -0.01em;
-    }
-    .product-card__body p {
-      margin: 0;
-      font-size: 13px;
-      display: inline-flex; align-items: center; gap: 6px;
-    }
-    .product-card__body .material-icons-outlined { font-size: 16px; }
-    .product-card--empty .product-card__body { padding: 40px 0; text-align: center; }
-
-    /* ============================================================
-       COUNTDOWN
-       ============================================================ */
-    .countdown-wrap {
-      padding: 8px 0 32px;
-    }
-    .countdown {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 32px;
-      padding: 24px 28px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--r-lg);
-    }
-    @media (max-width: 720px) {
-      .countdown { flex-direction: column; align-items: flex-start; padding: 20px; gap: 20px; }
-    }
-    .countdown__title {
-      display: inline-flex; align-items: center; gap: 8px;
-      font-size: 13px;
-      color: var(--text-muted);
-      font-weight: 500;
-    }
-    .countdown__title .material-icons-outlined { font-size: 16px; color: var(--gold); }
-    .countdown__values {
-      display: flex; gap: 24px;
-    }
-    @media (max-width: 480px) { .countdown__values { gap: 14px; } }
-    .cd-unit {
-      display: flex; flex-direction: column; align-items: center;
-      min-width: 56px;
-    }
-    .cd-unit__value {
-      font-size: 26px;
-      font-weight: 700;
-      letter-spacing: -0.02em;
-      font-variant-numeric: tabular-nums;
-      color: var(--text);
-      line-height: 1;
-    }
-    .cd-unit__label {
-      font-size: 10px;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      margin-top: 6px;
-      font-weight: 600;
-    }
-
-    /* ============================================================
-       SECTION patterns
-       ============================================================ */
-    .section { padding: 80px 0; }
-    @media (max-width: 720px) { .section { padding: 56px 0; } }
-
-    .section__head {
-      margin-bottom: 40px;
-      max-width: 640px;
-    }
-    .section__head .pill { margin-bottom: 14px; }
-
-    .h-section {
-      margin: 0;
-      font-size: clamp(24px, 3vw, 34px);
-      font-weight: 700;
-      letter-spacing: -0.02em;
-      line-height: 1.15;
-    }
-
-    /* ============================================================
-       PICKER — Selector de boletas (protagonista)
-       ============================================================ */
-    .picker {
-      padding: 40px 0 120px;
-      position: relative;
-    }
-
-    .picker__head {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-end;
-      gap: 24px;
-      margin-bottom: 24px;
-      flex-wrap: wrap;
-    }
-    .picker__head h2 { margin: 12px 0 6px; font-size: 28px; font-weight: 700; letter-spacing: -0.02em; }
-    .picker__head p { margin: 0; font-size: 14px; }
-
-    .legend {
-      display: flex; flex-wrap: wrap;
-      gap: 6px;
-    }
-    .legend__item {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 6px 10px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 999px;
-      font-size: 11px;
-      color: var(--text-muted);
-      font-weight: 500;
-    }
-    .legend__dot {
-      width: 8px; height: 8px;
-      border-radius: 3px;
-    }
-    .legend__dot--available { background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); }
-    .legend__dot--selected { background: var(--gold); box-shadow: 0 0 6px var(--gold); }
-    .legend__dot--reserved { background: var(--amber); }
-    .legend__dot--sold { background: var(--red); opacity: 0.5; }
-
-    /* ============ Search inline ============ */
-    .search {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--r-md);
-      padding: 6px 6px 6px 14px;
-      margin-bottom: 24px;
-      transition: border-color var(--t-fast);
-    }
-    .search:focus-within {
-      border-color: var(--gold);
-      box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.14);
-    }
-    .search__icon {
-      color: var(--text-dim);
-      font-size: 20px;
-    }
-    .search__input {
-      flex: 1;
-      background: transparent;
-      border: none;
-      color: var(--text);
-      font-size: 15px;
-      padding: 10px 4px;
-      outline: none;
-      font-family: inherit;
-      font-variant-numeric: tabular-nums;
-      -webkit-appearance: none;
-      appearance: none;
-      -moz-appearance: textfield;
-    }
-    .search__input::-webkit-outer-spin-button,
-    .search__input::-webkit-inner-spin-button {
-      -webkit-appearance: none; margin: 0;
-    }
-    .search__input::placeholder { color: var(--text-dim); }
-
-    /* ============ Search result card ============ */
-    .search-result {
-      display: flex;
-      align-items: flex-start;
-      gap: 14px;
-      padding: 16px 18px;
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: var(--r-md);
-      margin-bottom: 20px;
-      position: relative;
-    }
-    .search-result[data-status="available"] { border-color: rgba(22, 163, 74, 0.35); }
-    .search-result[data-status="available"] .search-result__icon { color: var(--green); }
-    .search-result[data-status="sold"] { border-color: rgba(239, 68, 68, 0.35); }
-    .search-result[data-status="sold"] .search-result__icon { color: var(--red); }
-    .search-result[data-status="reserved"] { border-color: rgba(245, 158, 11, 0.35); }
-    .search-result[data-status="reserved"] .search-result__icon { color: var(--amber); }
-    .search-result[data-status="assigned"] { border-color: rgba(59, 130, 246, 0.35); }
-    .search-result[data-status="assigned"] .search-result__icon { color: var(--blue); }
-    .search-result__icon { font-size: 22px; margin-top: 2px; flex-shrink: 0; }
-    .search-result__body { flex: 1; min-width: 0; }
-    .search-result__body strong { display: block; font-size: 14px; margin-bottom: 4px; }
-    .search-result__body p { margin: 0; font-size: 13px; color: var(--text-muted); }
-    .search-result__actions { display: flex; gap: 8px; flex-shrink: 0; }
-    .search-result__close {
-      background: transparent;
-      border: none;
-      color: var(--text-dim);
-      cursor: pointer;
-      padding: 4px;
-      border-radius: 6px;
-      display: grid; place-items: center;
-    }
-    .search-result__close:hover { color: var(--text); background: rgba(255,255,255,0.06); }
-    .search-result__close .material-icons-outlined { font-size: 18px; }
-    @media (max-width: 640px) {
-      .search-result { flex-wrap: wrap; }
-      .search-result__actions { width: 100%; }
-      .search-result__actions .btn { flex: 1; }
-    }
-
-    /* ============================================================
-       GRID de boletas — protagonista
-       ============================================================ */
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
-      gap: 8px;
-    }
-    .grid--skeleton { pointer-events: none; }
-
-    .ticket {
-      position: relative;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: var(--r-md);
-      padding: 16px 8px;
-      font-family: inherit;
-      color: var(--text);
-      font-weight: 600;
-      font-size: 15px;
-      font-variant-numeric: tabular-nums;
-      cursor: pointer;
-      transition: transform var(--t-fast), background var(--t-fast),
-                  border-color var(--t-fast), box-shadow var(--t-fast);
-      overflow: hidden;
-    }
-    .ticket__number { position: relative; z-index: 1; }
-    .ticket__check {
-      position: absolute;
-      top: 6px; right: 6px;
-      color: var(--bg);
-      font-size: 14px;
-      background: var(--gold);
-      border-radius: 50%;
-      width: 18px; height: 18px;
-      display: grid; place-items: center;
-      z-index: 2;
-    }
-
-    /* Estado disponible: default */
-    .ticket--available:hover {
-      background: var(--card-hover);
-      border-color: var(--border-strong);
-      transform: translateY(-1px);
-    }
-
-    /* Estado seleccionado */
-    .ticket--selected {
-      background: linear-gradient(180deg, rgba(212, 175, 55, 0.14) 0%, rgba(212, 175, 55, 0.06) 100%);
-      border-color: var(--gold);
-      color: var(--text);
-      box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.12);
-    }
-    .ticket--selected:hover { background: rgba(212, 175, 55, 0.18); }
-
-    /* Estado reservado (visual, no clickable en el pool público) */
-    .ticket--reserved {
-      background: var(--surface);
-      color: var(--text-dim);
-      cursor: not-allowed;
-      border-color: rgba(245, 158, 11, 0.2);
-    }
-    .ticket--reserved::after {
-      content: '';
-      position: absolute;
-      top: 6px; right: 6px;
-      width: 6px; height: 6px;
-      background: var(--amber);
-      border-radius: 50%;
-    }
-
-    /* Estado vendido */
-    .ticket--sold {
-      background: transparent;
-      color: var(--text-dim);
-      cursor: not-allowed;
-      border-style: dashed;
-      border-color: var(--border);
-      text-decoration: line-through;
-    }
-
-    /* Pulse animation */
-    .ticket--pulse {
-      animation: ticket-pulse 1.4s ease-in-out 2;
-    }
-    @keyframes ticket-pulse {
-      0%, 100% { transform: scale(1); box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.12); }
-      50% { transform: scale(1.06); box-shadow: 0 0 0 8px rgba(212, 175, 55, 0.18); }
-    }
-
-    /* Skeleton */
-    .ticket--skeleton {
-      background: linear-gradient(90deg, var(--surface) 0%, var(--card-hover) 50%, var(--surface) 100%);
-      background-size: 200% 100%;
-      animation: skel 1.4s linear infinite;
-      border: 1px solid var(--border);
-      height: 54px;
-      cursor: default;
-    }
-    @keyframes skel { to { background-position: -200% 0; } }
-
-    /* Empty state */
-    .empty {
-      text-align: center;
-      padding: 80px 20px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--r-lg);
-    }
-    .empty__icon { font-size: 44px; color: var(--text-dim); margin-bottom: 12px; display: block; }
-    .empty h3 { margin: 0 0 6px; font-size: 17px; font-weight: 600; }
-    .empty p { margin: 0; font-size: 14px; }
-
-    /* ============ Bottom bar (sticky) ============ */
-    .picker__bar {
-      position: sticky;
-      bottom: 16px;
-      z-index: 30;
-      margin-top: 32px;
-      padding: 0 24px;
-    }
-    .picker__bar-inner {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 20px;
-      padding: 16px 20px;
-      background: rgba(27, 28, 32, 0.85);
-      backdrop-filter: saturate(180%) blur(20px);
-      -webkit-backdrop-filter: saturate(180%) blur(20px);
-      border: 1px solid var(--border-strong);
-      border-radius: var(--r-lg);
-      box-shadow: var(--shadow-lg);
-    }
-    .picker__bar-info {
-      display: flex; flex-direction: column; gap: 2px;
-    }
-    .picker__bar-count { font-size: 13px; color: var(--text-muted); font-weight: 500; }
-    .picker__bar-total { font-size: 17px; font-weight: 600; }
-    .picker__bar-total strong { color: var(--text); font-weight: 700; }
-    @media (max-width: 540px) {
-      .picker__bar-inner { padding: 12px 14px; }
-      .picker__bar-info { flex: 1; }
-      .picker__bar-inner .btn { padding: 12px 16px; font-size: 13px; }
-    }
-
-    /* ============================================================
-       PRIZES grid — cards Stripe-style
-       ============================================================ */
-    .prizes-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-      gap: 16px;
-    }
-    .prize-card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: var(--r-lg);
-      padding: 24px;
-      transition: border-color var(--t-med), transform var(--t-med);
-    }
-    .prize-card:hover {
-      border-color: var(--border-strong);
-      transform: translateY(-2px);
-    }
-    .prize-card--top {
-      background:
-        radial-gradient(ellipse at top right, rgba(212, 175, 55, 0.08) 0%, transparent 60%),
-        var(--card);
-      border-color: rgba(212, 175, 55, 0.3);
-    }
-    .prize-card__head {
-      display: flex; justify-content: space-between; align-items: center;
-      margin-bottom: 20px;
-    }
-    .prize-card__num {
-      font-size: 12px;
-      font-weight: 700;
-      color: var(--text-muted);
-      letter-spacing: 0.06em;
-      font-variant-numeric: tabular-nums;
-    }
-    .prize-card--top .prize-card__num { color: var(--gold); }
-    .prize-card__tag {
-      padding: 3px 10px;
-      background: var(--gold-soft);
-      color: var(--gold);
-      border-radius: 999px;
-      font-size: 10px;
-      font-weight: 600;
-      letter-spacing: 0.02em;
-    }
-    .prize-card__title {
-      margin: 0 0 12px;
-      font-size: 18px;
-      font-weight: 600;
-      letter-spacing: -0.01em;
-      line-height: 1.3;
-    }
-    .prize-card__meta {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      color: var(--text-muted);
-      font-size: 13px;
-    }
-    .prize-card__meta .material-icons-outlined { font-size: 16px; }
-
-    /* ============================================================
-       STEPS — 3 cards
-       ============================================================ */
-    .steps {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 16px;
-    }
-    @media (max-width: 900px) { .steps { grid-template-columns: 1fr; } }
-    .step {
-      position: relative;
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: var(--r-lg);
-      padding: 28px 24px;
-      transition: border-color var(--t-med);
-    }
-    .step:hover { border-color: var(--border-strong); }
-    .step__icon {
-      display: grid; place-items: center;
-      width: 44px; height: 44px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      margin-bottom: 20px;
-    }
-    .step__icon .material-icons-outlined { font-size: 22px; color: var(--gold); }
-    .step__num {
-      position: absolute;
-      top: 24px; right: 24px;
-      font-size: 12px;
-      font-weight: 700;
-      color: var(--text-dim);
-      font-variant-numeric: tabular-nums;
-      letter-spacing: 0.05em;
-    }
-    .step h3 { margin: 0 0 8px; font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }
-    .step p { margin: 0; font-size: 14px; line-height: 1.6; }
-
-    /* ============================================================
-       FAQ
-       ============================================================ */
-    .faq { display: flex; flex-direction: column; gap: 8px; }
-    .faq__item {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: var(--r-md);
-      overflow: hidden;
-      transition: border-color var(--t-fast);
-    }
-    .faq__item:hover { border-color: var(--border-strong); }
-    .faq__item[open] { border-color: var(--border-strong); }
-    .faq__q {
-      display: flex; justify-content: space-between; align-items: center;
-      padding: 20px 24px;
-      cursor: pointer;
-      font-size: 15px;
-      font-weight: 500;
-      list-style: none;
-      user-select: none;
-    }
-    .faq__q::-webkit-details-marker { display: none; }
-    .faq__chev {
-      font-size: 20px;
-      color: var(--text-muted);
-      transition: transform var(--t-med);
-    }
-    .faq__item[open] .faq__chev { transform: rotate(180deg); color: var(--gold); }
-    .faq__a {
-      padding: 0 24px 20px;
+    .topbar__nav {
+      display: flex; gap: 4px;
+    }
+    .nav-link {
+      padding: 8px 14px;
       color: var(--text-muted);
       font-size: 14px;
-      line-height: 1.65;
+      font-weight: 500;
+      cursor: pointer;
+      border-radius: 8px;
+      transition: color var(--t-fast), background var(--t-fast);
     }
-    .faq__a p { margin: 0; }
+    .nav-link:hover { color: var(--text); background: rgba(255,255,255,0.04); }
+    @media (max-width: 900px) { .topbar__nav { display: none; } }
+
+    .topbar__actions { display: inline-flex; gap: 10px; }
 
     /* ============================================================
-       FOOTER
-       ============================================================ */
-    .foot {
-      margin-top: auto;
-      padding: 40px 0 32px;
-      border-top: 1px solid var(--border);
-    }
-    .foot__inner {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 16px;
-      flex-wrap: wrap;
-      font-size: 13px;
-      color: var(--text-muted);
-    }
-    .foot__brand {
-      display: inline-flex; align-items: center; gap: 8px;
-      color: var(--text);
-      font-weight: 600;
-    }
-    .foot__meta { display: inline-flex; gap: 8px; flex-wrap: wrap; }
-    .foot__sep { color: var(--text-dim); }
-
-    /* ============================================================
-       BOTONES
+       BUTTONS
        ============================================================ */
     .btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
+      display: inline-flex; align-items: center; justify-content: center;
       gap: 8px;
       padding: 10px 18px;
       border: 1px solid transparent;
-      border-radius: 10px;
+      border-radius: 12px;
       font-family: inherit;
       font-size: 14px;
       font-weight: 600;
       letter-spacing: -0.005em;
       cursor: pointer;
-      transition: background var(--t-fast), color var(--t-fast),
-                  border-color var(--t-fast), transform var(--t-fast),
+      transition: transform var(--t-fast), background var(--t-fast),
+                  color var(--t-fast), border-color var(--t-fast),
                   box-shadow var(--t-fast);
       white-space: nowrap;
       text-decoration: none;
     }
     .btn:disabled { opacity: 0.6; cursor: not-allowed; }
     .btn .material-icons-outlined { font-size: 18px; }
-    .btn--sm { padding: 7px 12px; font-size: 13px; border-radius: 8px; }
-    .btn--lg { padding: 13px 22px; font-size: 15px; border-radius: 12px; }
+
+    .btn--sm { padding: 8px 14px; font-size: 13px; border-radius: 10px; }
+    .btn--lg { padding: 14px 24px; font-size: 15px; border-radius: 14px; }
     .btn--block { width: 100%; }
 
-    .btn--gold {
-      background: var(--gold);
-      color: #1a1300;
-      box-shadow: 0 4px 12px rgba(212, 175, 55, 0.18);
+    .btn--primary {
+      background: linear-gradient(180deg, #22e695 0%, #16a34a 100%);
+      color: #041613;
+      box-shadow: 0 6px 20px rgba(34, 197, 94, 0.3),
+                  inset 0 1px 0 rgba(255,255,255,0.2);
     }
-    .btn--gold:hover:not(:disabled) {
-      background: var(--gold-hover);
+    .btn--primary:hover:not(:disabled) {
       transform: translateY(-1px);
-      box-shadow: 0 8px 20px rgba(212, 175, 55, 0.3);
+      box-shadow: 0 10px 28px rgba(34, 197, 94, 0.45),
+                  inset 0 1px 0 rgba(255,255,255,0.25);
     }
-    .btn--gold:active:not(:disabled) { transform: translateY(0); }
-    .btn--gold .material-icons-outlined { color: #1a1300; }
+    .btn--primary:active:not(:disabled) { transform: translateY(0); }
+    .btn--primary .material-icons-outlined { color: #041613; }
 
     .btn--ghost {
-      background: transparent;
-      border-color: var(--border-strong);
+      background: rgba(255, 255, 255, 0.04);
+      border-color: rgba(255, 255, 255, 0.1);
       color: var(--text);
     }
     .btn--ghost:hover:not(:disabled) {
-      background: rgba(255, 255, 255, 0.04);
-      border-color: var(--text-dim);
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .btn--play {
+      background: transparent;
+      border-color: rgba(255, 255, 255, 0.12);
+      color: var(--text);
+      padding-left: 10px;
+    }
+    .btn--play:hover { background: rgba(255,255,255,0.04); }
+    .hero__play-icon {
+      display: grid; place-items: center;
+      width: 32px; height: 32px;
+      background: rgba(255,255,255,0.08);
+      border-radius: 50%;
+      margin-right: 4px;
+    }
+    .hero__play-icon .material-icons-outlined {
+      font-size: 18px; color: var(--text); margin-left: 1px;
     }
 
     .btn__spin {
       display: inline-block;
       width: 14px; height: 14px;
-      border: 2px solid rgba(255, 255, 255, 0.3);
+      border: 2px solid rgba(0, 0, 0, 0.25);
       border-top-color: currentColor;
       border-radius: 50%;
       animation: spin 700ms linear infinite;
@@ -1501,22 +854,802 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
     .icon-btn .material-icons-outlined { font-size: 18px; }
 
     /* ============================================================
-       FORMULARIO
+       HERO
        ============================================================ */
-    .form { display: flex; flex-direction: column; gap: 16px; margin-top: 24px; }
-    .field { display: flex; flex-direction: column; gap: 6px; }
-    .field__label {
+    .hero {
+      position: relative;
+      padding: 56px 0 40px;
+      overflow: hidden;
+    }
+    .hero__bg {
+      position: absolute; inset: 0;
+      background:
+        radial-gradient(ellipse 60% 40% at 80% 40%, rgba(34, 197, 94, 0.18) 0%, transparent 60%),
+        radial-gradient(ellipse 40% 40% at 20% 80%, rgba(34, 197, 94, 0.1) 0%, transparent 60%);
+      pointer-events: none;
+    }
+    @media (max-width: 720px) { .hero { padding: 32px 0; } }
+
+    .hero__grid {
+      position: relative; z-index: 1;
+      display: grid;
+      grid-template-columns: 1.05fr 1.1fr;
+      gap: 48px;
+      align-items: center;
+    }
+    @media (max-width: 960px) {
+      .hero__grid { grid-template-columns: 1fr; gap: 40px; }
+      .hero__stage { order: -1; }
+    }
+
+    .hero__badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 6px 14px;
+      background: var(--brand-soft);
+      border: 1px solid var(--border-md);
+      border-radius: 999px;
       font-size: 12px;
       font-weight: 600;
+      color: var(--brand-glow);
+      margin-bottom: 24px;
+    }
+    .hero__badge-dot {
+      width: 8px; height: 8px;
+      background: var(--brand);
+      border-radius: 50%;
+      box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.25),
+                  0 0 12px var(--brand);
+      animation: pulse 1.6s ease-in-out infinite;
+    }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.55; } }
+
+    .hero__title {
+      margin: 0 0 20px;
+      font-size: clamp(36px, 5vw, 60px);
+      line-height: 1.05;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      color: var(--text);
+    }
+    .hero__title em {
+      font-style: normal;
+      color: var(--brand-glow);
+      background: linear-gradient(180deg, #4ade80 0%, #22c55e 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero__desc {
+      margin: 0 0 32px;
+      font-size: 17px;
+      line-height: 1.6;
       color: var(--text-muted);
-      letter-spacing: 0.02em;
+      max-width: 540px;
     }
-    .field__label small {
+
+    .hero__ctas {
+      display: flex; gap: 12px; flex-wrap: wrap;
+      margin-bottom: 32px;
+    }
+
+    .hero__bullets {
+      display: flex; gap: 24px; flex-wrap: wrap;
+      list-style: none; padding: 0; margin: 0;
+    }
+    .hero__bullets li {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 14px;
+      color: var(--text-muted);
+    }
+    .hero__bullets .material-icons-outlined {
+      font-size: 18px;
+      color: var(--brand-glow);
+      background: var(--brand-soft);
+      border-radius: 50%;
+      padding: 3px;
+      box-sizing: content-box;
+    }
+
+    /* ============ Hero stage (TV + boleta) ============ */
+    .hero__stage {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 460px;
+    }
+    @media (max-width: 960px) { .hero__stage { min-height: 380px; } }
+
+    .stage__product {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      max-width: 620px;
+    }
+    .stage__product::before {
+      content: '';
+      position: absolute;
+      inset: 10% 10%;
+      background: radial-gradient(circle, rgba(34, 197, 94, 0.35) 0%, transparent 60%);
+      filter: blur(30px);
+      z-index: 0;
+      animation: halo-pulse 4s ease-in-out infinite;
+    }
+    @keyframes halo-pulse {
+      0%, 100% { opacity: 0.65; transform: scale(1); }
+      50% { opacity: 1; transform: scale(1.06); }
+    }
+    .stage__product img {
+      position: relative;
+      z-index: 1;
+      max-width: 100%;
+      max-height: 460px;
+      object-fit: contain;
+      filter: drop-shadow(0 30px 40px rgba(0,0,0,0.5))
+              drop-shadow(0 0 50px rgba(34, 197, 94, 0.2));
+    }
+    .stage__fallback {
+      position: relative;
+      z-index: 1;
+      font-size: clamp(120px, 15vw, 200px);
+      line-height: 1;
+      filter: drop-shadow(0 20px 40px rgba(0,0,0,0.5));
+    }
+
+    /* Card flotante de boleta */
+    .ticket-card {
+      position: absolute;
+      bottom: 6%;
+      left: 4%;
+      z-index: 3;
+      width: min(340px, 90%);
+      background: rgba(4, 22, 19, 0.88);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--border-md);
+      border-radius: var(--r-lg);
+      padding: 18px 20px;
+      box-shadow: 0 24px 60px rgba(0,0,0,0.5),
+                  0 0 30px rgba(34, 197, 94, 0.15);
+      transform: rotate(-3deg);
+      animation: card-float 5s ease-in-out infinite;
+    }
+    @keyframes card-float {
+      0%, 100% { transform: rotate(-3deg) translateY(0); }
+      50% { transform: rotate(-3deg) translateY(-6px); }
+    }
+    .ticket-card__head {
+      display: flex; justify-content: space-between; align-items: baseline;
+      margin-bottom: 12px;
+      font-size: 13px;
+    }
+    .ticket-card__label {
+      font-weight: 700;
+      color: var(--text);
+      font-size: 17px;
+      letter-spacing: -0.01em;
+      font-variant-numeric: tabular-nums;
+    }
+    .ticket-card__code {
+      color: var(--text-muted);
+      font-family: 'JetBrains Mono', 'Menlo', ui-monospace, monospace;
       font-size: 11px;
-      color: var(--text-dim);
-      font-weight: 500;
-      margin-left: 4px;
+      letter-spacing: 0.06em;
     }
+    .ticket-card__grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+    .ticket-card__num {
+      display: grid; place-items: center;
+      padding: 6px 4px;
+      background: var(--brand-soft);
+      border: 1px solid var(--border-md);
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--brand-glow);
+      font-variant-numeric: tabular-nums;
+    }
+    .ticket-card__foot {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-align: center;
+      padding-top: 10px;
+      border-top: 1px dashed var(--border-md);
+    }
+
+    /* ============================================================
+       STATSBAR
+       ============================================================ */
+    .statsbar-wrap { padding: 24px 0; }
+    .statsbar {
+      display: grid;
+      grid-template-columns: repeat(3, auto) 1fr auto;
+      gap: 24px;
+      align-items: center;
+      padding: 20px 24px;
+      background: rgba(10, 49, 38, 0.55);
+      border: 1px solid var(--border);
+      border-radius: var(--r-lg);
+      backdrop-filter: blur(10px);
+    }
+    @media (max-width: 1080px) {
+      .statsbar {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+      }
+    }
+    @media (max-width: 640px) {
+      .statsbar { grid-template-columns: 1fr; gap: 16px; padding: 16px; }
+    }
+
+    .statsbar__stat {
+      display: flex; align-items: center; gap: 12px;
+    }
+    .stat-icon {
+      display: grid; place-items: center;
+      width: 42px; height: 42px;
+      background: var(--brand-soft);
+      border: 1px solid var(--border-md);
+      border-radius: 12px;
+      color: var(--brand-glow);
+    }
+    .stat-icon .material-icons-outlined { font-size: 22px; }
+    .stat-value {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      font-variant-numeric: tabular-nums;
+      color: var(--text);
+      line-height: 1;
+    }
+    .stat-label {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    .statsbar__progress {
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .statsbar__progress-pct {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .statsbar__progress-track {
+      height: 8px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+    .statsbar__progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #22c55e 0%, #4ade80 100%);
+      border-radius: 999px;
+      box-shadow: 0 0 12px rgba(34, 197, 94, 0.6);
+      transition: width 400ms ease;
+    }
+    .statsbar__progress-note {
+      font-size: 12px;
+      color: var(--brand-glow);
+      font-weight: 500;
+    }
+
+    .statsbar__countdown {
+      display: flex; flex-direction: column; align-items: flex-end; gap: 6px;
+    }
+    .cd-title {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+    .cd-values {
+      display: flex; align-items: baseline; gap: 6px;
+    }
+    .cd-unit {
+      display: flex; flex-direction: column; align-items: center;
+      min-width: 40px;
+    }
+    .cd-unit span {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      font-variant-numeric: tabular-nums;
+      color: var(--text);
+      line-height: 1;
+    }
+    .cd-unit small {
+      font-size: 10px;
+      color: var(--text-muted);
+      margin-top: 4px;
+      font-weight: 500;
+    }
+    .cd-sep {
+      color: var(--brand-glow);
+      font-size: 20px;
+      font-weight: 800;
+      align-self: center;
+      transform: translateY(-4px);
+    }
+
+    /* ============================================================
+       SECTIONS
+       ============================================================ */
+    .section { padding: 64px 0; }
+    @media (max-width: 720px) { .section { padding: 48px 0; } }
+    .section--how { padding-top: 40px; }
+    .section--picker { padding-top: 24px; padding-bottom: 100px; position: relative; }
+
+    .h-section {
+      margin: 0 0 8px;
+      font-size: clamp(24px, 3vw, 34px);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.15;
+      color: var(--text);
+    }
+    .section-head { max-width: 640px; margin-bottom: 32px; }
+    .section-head-row {
+      display: flex; justify-content: space-between; align-items: flex-end;
+      gap: 20px; margin-bottom: 28px; flex-wrap: wrap;
+    }
+    .section-head-row h2 { margin-bottom: 4px; }
+
+    .link-arrow {
+      display: inline-flex; align-items: center; gap: 6px;
+      color: var(--brand-glow);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+    }
+    .link-arrow .material-icons-outlined { font-size: 16px; }
+    .link-arrow:hover { color: #6ee7b7; }
+
+    /* ============================================================
+       PREMIOS
+       ============================================================ */
+    .prizes-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+    }
+    .prize-card {
+      position: relative;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--r-lg);
+      padding: 20px;
+      backdrop-filter: blur(6px);
+      transition: transform var(--t-med), border-color var(--t-med);
+    }
+    .prize-card:hover {
+      transform: translateY(-3px);
+      border-color: var(--border-str);
+    }
+    .prize-card--top {
+      background:
+        radial-gradient(ellipse at top, rgba(34, 197, 94, 0.15) 0%, transparent 60%),
+        var(--card);
+      border-color: rgba(34, 197, 94, 0.45);
+      box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.15),
+                  0 20px 40px rgba(34, 197, 94, 0.1);
+    }
+    .prize-card__num {
+      display: inline-block;
+      padding: 4px 10px;
+      background: var(--brand-soft);
+      color: var(--brand-glow);
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      margin-bottom: 14px;
+    }
+    .prize-card__media {
+      display: grid; place-items: center;
+      aspect-ratio: 4 / 3;
+      background:
+        radial-gradient(circle at center, rgba(34, 197, 94, 0.06) 0%, transparent 60%),
+        var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r-md);
+      margin-bottom: 16px;
+      overflow: hidden;
+    }
+    .prize-card__media img {
+      max-width: 100%; max-height: 100%;
+      object-fit: contain;
+      transition: transform 400ms cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .prize-card:hover .prize-card__media img { transform: scale(1.05); }
+    .prize-card__emoji { font-size: 56px; line-height: 1; }
+    .prize-card__body h3 {
+      margin: 0 0 4px;
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      color: var(--text);
+    }
+    .prize-card__body p { margin: 0; font-size: 13px; }
+
+    /* ============================================================
+       ¿CÓMO PARTICIPAR?
+       ============================================================ */
+    .how-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 24px;
+    }
+    @media (max-width: 900px) { .how-grid { grid-template-columns: repeat(2, 1fr); gap: 32px 20px; } }
+    @media (max-width: 540px) { .how-grid { grid-template-columns: 1fr; } }
+
+    .how-step { text-align: center; position: relative; }
+    .how-step__icon-wrap {
+      position: relative;
+      display: grid; place-items: center;
+      margin-bottom: 40px;
+    }
+    .how-step__icon {
+      display: grid; place-items: center;
+      width: 76px; height: 76px;
+      background: var(--brand-soft);
+      border: 2px solid var(--border-md);
+      border-radius: 50%;
+      color: var(--brand-glow);
+      box-shadow: 0 8px 20px rgba(34, 197, 94, 0.15);
+      transition: transform var(--t-med), border-color var(--t-med);
+    }
+    .how-step:hover .how-step__icon {
+      transform: translateY(-3px);
+      border-color: var(--brand);
+    }
+    .how-step__icon .material-icons-outlined { font-size: 32px; }
+    .how-step__connector {
+      position: absolute;
+      top: 50%;
+      left: calc(50% + 42px);
+      width: calc(100% + 24px - 84px);
+      height: 2px;
+      background: repeating-linear-gradient(
+        to right,
+        var(--border-md) 0 4px,
+        transparent 4px 10px);
+    }
+    @media (max-width: 900px) { .how-step__connector { display: none; } }
+    .how-step__num {
+      display: inline-block;
+      margin-bottom: 10px;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--brand-glow);
+      letter-spacing: 0.05em;
+    }
+    .how-step h3 {
+      margin: 0 0 6px;
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      color: var(--text);
+    }
+    .how-step p { margin: 0; font-size: 13px; line-height: 1.55; }
+
+    /* ============================================================
+       SELECTOR / GRID de boletas
+       ============================================================ */
+    .legend {
+      display: flex; flex-wrap: wrap; gap: 8px;
+    }
+    .legend__item {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 6px 10px;
+      background: rgba(10, 49, 38, 0.4);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+    .dot { width: 8px; height: 8px; border-radius: 3px; }
+    .dot--free { background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); }
+    .dot--sel { background: var(--brand); box-shadow: 0 0 6px var(--brand); }
+    .dot--res { background: var(--amber); }
+    .dot--sold { background: var(--red); opacity: 0.5; }
+
+    /* Search inline */
+    .search {
+      display: flex; align-items: center; gap: 8px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--r-md);
+      padding: 6px 6px 6px 14px;
+      margin-bottom: 20px;
+      transition: border-color var(--t-fast), box-shadow var(--t-fast);
+      backdrop-filter: blur(6px);
+    }
+    .search:focus-within {
+      border-color: var(--brand);
+      box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.14);
+    }
+    .search__icon { color: var(--text-dim); font-size: 20px; }
+    .search__input {
+      flex: 1; background: transparent; border: none;
+      color: var(--text);
+      font-size: 15px;
+      padding: 10px 4px;
+      outline: none;
+      font-family: inherit;
+      font-variant-numeric: tabular-nums;
+      -webkit-appearance: none; appearance: none; -moz-appearance: textfield;
+    }
+    .search__input::-webkit-outer-spin-button,
+    .search__input::-webkit-inner-spin-button {
+      -webkit-appearance: none; margin: 0;
+    }
+    .search__input::placeholder { color: var(--text-dim); }
+
+    .search-result {
+      display: flex; align-items: flex-start; gap: 14px;
+      padding: 16px 18px; margin-bottom: 20px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--r-md);
+      position: relative;
+    }
+    .search-result[data-status="available"] { border-color: rgba(34, 197, 94, 0.4); }
+    .search-result[data-status="available"] .search-result__icon { color: var(--brand-glow); }
+    .search-result[data-status="sold"] { border-color: rgba(239, 68, 68, 0.4); }
+    .search-result[data-status="sold"] .search-result__icon { color: var(--red); }
+    .search-result[data-status="reserved"] { border-color: rgba(245, 158, 11, 0.4); }
+    .search-result[data-status="reserved"] .search-result__icon { color: var(--amber); }
+    .search-result[data-status="assigned"] { border-color: rgba(59, 130, 246, 0.4); }
+    .search-result[data-status="assigned"] .search-result__icon { color: var(--blue); }
+    .search-result__icon { font-size: 22px; margin-top: 2px; flex-shrink: 0; }
+    .search-result__body { flex: 1; min-width: 0; }
+    .search-result__body strong { display: block; font-size: 14px; margin-bottom: 4px; }
+    .search-result__body p { margin: 0; font-size: 13px; color: var(--text-muted); }
+    .search-result__actions { display: flex; gap: 8px; flex-shrink: 0; }
+    .search-result__close {
+      background: transparent; border: none;
+      color: var(--text-dim); cursor: pointer;
+      padding: 4px; border-radius: 6px;
+      display: grid; place-items: center;
+    }
+    .search-result__close:hover { color: var(--text); background: rgba(255,255,255,0.06); }
+    .search-result__close .material-icons-outlined { font-size: 18px; }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+      gap: 8px;
+    }
+    .grid--skeleton { pointer-events: none; }
+
+    .ticket {
+      position: relative;
+      display: flex; align-items: center; justify-content: center;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--r-md);
+      padding: 16px 8px;
+      font-family: inherit;
+      color: var(--text);
+      font-weight: 600; font-size: 15px;
+      font-variant-numeric: tabular-nums;
+      cursor: pointer;
+      transition: transform var(--t-fast), background var(--t-fast),
+                  border-color var(--t-fast), box-shadow var(--t-fast);
+      overflow: hidden;
+      backdrop-filter: blur(4px);
+    }
+    .ticket__number { position: relative; z-index: 1; }
+    .ticket__check {
+      position: absolute; top: 6px; right: 6px;
+      color: #041613;
+      font-size: 14px;
+      background: var(--brand);
+      border-radius: 50%;
+      width: 18px; height: 18px;
+      display: grid; place-items: center;
+      z-index: 2;
+    }
+    .ticket--available:hover {
+      background: rgba(34, 197, 94, 0.08);
+      border-color: var(--border-str);
+      transform: translateY(-1px);
+    }
+    .ticket--selected {
+      background: linear-gradient(180deg, rgba(34, 197, 94, 0.22) 0%, rgba(34, 197, 94, 0.1) 100%);
+      border-color: var(--brand);
+      color: var(--text);
+      box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.14);
+    }
+    .ticket--selected:hover { background: rgba(34, 197, 94, 0.28); }
+    .ticket--pulse { animation: ticket-pulse 1.4s ease-in-out 2; }
+    @keyframes ticket-pulse {
+      0%, 100% { transform: scale(1); box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.14); }
+      50% { transform: scale(1.06); box-shadow: 0 0 0 8px rgba(34, 197, 94, 0.22); }
+    }
+    .ticket--skeleton {
+      background: linear-gradient(90deg, var(--surface) 0%, var(--surface-2) 50%, var(--surface) 100%);
+      background-size: 200% 100%;
+      animation: skel 1.4s linear infinite;
+      height: 54px;
+      cursor: default;
+    }
+    @keyframes skel { to { background-position: -200% 0; } }
+
+    .empty {
+      text-align: center; padding: 80px 20px;
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--r-lg);
+    }
+    .empty__icon { font-size: 44px; color: var(--text-dim); margin-bottom: 12px; display: block; }
+    .empty h3 { margin: 0 0 6px; font-size: 17px; font-weight: 600; }
+    .empty p { margin: 0; font-size: 14px; }
+
+    /* Bottom bar sticky con selección */
+    .picker__bar {
+      position: sticky; bottom: 16px; z-index: 30;
+      margin-top: 32px; padding: 0 24px;
+    }
+    .picker__bar-inner {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 20px;
+      padding: 16px 20px;
+      background: rgba(8, 40, 32, 0.88);
+      backdrop-filter: saturate(180%) blur(20px);
+      -webkit-backdrop-filter: saturate(180%) blur(20px);
+      border: 1px solid var(--border-str);
+      border-radius: var(--r-lg);
+      box-shadow: var(--shadow-lg);
+    }
+    .picker__bar-info { display: flex; flex-direction: column; gap: 2px; }
+    .picker__bar-count { font-size: 13px; color: var(--text-muted); font-weight: 500; }
+    .picker__bar-total { font-size: 17px; font-weight: 600; }
+    .picker__bar-total strong { color: var(--brand-glow); font-weight: 800; }
+
+    /* ============================================================
+       FEATURES
+       ============================================================ */
+    .features-wrap { padding: 40px 0 20px; }
+    .features {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+      padding: 24px;
+      background: rgba(10, 49, 38, 0.4);
+      border: 1px solid var(--border);
+      border-radius: var(--r-lg);
+      backdrop-filter: blur(6px);
+    }
+    @media (max-width: 900px) { .features { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 540px) { .features { grid-template-columns: 1fr; } }
+    .feature {
+      display: flex; gap: 14px; align-items: flex-start;
+    }
+    .feature__icon {
+      display: grid; place-items: center;
+      width: 44px; height: 44px;
+      background: var(--brand-soft);
+      border: 1px solid var(--border-md);
+      border-radius: 50%;
+      color: var(--brand-glow);
+      flex-shrink: 0;
+    }
+    .feature__icon .material-icons-outlined { font-size: 22px; }
+    .feature h3 { margin: 0 0 4px; font-size: 14px; font-weight: 700; }
+    .feature p { margin: 0; font-size: 12.5px; line-height: 1.5; }
+
+    /* ============================================================
+       FAQ
+       ============================================================ */
+    .faq { display: flex; flex-direction: column; gap: 8px; }
+    .faq__item {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--r-md);
+      overflow: hidden;
+      transition: border-color var(--t-fast);
+      backdrop-filter: blur(6px);
+    }
+    .faq__item:hover, .faq__item[open] { border-color: var(--border-md); }
+    .faq__q {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 18px 22px;
+      cursor: pointer;
+      font-size: 15px;
+      font-weight: 500;
+      list-style: none;
+      user-select: none;
+      color: var(--text);
+    }
+    .faq__q::-webkit-details-marker { display: none; }
+    .faq__chev {
+      font-size: 20px;
+      color: var(--text-muted);
+      transition: transform var(--t-med), color var(--t-med);
+    }
+    .faq__item[open] .faq__chev { transform: rotate(180deg); color: var(--brand-glow); }
+    .faq__a {
+      padding: 0 22px 20px;
+      color: var(--text-muted);
+      font-size: 14px;
+      line-height: 1.65;
+    }
+    .faq__a p { margin: 0; }
+
+    /* ============================================================
+       FOOTER
+       ============================================================ */
+    .foot {
+      margin-top: auto;
+      padding: 32px 0;
+      border-top: 1px solid var(--border);
+    }
+    .foot__inner {
+      display: flex; justify-content: space-between; align-items: center;
+      gap: 14px; flex-wrap: wrap;
+      font-size: 13px; color: var(--text-muted);
+    }
+    .foot__brand {
+      display: inline-flex; align-items: center; gap: 8px;
+      color: var(--text); font-weight: 700;
+    }
+    .foot__meta { display: inline-flex; gap: 8px; flex-wrap: wrap; }
+    .foot__sep { color: var(--text-dim); }
+
+    /* ============================================================
+       WhatsApp FAB
+       ============================================================ */
+    .whatsapp-fab {
+      position: fixed;
+      bottom: 24px; right: 24px;
+      z-index: 50;
+      display: grid; place-items: center;
+      width: 56px; height: 56px;
+      background: #25d366;
+      color: #fff;
+      border-radius: 50%;
+      text-decoration: none;
+      box-shadow: 0 12px 24px rgba(37, 211, 102, 0.4),
+                  0 0 0 3px rgba(255,255,255,0.06);
+      transition: transform var(--t-fast), box-shadow var(--t-fast);
+    }
+    .whatsapp-fab:hover {
+      transform: translateY(-2px) scale(1.05);
+      box-shadow: 0 16px 32px rgba(37, 211, 102, 0.55);
+    }
+    @media (max-width: 720px) {
+      .whatsapp-fab { bottom: 90px; right: 16px; width: 50px; height: 50px; }
+    }
+
+    /* ============================================================
+       PILLS + FORMS + MODALES
+       ============================================================ */
+    .pill {
+      display: inline-flex; align-items: center;
+      padding: 4px 10px;
+      background: var(--brand-soft);
+      color: var(--brand-glow);
+      border: 1px solid var(--border-md);
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .form { display: flex; flex-direction: column; gap: 16px; margin-top: 24px; }
+    .field { display: flex; flex-direction: column; gap: 6px; }
+    .field__label { font-size: 12px; font-weight: 600; color: var(--text-muted); letter-spacing: 0.02em; }
+    .field__label small { font-size: 11px; color: var(--text-dim); font-weight: 500; margin-left: 4px; }
     .input {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -1531,8 +1664,8 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
     }
     .input::placeholder { color: var(--text-dim); }
     .input:focus {
-      border-color: var(--gold);
-      box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.14);
+      border-color: var(--brand);
+      box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.14);
     }
     .input:-webkit-autofill,
     .input:-webkit-autofill:hover,
@@ -1543,19 +1676,12 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
     }
 
     .or {
-      display: flex;
-      align-items: center;
-      gap: 12px;
+      display: flex; align-items: center; gap: 12px;
       margin: 4px 0;
       color: var(--text-dim);
       font-size: 12px;
     }
-    .or::before, .or::after {
-      content: '';
-      flex: 1;
-      height: 1px;
-      background: var(--border);
-    }
+    .or::before, .or::after { content: ''; flex: 1; height: 1px; background: var(--border); }
 
     .alert {
       display: flex; align-items: center; gap: 10px;
@@ -1568,29 +1694,23 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
     }
     .alert .material-icons-outlined { font-size: 18px; }
 
-    /* ============================================================
-       MODAL
-       ============================================================ */
     .modal {
       position: fixed; inset: 0;
       background: rgba(0, 0, 0, 0.7);
       backdrop-filter: blur(8px);
       -webkit-backdrop-filter: blur(8px);
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      display: flex; align-items: center; justify-content: center;
       padding: 20px;
       z-index: 100;
       animation: fadeIn 200ms ease;
     }
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     .modal__card {
-      background: var(--card);
-      border: 1px solid var(--border);
+      background: var(--surface-2);
+      border: 1px solid var(--border-md);
       border-radius: var(--r-xl);
       padding: 28px;
-      max-width: 480px;
-      width: 100%;
+      max-width: 480px; width: 100%;
       max-height: 92vh;
       overflow-y: auto;
       box-shadow: var(--shadow-lg);
@@ -1603,24 +1723,17 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
     }
     .modal__head {
       display: flex; justify-content: space-between; align-items: flex-start;
-      gap: 16px;
-      margin-bottom: 20px;
+      gap: 16px; margin-bottom: 20px;
     }
     .modal__head h2 { margin: 8px 0 4px; font-size: 22px; font-weight: 700; letter-spacing: -0.02em; }
     .modal__head p { margin: 0; font-size: 13px; }
     .modal__actions {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      margin-top: 20px;
-      padding-top: 20px;
+      display: flex; flex-direction: column; gap: 10px;
+      margin-top: 20px; padding-top: 20px;
       border-top: 1px solid var(--border);
     }
-
-    /* ============ Preview ticket ============ */
     .preview-ticket {
-      display: flex;
-      justify-content: center;
+      display: flex; justify-content: center;
       padding: 8px 0;
     }
   `],
@@ -1651,37 +1764,24 @@ export class PublicPurchaseComponent implements OnInit, OnDestroy {
   previewData = signal<PublicTicketDetail | null>(null);
   previewTicketId = signal<number | null>(null);
 
-  // Countdown reactivo — se actualiza cada segundo
   countdown = signal<{ days: string; hours: string; minutes: string; seconds: string } | null>(null);
   private countdownInterval: ReturnType<typeof setInterval> | null = null;
 
   skeletonRange = Array.from({ length: 30 }, (_, i) => i);
 
   faq = [
-    {
-      q: '¿Cómo garantizan la transparencia del sorteo?',
-      a: 'El sorteo se realiza con la lotería oficial anunciada en la rifa. Los números y fechas quedan registrados en la plataforma antes del sorteo y son verificables públicamente con el QR de cada boleta.',
-    },
-    {
-      q: '¿Qué métodos de pago aceptan?',
-      a: 'Nequi, PSE, Bancolombia y tarjeta de crédito/débito a través de Wompi. También transferencia manual con comprobante que el organizador aprueba en menos de 24 horas.',
-    },
-    {
-      q: '¿Cuánto tiempo tengo para pagar mi boleta reservada?',
-      a: 'Al elegir una boleta la reservamos por 24 horas. Recibirás un recordatorio antes de que expire. Si no pagas, la boleta vuelve a estar disponible para otros compradores.',
-    },
-    {
-      q: '¿Cómo sabré si gané?',
-      a: 'Después del sorteo te notificamos por correo electrónico y WhatsApp automáticamente. También puedes verificar el resultado desde el enlace de tu boleta.',
-    },
-    {
-      q: '¿Mis datos personales están seguros?',
-      a: 'Sí. Solo pedimos la información mínima para entregarte el premio si ganas. No compartimos tu información con terceros ni la usamos para publicidad.',
-    },
-    {
-      q: '¿Puedo comprar varias boletas?',
-      a: 'Sí, puedes seleccionar hasta 10 boletas por compra. Si quieres más, puedes hacer múltiples compras.',
-    },
+    { q: '¿Cómo garantizan la transparencia del sorteo?',
+      a: 'El sorteo se realiza con la lotería oficial anunciada en la rifa. Los números y fechas quedan registrados en la plataforma antes del sorteo y son verificables públicamente con el QR de cada boleta.' },
+    { q: '¿Qué métodos de pago aceptan?',
+      a: 'Nequi, PSE, Bancolombia y tarjeta de crédito/débito a través de Wompi. También transferencia manual con comprobante que el organizador aprueba en menos de 24 horas.' },
+    { q: '¿Cuánto tiempo tengo para pagar mi boleta reservada?',
+      a: 'Al elegir una boleta la reservamos por 24 horas. Recibirás un recordatorio antes de que expire. Si no pagas, la boleta vuelve a estar disponible para otros compradores.' },
+    { q: '¿Cómo sabré si gané?',
+      a: 'Después del sorteo te notificamos por correo electrónico y WhatsApp automáticamente. También puedes verificar el resultado desde el enlace de tu boleta.' },
+    { q: '¿Mis datos personales están seguros?',
+      a: 'Sí. Solo pedimos la información mínima para entregarte el premio si ganas. No compartimos tu información con terceros ni la usamos para publicidad.' },
+    { q: '¿Puedo comprar varias boletas?',
+      a: 'Sí, puedes seleccionar hasta 10 boletas por compra. Si quieres más, puedes hacer múltiples compras.' },
   ];
 
   form = {
@@ -1702,13 +1802,16 @@ export class PublicPurchaseComponent implements OnInit, OnDestroy {
 
   selectedLabels = computed(() => {
     const set = this.selected();
-    return this.available()
-      .filter((t) => set.has(t.id))
-      .map((t) => t.number_label)
-      .join(', ');
+    return this.available().filter((t) => set.has(t.id))
+      .map((t) => t.number_label).join(', ');
   });
 
   availableCount = computed(() => this.available().length);
+  soldCount = computed(() => {
+    const r = this.overview();
+    if (!r) return 0;
+    return Math.round((r.total_tickets * r.sold_pct) / 100);
+  });
 
   searchPlaceholder = computed(() => {
     const r = this.overview();
@@ -1723,17 +1826,44 @@ export class PublicPurchaseComponent implements OnInit, OnDestroy {
     return [...r.prizes].sort((a, b) => a.position - b.position)[0].name;
   });
 
+  /** Un ticket de muestra para la card flotante del hero. Toma el primer
+   *  ticket disponible del pool si existe; si no, genera uno decorativo. */
+  sampleTicket = computed(() => {
+    const first = this.available()[0];
+    if (first) {
+      return {
+        label: first.number_label,
+        code: first.code,
+        numbers: this.generateSampleNumbers(first.id),
+      };
+    }
+    return {
+      label: '042',
+      code: 'NF5-Q8F-MBY',
+      numbers: ['0421', '1837', '2604', '3719', '4250', '5183', '6042', '7271', '8540', '9617'],
+    };
+  });
+
+  private generateSampleNumbers(seed: number): string[] {
+    const nums: string[] = [];
+    let s = seed;
+    for (let i = 0; i < 10; i++) {
+      s = (s * 9301 + 49297) % 233280;
+      const v = Math.floor((s / 233280) * 10000);
+      nums.push(String(v).padStart(4, '0'));
+    }
+    return nums;
+  }
+
   previewTicket = computed(() => {
     const pd = this.previewData();
     if (!pd) return null;
     return {
-      id: 0,
-      raffle_id: pd.raffle.id,
+      id: 0, raffle_id: pd.raffle.id,
       number_label: pd.ticket.label,
       code: pd.ticket.code,
       status: 'available' as const,
-      seller_id: null,
-      customer_id: null,
+      seller_id: null, customer_id: null,
       numbers: pd.ticket.numbers.map((n, idx) => ({ number: n, position: idx })),
     };
   });
@@ -1742,12 +1872,37 @@ export class PublicPurchaseComponent implements OnInit, OnDestroy {
     const pd = this.previewData();
     if (!pd) return [];
     return pd.prizes.map((p, idx) => ({
-      position: idx + 1,
-      name: p.name,
-      draw_date: p.draw_date,
-      winning_number: p.winning_number,
+      position: idx + 1, name: p.name,
+      draw_date: p.draw_date, winning_number: p.winning_number,
     }));
   });
+
+  whatsappHref = computed(() => {
+    const r = this.overview();
+    const phone = r?.lottery_name ? '573135487605' : '573135487605';
+    const raffleName = r?.name ?? 'la rifa';
+    const msg = `Hola, quiero saber más sobre la rifa "${raffleName}".`;
+    return `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
+  });
+
+  prizeEmoji(name: string): string {
+    const n = (name || '').toLowerCase();
+    if (!n) return '🏆';
+    if (/(televisor|tele\b|\btv\b|pantalla|smart tv)/.test(n)) return '📺';
+    if (/(moto|scooter|motocicleta)/.test(n)) return '🏍️';
+    if (/(carro|auto\b|vehículo|camioneta)/.test(n)) return '🚗';
+    if (/(celular|iphone|samsung|smartphone|teléfono)/.test(n)) return '📱';
+    if (/(nevera|refrigerador)/.test(n)) return '🧊';
+    if (/(lavadora)/.test(n)) return '🧺';
+    if (/(bono|efectivo|dinero|plata|cash)/.test(n)) return '💵';
+    if (/(portátil|computador|laptop|pc\b|notebook)/.test(n)) return '💻';
+    if (/(bicicleta|bici)/.test(n)) return '🚴';
+    if (/(mercado|canasta)/.test(n)) return '🛒';
+    if (/(consola|ps5|xbox|nintendo)/.test(n)) return '🎮';
+    if (/(reloj|smartwatch|airpods|audífonos)/.test(n)) return '⌚';
+    if (/(cámara|camara)/.test(n)) return '📷';
+    return '🎁';
+  }
 
   ngOnInit(): void {
     const id = Number(this.route.snapshot.paramMap.get('id'));
@@ -1759,9 +1914,7 @@ export class PublicPurchaseComponent implements OnInit, OnDestroy {
     this.raffleId = id;
 
     const ref = this.route.snapshot.queryParamMap.get('ref');
-    if (ref) {
-      try { localStorage.setItem('boletera_referral_code', ref); } catch {}
-    }
+    if (ref) { try { localStorage.setItem('boletera_referral_code', ref); } catch {} }
 
     this.svc.overview(id).subscribe({
       next: (r) => {
@@ -1782,12 +1935,9 @@ export class PublicPurchaseComponent implements OnInit, OnDestroy {
   }
 
   private startCountdown(r: PublicRaffleOverview) {
-    // Solo mostramos el countdown si la fecha está pública (threshold alcanzado o programada)
     if (!r.show_draw_date || !r.final_draw_date) return;
-
     const target = new Date(r.final_draw_date + (r.final_draw_date.length === 10 ? 'T20:00:00' : '')).getTime();
     if (isNaN(target)) return;
-
     const tick = () => {
       const now = Date.now();
       const diff = target - now;
@@ -1796,15 +1946,11 @@ export class PublicPurchaseComponent implements OnInit, OnDestroy {
         if (this.countdownInterval) clearInterval(this.countdownInterval);
         return;
       }
-      const days = Math.floor(diff / 86400000);
-      const hours = Math.floor((diff % 86400000) / 3600000);
-      const minutes = Math.floor((diff % 3600000) / 60000);
-      const seconds = Math.floor((diff % 60000) / 1000);
       this.countdown.set({
-        days: String(days).padStart(2, '0'),
-        hours: String(hours).padStart(2, '0'),
-        minutes: String(minutes).padStart(2, '0'),
-        seconds: String(seconds).padStart(2, '0'),
+        days: String(Math.floor(diff / 86400000)).padStart(2, '0'),
+        hours: String(Math.floor((diff % 86400000) / 3600000)).padStart(2, '0'),
+        minutes: String(Math.floor((diff % 3600000) / 60000)).padStart(2, '0'),
+        seconds: String(Math.floor((diff % 60000) / 1000)).padStart(2, '0'),
       });
     };
     tick();
@@ -1911,12 +2057,8 @@ export class PublicPurchaseComponent implements OnInit, OnDestroy {
     this.scrollToTicket(ticketId);
   }
 
-  scrollToGrid() {
-    document.getElementById('grid-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }
-
-  scrollToPrizes() {
-    document.getElementById('prizes-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  scrollTo(id: string) {
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   private scrollToTicket(ticketId: number) {
@@ -1940,10 +2082,8 @@ export class PublicPurchaseComponent implements OnInit, OnDestroy {
     if (this.submitting()) return;
     this.submitError.set(null);
     this.submitting.set(true);
-
     let referralCode: string | undefined;
     try { referralCode = localStorage.getItem('boletera_referral_code') || undefined; } catch {}
-
     const ticket_ids = Array.from(this.selected());
     this.svc.checkout(this.raffleId, {
       ticket_ids,
@@ -1986,5 +2126,15 @@ export class PublicPurchaseComponent implements OnInit, OnDestroy {
     const d = new Date(iso.length === 10 ? iso + 'T12:00:00' : iso);
     if (isNaN(d.getTime())) return iso;
     return d.toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' });
+  }
+
+  formatDateShort(iso: string): string {
+    if (!iso) return '';
+    const d = new Date(iso.length === 10 ? iso + 'T12:00:00' : iso);
+    if (isNaN(d.getTime())) return iso;
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    return `${day}/${month}/${year}`;
   }
 }
