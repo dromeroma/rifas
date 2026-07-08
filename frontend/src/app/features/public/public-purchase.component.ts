@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import {
-  ChangeDetectionStrategy, Component, OnInit, computed, inject, signal,
+  ChangeDetectionStrategy, Component, OnDestroy, OnInit,
+  computed, inject, signal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -12,25 +13,24 @@ import {
   PublicTicketDetail,
   TicketLookup,
 } from '@core/services/public-sales.service';
-import { ThemeService } from '@core/services/theme.service';
 import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-design.component';
 
 /**
- * Portal PÚBLICO de compra online de boletas — v3 premium.
+ * Portal PÚBLICO de compra online — v4 SaaS premium.
  *
- * Estructura visual (storytelling):
- *   1. Hero full-bleed con TV protagonista (imagen grande + halo + partículas)
- *   2. Grid de premios como cards prominentes
- *   3. Cómo funciona (3 pasos visuales)
- *   4. Buscador por número
- *   5. Grid de boletas con preview modal (ver diseño real antes de reservar)
- *   6. Footer con marca
+ * Estilo: dark theme fijo (#0B0B0D), inspirado en Linear / Stripe / Vercel.
+ * Tipografía Inter, acento dorado #D4AF37 solo en CTA y estados activos.
+ * Selector de boletas como componente protagonista.
  *
- * Flujo compra:
- *   - Cliente explora sin compromiso (click en boleta → preview del diseño)
- *   - Desde el preview: "Reservar y pagar" pre-selecciona esa boleta y abre checkout
- *   - O selecciona varias en el grid → "Continuar al pago" → modal formulario
- *   - Wompi (si configurado) o transferencia manual (comprobante)
+ * Estructura:
+ *   Topbar (brand + estado rifa)
+ *   Hero balanceado (contenido + product card compact)
+ *   Countdown timer
+ *   Selector protagonista con 4 estados (available/selected/reserved/sold)
+ *   Grid de premios (cards uniformes)
+ *   Pasos (3 cards simples con iconos)
+ *   FAQ (acordeón nativo)
+ *   Footer minimal
  */
 @Component({
   selector: 'app-public-purchase',
@@ -38,387 +38,423 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
   imports: [CommonModule, FormsModule, RouterLink, TicketDesignComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <main class="page">
+    <div class="app">
       @if (loading()) {
-        <section class="state">
-          <div class="spinner"></div>
-          <p>Cargando rifa...</p>
-        </section>
+        <div class="page-loader">
+          <div class="page-loader__spinner"></div>
+        </div>
       } @else if (error()) {
-        <section class="state state--err">
-          <h2>Rifa no encontrada</h2>
-          <p>{{ error() }}</p>
-          <a routerLink="/" class="btn">Volver al inicio</a>
-        </section>
+        <div class="page-loader">
+          <p class="muted">{{ error() }}</p>
+          <a routerLink="/" class="btn btn--ghost">Volver al inicio</a>
+        </div>
       } @else if (overview(); as r) {
 
-        <!-- Toggle claro/oscuro flotante -->
-        <button class="theme-toggle" type="button"
-                (click)="theme.toggle()"
-                [attr.aria-label]="theme.isDark() ? 'Modo claro' : 'Modo oscuro'"
-                [title]="theme.isDark() ? 'Modo claro' : 'Modo oscuro'">
-          <span class="material-icons">{{ theme.isDark() ? 'light_mode' : 'dark_mode' }}</span>
-        </button>
-
-        <!-- ============ HERO FULL-BLEED ============ -->
-        <section class="hero">
-          <div class="hero__bg">
-            <div class="hero__mesh"></div>
-            <div class="hero__spotlight"></div>
-            <div class="hero__stars">
-              @for (i of [1,2,3,4,5,6,7,8,9,10,11,12]; track i) {
-                <span></span>
-              }
+        <!-- ============ TOPBAR ============ -->
+        <header class="topbar">
+          <div class="topbar__inner">
+            <a routerLink="/" class="brand">
+              <span class="brand__dot"></span>
+              <span class="brand__name">Boletera</span>
+            </a>
+            <div class="topbar__actions">
+              <span class="badge badge--live">
+                <span class="badge__pulse"></span>
+                Rifa activa
+              </span>
             </div>
           </div>
+        </header>
 
-          <div class="hero__inner">
-            <div class="hero__text">
-              <div class="badge">
-                <span class="badge__dot"></span>
-                <span>Rifa activa</span>
-                @if (r.prizes.length) {
-                  <span class="badge__sep">·</span>
-                  <span>{{ r.prizes.length }} premios</span>
+        <!-- ============ HERO ============ -->
+        <section class="hero">
+          <div class="container hero__grid">
+            <div class="hero__content">
+              <div class="hero__meta">
+                <span class="pill">
+                  {{ r.prizes.length }} premios
+                </span>
+                @if (r.show_draw_date && r.final_draw_date) {
+                  <span class="pill pill--muted">
+                    <span class="material-icons-outlined">event</span>
+                    Sorteo {{ formatDate(r.final_draw_date) }}
+                  </span>
                 }
               </div>
 
-              <h1 class="hero__title">{{ r.name }}</h1>
+              <h1 class="h-display">{{ r.name }}</h1>
 
               @if (r.description) {
-                <p class="hero__desc">{{ r.description }}</p>
+                <p class="h-lead">{{ r.description }}</p>
+              } @else {
+                <p class="h-lead">
+                  Compra tu boleta digital. Transparencia total, verificación pública
+                  y notificación instantánea.
+                </p>
               }
 
-              @if (r.public_welcome_message) {
-                <div class="welcome">
-                  <span class="material-icons">campaign</span>
-                  <p>{{ r.public_welcome_message }}</p>
-                </div>
-              }
-
-              <div class="hero__stats">
+              <div class="stats">
                 <div class="stat">
-                  <strong>\${{ formatNumber(r.ticket_price) }}</strong>
-                  <small>por boleta</small>
+                  <div class="stat__value">\${{ formatNumber(r.ticket_price) }}</div>
+                  <div class="stat__label">Precio por boleta</div>
                 </div>
+                <div class="stat__sep"></div>
                 <div class="stat">
-                  <strong>{{ r.sold_pct }}%</strong>
-                  <small>vendido</small>
+                  <div class="stat__value">{{ r.total_tickets }}</div>
+                  <div class="stat__label">Boletas totales</div>
                 </div>
-                @if (r.show_draw_date && r.final_draw_date) {
-                  <div class="stat">
-                    <strong>{{ formatDate(r.final_draw_date) }}</strong>
-                    <small>sorteo final</small>
-                  </div>
-                }
+                <div class="stat__sep"></div>
+                <div class="stat">
+                  <div class="stat__value">{{ availableCount() }}</div>
+                  <div class="stat__label">Disponibles</div>
+                </div>
               </div>
 
               <div class="progress">
-                <div class="progress__bar" [style.width.%]="r.sold_pct"></div>
+                <div class="progress__track">
+                  <div class="progress__bar" [style.width.%]="r.sold_pct"></div>
+                </div>
+                <div class="progress__meta">
+                  <span>{{ r.sold_pct }}% vendido</span>
+                  <span class="muted">{{ availableCount() }} boletas disponibles</span>
+                </div>
               </div>
 
-              <div class="hero__ctas">
-                <button class="btn primary btn--xl" (click)="scrollToGrid()">
-                  <span class="material-icons">grid_on</span>
-                  Elige tu boleta
+              <div class="cta-row">
+                <button class="btn btn--gold btn--lg" (click)="scrollToGrid()">
+                  Elegir boleta
+                  <span class="material-icons-outlined">arrow_forward</span>
                 </button>
-                <button class="btn ghost-light btn--xl" (click)="scrollToSearch()">
-                  <span class="material-icons">search</span>
-                  Buscar número
+                <button class="btn btn--ghost btn--lg" (click)="scrollToPrizes()">
+                  Ver premios
                 </button>
               </div>
             </div>
 
-            <div class="hero__stage">
-              <div class="stage__halo"></div>
-              <div class="stage__floor"></div>
-              <div class="stage__frame">
-                @if (r.logo_url) {
-                  <img [src]="r.logo_url" [alt]="topPrizeName()" class="stage__img" />
-                } @else {
-                  <div class="stage__fallback">{{ heroPrizeEmoji() }}</div>
-                }
-              </div>
-              <div class="stage__ribbon">
-                <span class="material-icons">emoji_events</span>
-                <span>{{ topPrizeName() }}</span>
-              </div>
-              <div class="stage__sparkle stage__sparkle--1">✨</div>
-              <div class="stage__sparkle stage__sparkle--2">✨</div>
-              <div class="stage__sparkle stage__sparkle--3">⭐</div>
-            </div>
-          </div>
-
-          <div class="hero__scroll">
-            <span class="material-icons">expand_more</span>
+            <aside class="hero__product">
+              @if (r.logo_url) {
+                <div class="product-card">
+                  <div class="product-card__label">Premio mayor</div>
+                  <div class="product-card__media">
+                    <img [src]="r.logo_url" [alt]="topPrizeName()" />
+                  </div>
+                  <div class="product-card__body">
+                    <h3>{{ topPrizeName() }}</h3>
+                    @if (r.prizes[0]?.draw_date) {
+                      <p class="muted">
+                        <span class="material-icons-outlined">event</span>
+                        {{ formatDate(r.prizes[0].draw_date!) }}
+                      </p>
+                    }
+                  </div>
+                </div>
+              } @else {
+                <div class="product-card product-card--empty">
+                  <div class="product-card__label">Premio mayor</div>
+                  <div class="product-card__body">
+                    <h3>{{ topPrizeName() }}</h3>
+                  </div>
+                </div>
+              }
+            </aside>
           </div>
         </section>
 
-        <!-- ============ BUSCADOR compacto + GRID (justo debajo del hero) ============ -->
-        <section class="picker" #gridSection id="grid-section">
-          <div class="picker__head">
-            <div class="picker__title">
-              <span class="section-tag">🎟️ Todas las boletas</span>
-              <h2>Elige tu boleta favorita</h2>
-              <p class="muted">Haz clic en una boleta para ver su diseño antes de reservar.</p>
+        <!-- ============ COUNTDOWN ============ -->
+        @if (countdown(); as c) {
+          <section class="countdown-wrap">
+            <div class="container countdown">
+              <div class="countdown__title">
+                <span class="material-icons-outlined">schedule</span>
+                Sorteo en
+              </div>
+              <div class="countdown__values">
+                <div class="cd-unit">
+                  <span class="cd-unit__value">{{ c.days }}</span>
+                  <span class="cd-unit__label">Días</span>
+                </div>
+                <div class="cd-unit">
+                  <span class="cd-unit__value">{{ c.hours }}</span>
+                  <span class="cd-unit__label">Horas</span>
+                </div>
+                <div class="cd-unit">
+                  <span class="cd-unit__value">{{ c.minutes }}</span>
+                  <span class="cd-unit__label">Minutos</span>
+                </div>
+                <div class="cd-unit">
+                  <span class="cd-unit__value">{{ c.seconds }}</span>
+                  <span class="cd-unit__label">Segundos</span>
+                </div>
+              </div>
             </div>
-            <div class="picker__legend">
-              <span class="chip chip--free">Disponible</span>
-              <span class="chip chip--sel">Seleccionada</span>
-            </div>
-          </div>
+          </section>
+        }
 
-          <!-- Buscador inline: chip elegante integrado al picker -->
-          <div class="quick-search" id="search-section">
-            <div class="quick-search__label">
-              <span class="material-icons">search</span>
-              <span>Buscar número</span>
+        <!-- ============ SELECTOR DE BOLETAS (protagonista) ============ -->
+        <section class="picker" id="grid-section">
+          <div class="container">
+            <div class="picker__head">
+              <div>
+                <span class="pill pill--muted">Selector</span>
+                <h2 class="h-section">Elige tu boleta</h2>
+                <p class="muted">
+                  Toca una boleta para ver su diseño. Puedes seleccionar hasta 10.
+                </p>
+              </div>
+              <div class="legend">
+                <span class="legend__item">
+                  <span class="legend__dot legend__dot--available"></span>
+                  Disponible
+                </span>
+                <span class="legend__item">
+                  <span class="legend__dot legend__dot--selected"></span>
+                  Seleccionada
+                </span>
+                <span class="legend__item">
+                  <span class="legend__dot legend__dot--reserved"></span>
+                  Reservada
+                </span>
+                <span class="legend__item">
+                  <span class="legend__dot legend__dot--sold"></span>
+                  Vendida
+                </span>
+              </div>
             </div>
-            <form class="quick-search__form" (ngSubmit)="doSearch()">
-              <input type="number" class="quick-search__input"
+
+            <!-- Buscador inline -->
+            <form class="search" (ngSubmit)="doSearch()">
+              <span class="search__icon material-icons-outlined">search</span>
+              <input type="number" class="search__input"
                      [(ngModel)]="searchInput" name="searchInput"
-                     [placeholder]="'Ej: ' + searchPlaceholder()"
-                     [min]="1" inputmode="numeric" />
-              <button type="submit" class="btn primary" [disabled]="searching()">
+                     [placeholder]="'Buscar número (ej ' + searchPlaceholder() + ')'"
+                     inputmode="numeric" />
+              <button type="submit" class="btn btn--gold" [disabled]="searching()">
                 @if (searching()) {
                   <span class="btn__spin"></span>
                 } @else {
-                  <span class="material-icons">search</span>
+                  Buscar
                 }
-                Buscar
               </button>
             </form>
 
             @if (searchResult(); as sr) {
-              <div class="search-result search-result--{{ sr.status }}">
-                <span class="material-icons">
+              <div class="search-result" [attr.data-status]="sr.status">
+                <span class="search-result__icon material-icons-outlined">
                   {{ sr.status === 'available' ? 'check_circle'
                    : sr.status === 'sold' ? 'block'
-                   : sr.status === 'reserved' ? 'lock_clock'
-                   : sr.status === 'assigned' ? 'person_search'
+                   : sr.status === 'reserved' ? 'schedule'
+                   : sr.status === 'assigned' ? 'person'
                    : 'help_outline' }}
                 </span>
                 <div class="search-result__body">
                   <strong>Boleta {{ sr.number_label }}</strong>
                   <p>{{ sr.message }}</p>
-                  @if (sr.status === 'available' && sr.ticket_id) {
-                    <div class="search-result__actions">
-                      <button type="button" class="btn primary btn--sm"
-                              (click)="openTicketPreviewById(sr.ticket_id!)">
-                        <span class="material-icons">visibility</span>
-                        Ver la boleta
-                      </button>
-                      <button type="button" class="btn ghost btn--sm"
-                              (click)="selectFromSearch(sr.ticket_id!)">
-                        <span class="material-icons">add_shopping_cart</span>
-                        Reservar directo
-                      </button>
-                    </div>
-                  }
                 </div>
+                @if (sr.status === 'available' && sr.ticket_id) {
+                  <div class="search-result__actions">
+                    <button class="btn btn--ghost btn--sm"
+                            (click)="openTicketPreviewById(sr.ticket_id!)">
+                      Ver diseño
+                    </button>
+                    <button class="btn btn--gold btn--sm"
+                            (click)="selectFromSearch(sr.ticket_id!)">
+                      Reservar
+                    </button>
+                  </div>
+                }
                 <button class="search-result__close" (click)="clearSearch()"
-                        aria-label="Cerrar">×</button>
+                        aria-label="Cerrar">
+                  <span class="material-icons-outlined">close</span>
+                </button>
+              </div>
+            }
+
+            @if (loadingTickets()) {
+              <div class="grid grid--skeleton">
+                @for (i of skeletonRange; track i) {
+                  <div class="ticket ticket--skeleton"></div>
+                }
+              </div>
+            } @else if (!available().length) {
+              <div class="empty">
+                <span class="empty__icon material-icons-outlined">inbox</span>
+                <h3>No hay boletas disponibles</h3>
+                <p class="muted">Todas están asignadas o vendidas.</p>
+              </div>
+            } @else {
+              <div class="grid">
+                @for (t of available(); track t.id) {
+                  <button type="button"
+                          [id]="'ticket-' + t.id"
+                          class="ticket ticket--available"
+                          [class.ticket--selected]="isSelected(t.id)"
+                          [class.ticket--pulse]="pulseTicketId() === t.id"
+                          (click)="openTicketPreview(t)">
+                    <span class="ticket__number">{{ t.number_label }}</span>
+                    @if (isSelected(t.id)) {
+                      <span class="ticket__check material-icons-outlined">check</span>
+                    }
+                  </button>
+                }
               </div>
             }
           </div>
 
-          @if (loadingTickets()) {
-            <div class="grid-skeleton">
-              @for (i of [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]; track i) {
-                <div class="skeleton-cell"></div>
-              }
-            </div>
-          } @else if (!available().length) {
-            <div class="empty">
-              <span class="material-icons big">confirmation_number</span>
-              <p><strong>No hay boletas disponibles públicamente.</strong></p>
-              <p class="muted">Puede que todas estén asignadas a vendedores o ya se hayan vendido.</p>
-            </div>
-          } @else {
-            <div class="grid">
-              @for (t of available(); track t.id) {
-                <button type="button"
-                        [id]="'ticket-' + t.id"
-                        class="cell"
-                        [class.cell--selected]="isSelected(t.id)"
-                        [class.cell--pulse]="pulseTicketId() === t.id"
-                        (click)="openTicketPreview(t)">
-                  {{ t.number_label }}
-                </button>
-              }
-            </div>
-          }
-
+          <!-- Footer sticky con selección -->
           @if (selected().size > 0) {
-            <div class="summary">
-              <div class="summary__info">
-                <strong>{{ selected().size }}</strong> boleta(s) seleccionada(s)
-                — total <strong>\${{ formatNumber(totalPrice()) }}</strong>
+            <div class="picker__bar">
+              <div class="container picker__bar-inner">
+                <div class="picker__bar-info">
+                  <div class="picker__bar-count">
+                    {{ selected().size }} {{ selected().size === 1 ? 'boleta' : 'boletas' }}
+                  </div>
+                  <div class="picker__bar-total">
+                    Total <strong>\${{ formatNumber(totalPrice()) }}</strong>
+                  </div>
+                </div>
+                <button class="btn btn--gold btn--lg" (click)="openCheckout()">
+                  Continuar al pago
+                  <span class="material-icons-outlined">arrow_forward</span>
+                </button>
               </div>
-              <button class="btn primary btn--lg" (click)="openCheckout()">
-                Continuar al pago
-                <span class="material-icons">arrow_forward</span>
-              </button>
             </div>
           }
         </section>
 
-        <!-- ============ PREMIOS — layout editorial de lujo ============ -->
+        <!-- ============ PREMIOS ============ -->
         @if (r.prizes.length) {
-          <section class="editorial editorial--prizes">
-            <div class="editorial__inner">
-              <div class="editorial__head">
-                <span class="eyebrow">
-                  <span class="eyebrow__line"></span>
-                  <span>Premios en juego</span>
-                  <span class="eyebrow__line"></span>
-                </span>
-                <h2 class="display">Todo lo que <em>puedes ganar</em></h2>
-                <p class="lede">
-                  Cada boleta juega por múltiples premios en distintas fechas de sorteo.
-                  Una sola compra, muchas oportunidades.
+          <section class="section" id="prizes-section">
+            <div class="container">
+              <div class="section__head">
+                <span class="pill pill--muted">Premios</span>
+                <h2 class="h-section">{{ r.prizes.length }} oportunidades de ganar</h2>
+                <p class="h-lead-sm">
+                  Cada boleta juega por todos los premios en fechas distintas.
                 </p>
               </div>
-
-              <!-- Premio mayor: hero card editorial -->
-              @if (r.prizes[0]; as top) {
-                <article class="prize-hero">
-                  <div class="prize-hero__meta">
-                    <div class="prize-hero__eyebrow">
-                      <span class="prize-hero__roman">I</span>
-                      <span class="prize-hero__label">Premio mayor</span>
-                    </div>
-                    <h3 class="display display--xl">{{ top.name }}</h3>
-                    <div class="prize-hero__divider"></div>
-                    @if (top.draw_date) {
-                      <div class="prize-hero__date">
-                        <span class="prize-hero__date-label">Sorteo</span>
-                        <span class="prize-hero__date-value">{{ formatDate(top.draw_date) }}</span>
+              <div class="prizes-grid">
+                @for (p of r.prizes; track p.position; let idx = $index) {
+                  <article class="prize-card" [class.prize-card--top]="idx === 0">
+                    <div class="prize-card__head">
+                      <div class="prize-card__num">
+                        {{ (idx + 1) < 10 ? '0' : '' }}{{ idx + 1 }}
                       </div>
-                    }
-                    <p class="prize-hero__note">
-                      El objeto principal de la rifa. Se sortea junto con la lotería nacional
-                      para garantizar transparencia total.
-                    </p>
-                  </div>
-                  <div class="prize-hero__visual">
-                    @if (r.logo_url) {
-                      <img [src]="r.logo_url" [alt]="top.name" />
-                    } @else {
-                      <div class="prize-hero__glyph">{{ prizeEmoji(top.name) }}</div>
-                    }
-                    <div class="prize-hero__glow"></div>
-                  </div>
-                </article>
-              }
-
-              <!-- Premios secundarios: lista editorial vertical -->
-              @if (r.prizes.length > 1) {
-                <div class="prize-list">
-                  <div class="prize-list__title">
-                    <span class="eyebrow eyebrow--sm">
-                      <span class="eyebrow__line"></span>
-                      <span>Premios adicionales</span>
-                    </span>
-                  </div>
-                  @for (p of r.prizes.slice(1); track p.position; let idx = $index) {
-                    <article class="prize-row">
-                      <div class="prize-row__roman">{{ roman(idx + 2) }}</div>
-                      <div class="prize-row__body">
-                        <div class="prize-row__label">Premio · {{ idx + 2 }}</div>
-                        <h4>{{ p.name }}</h4>
-                      </div>
-                      @if (p.draw_date) {
-                        <div class="prize-row__date">
-                          <small>Sorteo</small>
-                          <strong>{{ formatDate(p.draw_date) }}</strong>
-                        </div>
+                      @if (idx === 0) {
+                        <span class="prize-card__tag">Premio mayor</span>
                       }
-                      <div class="prize-row__arrow">
-                        <svg viewBox="0 0 24 24" width="20" height="20">
-                          <path d="M5 12 L19 12 M13 6 L19 12 L13 18"
-                                fill="none" stroke="currentColor" stroke-width="1.5"
-                                stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
+                    </div>
+                    <h3 class="prize-card__title">{{ p.name }}</h3>
+                    @if (p.draw_date) {
+                      <div class="prize-card__meta">
+                        <span class="material-icons-outlined">event</span>
+                        {{ formatDate(p.draw_date) }}
                       </div>
-                    </article>
-                  }
-                </div>
-              }
+                    }
+                  </article>
+                }
+              </div>
             </div>
           </section>
         }
 
-        <!-- ============ CÓMO FUNCIONA — layout editorial ============ -->
-        <section class="editorial editorial--how">
-          <div class="editorial__inner">
-            <div class="editorial__head">
-              <span class="eyebrow">
-                <span class="eyebrow__line"></span>
-                <span>Cómo funciona</span>
-                <span class="eyebrow__line"></span>
-              </span>
-              <h2 class="display">Comprar es <em>elegantemente simple</em></h2>
+        <!-- ============ CÓMO FUNCIONA ============ -->
+        <section class="section">
+          <div class="container">
+            <div class="section__head">
+              <span class="pill pill--muted">Proceso</span>
+              <h2 class="h-section">Comprar en 3 pasos</h2>
             </div>
-
-            <div class="how-flow">
-              <article class="how-step">
-                <div class="how-step__roman">I</div>
-                <div class="how-step__line" aria-hidden="true"></div>
-                <div class="how-step__body">
-                  <div class="how-step__label">Paso uno</div>
-                  <h3>Elige tu boleta</h3>
-                  <p>Explora las boletas disponibles y ve el diseño real antes de reservar.
-                    Cada una es única.</p>
+            <div class="steps">
+              <article class="step">
+                <div class="step__icon">
+                  <span class="material-icons-outlined">grid_view</span>
                 </div>
+                <div class="step__num">01</div>
+                <h3>Elige tu boleta</h3>
+                <p class="muted">
+                  Explora las disponibles y ve el diseño real antes de reservar.
+                </p>
               </article>
-
-              <article class="how-step">
-                <div class="how-step__roman">II</div>
-                <div class="how-step__line" aria-hidden="true"></div>
-                <div class="how-step__body">
-                  <div class="how-step__label">Paso dos</div>
-                  <h3>Paga en línea</h3>
-                  <p>Nequi, PSE, tarjeta o transferencia con comprobante.
-                    Tu boleta queda reservada por 24 horas.</p>
+              <article class="step">
+                <div class="step__icon">
+                  <span class="material-icons-outlined">credit_card</span>
                 </div>
+                <div class="step__num">02</div>
+                <h3>Paga en línea</h3>
+                <p class="muted">
+                  Nequi, PSE, tarjeta o transferencia con comprobante. Reserva 24h.
+                </p>
               </article>
-
-              <article class="how-step">
-                <div class="how-step__roman">III</div>
-                <div class="how-step__body">
-                  <div class="how-step__label">Paso tres</div>
-                  <h3>Gana premios</h3>
-                  <p>Te notificamos por correo y WhatsApp cuando se sortee.
-                    Verificación pública instantánea.</p>
+              <article class="step">
+                <div class="step__icon">
+                  <span class="material-icons-outlined">verified</span>
                 </div>
+                <div class="step__num">03</div>
+                <h3>Verificación pública</h3>
+                <p class="muted">
+                  Te notificamos por correo y WhatsApp. Verifica tu boleta con un QR.
+                </p>
               </article>
             </div>
           </div>
         </section>
 
-        <!-- FOOTER premium -->
-        <footer class="foot">
-          <div class="foot__brand">
-            <span class="foot__dot"></span>
-            <span>Boletera</span>
+        <!-- ============ FAQ ============ -->
+        <section class="section">
+          <div class="container container--narrow">
+            <div class="section__head">
+              <span class="pill pill--muted">Preguntas frecuentes</span>
+              <h2 class="h-section">Todo lo que necesitas saber</h2>
+            </div>
+            <div class="faq">
+              @for (q of faq; track q.q) {
+                <details class="faq__item">
+                  <summary class="faq__q">
+                    <span>{{ q.q }}</span>
+                    <span class="faq__chev material-icons-outlined">expand_more</span>
+                  </summary>
+                  <div class="faq__a">
+                    <p>{{ q.a }}</p>
+                  </div>
+                </details>
+              }
+            </div>
           </div>
-          <p>Compra segura · Verificación pública de tus boletas · Sorteo con Lotería.</p>
-          @if (r.lottery_name) {
-            <p class="foot__lot">Juega con: <strong>{{ r.lottery_name }}</strong></p>
-          }
+        </section>
+
+        <!-- ============ FOOTER ============ -->
+        <footer class="foot">
+          <div class="container foot__inner">
+            <div class="foot__brand">
+              <span class="brand__dot"></span>
+              <span>Boletera</span>
+            </div>
+            <div class="foot__meta">
+              @if (r.lottery_name) {
+                <span>Juega con {{ r.lottery_name }}</span>
+                <span class="foot__sep">·</span>
+              }
+              <span>Compra segura</span>
+              <span class="foot__sep">·</span>
+              <span>Verificación pública</span>
+            </div>
+          </div>
         </footer>
 
       }
 
       <!-- ============ MODAL PREVIEW DE BOLETA ============ -->
       @if (previewOpen() && previewData(); as pd) {
-        <div class="modal modal--preview" (click)="closePreview()">
+        <div class="modal" (click)="closePreview()">
           <div class="modal__card modal__card--wide" (click)="$event.stopPropagation()">
-            <button class="modal__close" (click)="closePreview()" aria-label="Cerrar">×</button>
-            <div class="preview-head">
-              <h2>Boleta {{ pd.ticket.label }}</h2>
-              <p>Este es el diseño exacto que recibirás. Los 20 números son únicos para esta boleta.</p>
+            <div class="modal__head">
+              <div>
+                <div class="pill pill--muted">Boleta {{ pd.ticket.label }}</div>
+                <h2>Diseño de tu boleta</h2>
+              </div>
+              <button class="icon-btn" (click)="closePreview()" aria-label="Cerrar">
+                <span class="material-icons-outlined">close</span>
+              </button>
             </div>
 
             <div class="preview-ticket">
@@ -432,92 +468,105 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
                 [responsiblePhone]="pd.raffle.responsible_phone" />
             </div>
 
-            <div class="preview-actions">
+            <div class="modal__actions">
               @if (isSelected(previewTicketId()!)) {
-                <button class="btn ghost btn--lg" (click)="removeFromSelection(previewTicketId()!)">
-                  <span class="material-icons">remove_shopping_cart</span>
+                <button class="btn btn--ghost btn--lg"
+                        (click)="removeFromSelection(previewTicketId()!)">
                   Quitar de la selección
                 </button>
               } @else {
-                <button class="btn primary btn--lg" (click)="selectAndClosePreview()">
-                  <span class="material-icons">add_shopping_cart</span>
-                  Reservar esta boleta
+                <button class="btn btn--ghost btn--lg" (click)="selectAndClosePreview()">
+                  Agregar a mi selección
                 </button>
               }
-              <button class="btn ghost btn--lg" (click)="reserveAndCheckoutNow()">
-                <span class="material-icons">bolt</span>
-                Reservar y pagar ya
+              <button class="btn btn--gold btn--lg" (click)="reserveAndCheckoutNow()">
+                Reservar y pagar
+                <span class="material-icons-outlined">arrow_forward</span>
               </button>
             </div>
           </div>
         </div>
       }
 
-      <!-- MODAL CHECKOUT (formulario cliente) -->
+      <!-- ============ MODAL CHECKOUT ============ -->
       @if (checkoutOpen()) {
         <div class="modal" (click)="closeCheckout()">
           <div class="modal__card" (click)="$event.stopPropagation()">
-            <button class="modal__close" (click)="closeCheckout()" aria-label="Cerrar">×</button>
-            <h2>Completar tu compra</h2>
-            <p class="modal__lead">
-              Boletas: <strong>{{ selectedLabels() }}</strong>
-              — total <strong>\${{ formatNumber(totalPrice()) }}</strong>
-            </p>
+            <div class="modal__head">
+              <div>
+                <div class="pill pill--muted">Checkout</div>
+                <h2>Completar compra</h2>
+                <p class="muted">
+                  <strong>{{ selected().size }}</strong>
+                  {{ selected().size === 1 ? 'boleta' : 'boletas' }}
+                  · Total <strong>\${{ formatNumber(totalPrice()) }}</strong>
+                </p>
+              </div>
+              <button class="icon-btn" (click)="closeCheckout()" aria-label="Cerrar">
+                <span class="material-icons-outlined">close</span>
+              </button>
+            </div>
 
             <form class="form" (ngSubmit)="submit()" autocomplete="on">
               <label class="field">
-                <span>Cédula</span>
-                <input type="text" [(ngModel)]="form.customer_document" name="doc"
-                       required minlength="4" maxlength="30" inputmode="numeric"
-                       autocomplete="off" placeholder="Tu número de cédula" />
+                <span class="field__label">Cédula</span>
+                <input class="input" type="text" [(ngModel)]="form.customer_document"
+                       name="doc" required minlength="4" maxlength="30"
+                       inputmode="numeric" placeholder="Número de cédula" />
               </label>
-
               <label class="field">
-                <span>Nombre completo</span>
-                <input type="text" [(ngModel)]="form.customer_name" name="name"
-                       required minlength="2" maxlength="150"
+                <span class="field__label">Nombre completo</span>
+                <input class="input" type="text" [(ngModel)]="form.customer_name"
+                       name="name" required minlength="2" maxlength="150"
                        autocomplete="name" placeholder="Nombre y apellidos" />
               </label>
-
               <label class="field">
-                <span>Email</span>
-                <input type="email" [(ngModel)]="form.customer_email" name="email" required
-                       autocomplete="email" placeholder="tucorreo@ejemplo.com" />
+                <span class="field__label">Email</span>
+                <input class="input" type="email" [(ngModel)]="form.customer_email"
+                       name="email" required autocomplete="email"
+                       placeholder="tu@ejemplo.com" />
               </label>
-
               <label class="field">
-                <span>Celular (WhatsApp)</span>
-                <input type="tel" [(ngModel)]="form.customer_phone" name="phone"
-                       required minlength="7"
-                       autocomplete="tel" placeholder="3001234567" />
+                <span class="field__label">Celular (WhatsApp)</span>
+                <input class="input" type="tel" [(ngModel)]="form.customer_phone"
+                       name="phone" required minlength="7" autocomplete="tel"
+                       placeholder="3001234567" />
               </label>
-
               <label class="field">
-                <span>Ciudad (opcional)</span>
-                <input type="text" [(ngModel)]="form.customer_city" name="city" maxlength="80"
-                       autocomplete="address-level2" placeholder="Ej: Valledupar" />
+                <span class="field__label">Ciudad <small>opcional</small></span>
+                <input class="input" type="text" [(ngModel)]="form.customer_city"
+                       name="city" maxlength="80" autocomplete="address-level2"
+                       placeholder="Ej. Valledupar" />
               </label>
 
               @if (overview()?.enable_online_purchase) {
-                <button type="submit" class="btn primary btn--lg" [disabled]="submitting()">
-                  <span class="material-icons">credit_card</span>
-                  {{ submitting() ? 'Redirigiendo...' : 'Pagar con Wompi' }}
+                <button type="submit" class="btn btn--gold btn--lg btn--block"
+                        [disabled]="submitting()">
+                  @if (submitting()) {
+                    <span class="btn__spin"></span> Redirigiendo…
+                  } @else {
+                    Pagar con Wompi
+                    <span class="material-icons-outlined">arrow_forward</span>
+                  }
                 </button>
-                <small class="muted">Nequi, PSE, Bancolombia, tarjeta — seguro y rápido.</small>
+                <small class="muted center">
+                  Nequi · PSE · Bancolombia · Tarjeta
+                </small>
               }
 
               @if (overview()?.enable_manual_transfer) {
-                <div class="or">— o —</div>
-                <button type="button" class="btn ghost btn--lg" (click)="switchManual()">
-                  <span class="material-icons">receipt_long</span>
-                  Ya hice la transferencia — subir comprobante
+                <div class="or"><span>o</span></div>
+                <button type="button" class="btn btn--ghost btn--lg btn--block"
+                        (click)="switchManual()">
+                  <span class="material-icons-outlined">receipt_long</span>
+                  Subir comprobante de transferencia
                 </button>
               }
             </form>
 
             @if (submitError()) {
               <div class="alert">
-                <span class="material-icons">error_outline</span>
+                <span class="material-icons-outlined">error_outline</span>
                 {{ submitError() }}
               </div>
             }
@@ -525,1259 +574,1061 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
         </div>
       }
 
-    </main>
+    </div>
   `,
   styles: [`
-    /* ============ TEMA CLARO (default) ============ */
+    /* ============================================================
+       SISTEMA DE DISEÑO — SaaS premium dark
+       ============================================================ */
     :host {
+      --bg:            #0B0B0D;
+      --surface:       #111214;
+      --surface-2:     #1B1C20;
+      --card:          #1B1C20;
+      --card-hover:    #22232A;
+      --border:        rgba(255, 255, 255, 0.08);
+      --border-strong: rgba(255, 255, 255, 0.14);
+      --text:          #FFFFFF;
+      --text-muted:    #B5B7BE;
+      --text-dim:      #6E7079;
+
+      --gold:          #D4AF37;
+      --gold-hover:    #E4C15A;
+      --gold-soft:     rgba(212, 175, 55, 0.12);
+
+      --green:         #16a34a;
+      --red:           #ef4444;
+      --amber:         #f59e0b;
+      --blue:          #3b82f6;
+
+      --shadow-sm:     0 1px 2px rgba(0,0,0,0.4);
+      --shadow-md:     0 8px 24px rgba(0,0,0,0.35);
+      --shadow-lg:     0 20px 60px rgba(0,0,0,0.5);
+
+      --r-sm:  10px;
+      --r-md:  14px;
+      --r-lg:  20px;
+      --r-xl:  24px;
+
+      --t-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+      --t-med:  240ms cubic-bezier(0.4, 0, 0.2, 1);
+
       display: block;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
       min-height: 100vh;
-      font-family: 'Inter', system-ui, sans-serif;
-
-      --pg-bg:
-        radial-gradient(ellipse at 20% 0%, rgba(201, 169, 110, 0.18), transparent 45%),
-        radial-gradient(ellipse at 80% 100%, rgba(30, 199, 123, 0.12), transparent 50%),
-        linear-gradient(180deg, #faf6ee 0%, #f0e5c8 100%);
-      --pg-text: #1a2942;
-      --pg-muted: #6b7280;
-      --heading: #1a2942;
-
-      --card-bg: #ffffff;
-      --card-border: rgba(201, 169, 110, 0.15);
-      --card-shadow: 0 4px 24px rgba(26, 41, 66, 0.08);
-
-      --input-bg: #ffffff;
-      --input-text: #1a2942;
-      --input-border: rgba(26, 41, 66, 0.15);
-      --input-placeholder: #9ca3af;
-
-      --cell-bg: linear-gradient(180deg, #fff 0%, #f8f1e3 100%);
-      --cell-bg-hover: #ffffff;
-      --cell-text: #1a2942;
-      --cell-border: rgba(26, 41, 66, 0.12);
-
-      --summary-bg: linear-gradient(90deg, #f8f1e3 0%, #f0e5c8 100%);
-      --summary-border: rgba(201, 169, 110, 0.3);
-
-      --toggle-bg: rgba(255, 255, 255, 0.9);
-      --toggle-text: #1a2942;
-      --toggle-border: rgba(201, 169, 110, 0.35);
-
-      --section-alt-bg: rgba(255, 255, 255, 0.6);
-
-      background: var(--pg-bg);
-      color: var(--pg-text);
+      font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
     }
 
-    /* ============ TEMA OSCURO ============ */
-    :host-context([data-theme="dark"]) {
-      --pg-bg:
-        radial-gradient(ellipse at 20% 0%, rgba(201, 169, 110, 0.15), transparent 45%),
-        radial-gradient(ellipse at 80% 100%, rgba(30, 199, 123, 0.1), transparent 50%),
-        linear-gradient(180deg, #0a1424 0%, #0f1e38 100%);
-      --pg-text: #f8f1e3;
-      --pg-muted: rgba(248, 241, 227, 0.55);
-      --heading: #f8f1e3;
+    * { box-sizing: border-box; }
 
-      --card-bg: linear-gradient(180deg, rgba(20, 34, 64, 0.7) 0%, rgba(15, 26, 46, 0.7) 100%);
-      --card-border: rgba(201, 169, 110, 0.25);
-      --card-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
-
-      --input-bg: rgba(10, 20, 36, 0.7);
-      --input-text: #f8f1e3;
-      --input-border: rgba(201, 169, 110, 0.25);
-      --input-placeholder: rgba(248, 241, 227, 0.4);
-
-      --cell-bg: linear-gradient(180deg, rgba(30, 48, 87, 0.55) 0%, rgba(20, 34, 64, 0.55) 100%);
-      --cell-bg-hover: rgba(30, 48, 87, 0.9);
-      --cell-text: #f8f1e3;
-      --cell-border: rgba(201, 169, 110, 0.25);
-
-      --summary-bg: linear-gradient(90deg, rgba(30, 48, 87, 0.6) 0%, rgba(20, 34, 64, 0.6) 100%);
-      --summary-border: rgba(201, 169, 110, 0.35);
-
-      --toggle-bg: rgba(20, 34, 64, 0.85);
-      --toggle-text: #e8c98a;
-      --toggle-border: rgba(232, 201, 138, 0.35);
-
-      --section-alt-bg: rgba(15, 26, 46, 0.4);
+    .app {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
     }
 
-    .page { position: relative; }
+    .container {
+      width: 100%;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+    .container--narrow { max-width: 760px; }
+    @media (max-width: 720px) { .container { padding: 0 20px; } }
 
-    /* ============ TOGGLE claro/oscuro ============ */
-    .theme-toggle {
-      position: fixed;
-      top: 20px; right: 20px;
-      width: 46px; height: 46px;
+    .muted { color: var(--text-muted); }
+    .center { text-align: center; display: block; }
+
+    /* ============ Loader ============ */
+    .page-loader {
       display: grid; place-items: center;
-      background: var(--toggle-bg);
-      color: var(--toggle-text);
-      border: 1.5px solid var(--toggle-border);
+      min-height: 100vh;
+      gap: 20px;
+    }
+    .page-loader__spinner {
+      width: 32px; height: 32px;
+      border: 2px solid var(--border);
+      border-top-color: var(--gold);
       border-radius: 50%;
-      cursor: pointer;
-      z-index: 50;
-      backdrop-filter: blur(10px);
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-      transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
-    }
-    .theme-toggle:hover {
-      transform: translateY(-2px) rotate(15deg);
-      border-color: rgba(232, 201, 138, 0.7);
-      box-shadow: 0 12px 32px rgba(232, 201, 138, 0.35);
-    }
-    .theme-toggle .material-icons { font-size: 22px; }
-    @media (max-width: 720px) {
-      .theme-toggle { top: 14px; right: 14px; width: 40px; height: 40px; }
-    }
-
-    .state {
-      text-align: center;
-      padding: 120px 20px;
-      color: var(--pg-muted);
-    }
-    .spinner {
-      display: inline-block;
-      width: 40px; height: 40px;
-      border: 3px solid rgba(26, 41, 66, 0.12);
-      border-top-color: #c9a96e;
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-      margin-bottom: 16px;
+      animation: spin 700ms linear infinite;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
     /* ============================================================
-       HERO FULL-BLEED compacto — TV protagonista, sin espacio muerto
+       TOPBAR
        ============================================================ */
-    .hero {
-      position: relative;
-      padding: 32px 24px 20px;
-      background:
-        radial-gradient(ellipse at 30% 40%, #1e3057 0%, transparent 50%),
-        radial-gradient(ellipse at 70% 60%, #0f1a2e 0%, transparent 60%),
-        linear-gradient(135deg, #050a14 0%, #0a1424 60%, #0f1e38 100%);
-      color: #f8f1e3;
-      overflow: hidden;
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      background: rgba(11, 11, 13, 0.72);
+      backdrop-filter: saturate(180%) blur(20px);
+      -webkit-backdrop-filter: saturate(180%) blur(20px);
+      border-bottom: 1px solid var(--border);
     }
-    @media (max-width: 900px) { .hero { padding: 40px 20px 24px; } }
-
-    /* Mesh gradient + luces + partículas */
-    .hero__bg { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
-    .hero__mesh {
-      position: absolute;
-      inset: -20%;
-      background:
-        radial-gradient(circle at 15% 30%, rgba(232, 201, 138, 0.35) 0%, transparent 40%),
-        radial-gradient(circle at 85% 70%, rgba(30, 199, 123, 0.3) 0%, transparent 40%),
-        radial-gradient(circle at 50% 100%, rgba(201, 169, 110, 0.25) 0%, transparent 60%);
-      filter: blur(60px);
-      opacity: 0.8;
-      animation: mesh-drift 18s ease-in-out infinite;
-    }
-    @keyframes mesh-drift {
-      0%, 100% { transform: translate(0, 0) scale(1); }
-      33% { transform: translate(-30px, 20px) scale(1.05); }
-      66% { transform: translate(20px, -20px) scale(0.98); }
-    }
-
-    /* Foco central para dar profundidad */
-    .hero__spotlight {
-      position: absolute;
-      top: 50%; right: 25%;
-      width: 700px; height: 700px;
-      transform: translate(50%, -50%);
-      background: radial-gradient(circle,
-        rgba(232, 201, 138, 0.28) 0%,
-        rgba(232, 201, 138, 0.1) 30%,
-        transparent 60%);
-      filter: blur(30px);
-      animation: spotlight-pulse 5s ease-in-out infinite;
-    }
-    @keyframes spotlight-pulse {
-      0%, 100% { opacity: 0.6; transform: translate(50%, -50%) scale(1); }
-      50% { opacity: 1; transform: translate(50%, -50%) scale(1.05); }
-    }
-
-    /* Partículas doradas titilando */
-    .hero__stars span {
-      position: absolute;
-      width: 4px; height: 4px;
-      background: #e8c98a;
-      border-radius: 50%;
-      box-shadow: 0 0 10px rgba(232, 201, 138, 0.9);
-      animation: twinkle 3s ease-in-out infinite;
-    }
-    .hero__stars span:nth-child(1)  { top: 8%;  left: 12%; animation-delay: 0.0s; }
-    .hero__stars span:nth-child(2)  { top: 18%; left: 42%; animation-delay: 0.3s; }
-    .hero__stars span:nth-child(3)  { top: 68%; left: 8%;  animation-delay: 0.6s; }
-    .hero__stars span:nth-child(4)  { top: 88%; left: 38%; animation-delay: 0.9s; }
-    .hero__stars span:nth-child(5)  { top: 14%; left: 78%; animation-delay: 0.2s; }
-    .hero__stars span:nth-child(6)  { top: 42%; left: 92%; animation-delay: 0.7s; width: 3px; height: 3px; }
-    .hero__stars span:nth-child(7)  { top: 74%; left: 68%; animation-delay: 1.1s; }
-    .hero__stars span:nth-child(8)  { top: 92%; left: 82%; animation-delay: 1.4s; }
-    .hero__stars span:nth-child(9)  { top: 32%; left: 18%; animation-delay: 0.5s; width: 3px; height: 3px; }
-    .hero__stars span:nth-child(10) { top: 56%; left: 55%; animation-delay: 1.6s; width: 3px; height: 3px; }
-    .hero__stars span:nth-child(11) { top: 22%; left: 62%; animation-delay: 0.8s; }
-    .hero__stars span:nth-child(12) { top: 82%; left: 12%; animation-delay: 1.2s; }
-    @keyframes twinkle { 0%,100% { opacity: 0.3; transform: scale(1); } 50% { opacity: 1; transform: scale(1.5); } }
-
-    .hero__inner {
-      position: relative;
-      z-index: 2;
-      max-width: 1280px;
+    .topbar__inner {
+      max-width: 1200px;
       margin: 0 auto;
-      display: grid;
-      grid-template-columns: 1fr 1.1fr;
-      gap: 48px;
+      padding: 14px 24px;
+      display: flex;
       align-items: center;
-      width: 100%;
+      justify-content: space-between;
+      gap: 16px;
     }
-    @media (max-width: 900px) { .hero__inner { grid-template-columns: 1fr; gap: 32px; } }
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--text);
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 15px;
+      letter-spacing: -0.01em;
+    }
+    .brand__dot {
+      width: 8px; height: 8px;
+      background: var(--gold);
+      border-radius: 50%;
+      box-shadow: 0 0 12px var(--gold);
+    }
+    .brand__name { color: var(--text); }
 
-    /* Text side */
-    .hero__text { max-width: 560px; }
-    @media (max-width: 900px) { .hero__text { max-width: none; } }
+    /* ============================================================
+       BADGES / PILLS
+       ============================================================ */
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      background: var(--gold-soft);
+      color: var(--gold);
+      border: 1px solid rgba(212, 175, 55, 0.25);
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      line-height: 1.2;
+    }
+    .pill--muted {
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--text-muted);
+      border-color: var(--border);
+    }
+    .pill .material-icons-outlined { font-size: 14px; }
 
     .badge {
-      display: inline-flex; align-items: center; gap: 8px;
-      padding: 8px 18px;
-      background: linear-gradient(135deg, rgba(30, 199, 123, 0.22) 0%, rgba(232, 201, 138, 0.18) 100%);
-      color: #f8f1e3;
-      border: 1px solid rgba(232, 201, 138, 0.4);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
       border-radius: 999px;
       font-size: 12px;
-      font-weight: 700;
-      margin-bottom: 24px;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      backdrop-filter: blur(8px);
-      box-shadow: 0 6px 20px rgba(232, 201, 138, 0.15);
+      font-weight: 600;
+      color: var(--text-muted);
+      line-height: 1.2;
     }
-    .badge__dot {
-      width: 8px; height: 8px;
-      background: #1ec77b;
+    .badge--live { color: var(--text); }
+    .badge__pulse {
+      width: 6px; height: 6px;
+      background: var(--green);
       border-radius: 50%;
-      box-shadow: 0 0 0 4px rgba(30, 199, 123, 0.3), 0 0 12px #1ec77b;
-      animation: badge-pulse 1.6s ease-in-out infinite;
+      box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.25);
+      animation: pulse 1.6s ease-in-out infinite;
     }
-    .badge__sep { color: rgba(232, 201, 138, 0.6); }
-    @keyframes badge-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.6; } }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
 
-    .hero__title {
-      font-family: 'Playfair Display', Georgia, serif;
-      margin: 0 0 20px;
-      font-size: clamp(36px, 5.2vw, 68px);
-      line-height: 1;
-      color: #fff;
-      font-weight: 700;
-      letter-spacing: -0.02em;
-      background: linear-gradient(180deg, #ffffff 0%, #f8f1e3 60%, #e8c98a 130%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      text-shadow: 0 4px 40px rgba(232, 201, 138, 0.2);
+    /* ============================================================
+       HERO
+       ============================================================ */
+    .hero {
+      padding: 72px 0 40px;
+      position: relative;
+      overflow: hidden;
     }
-    .hero__desc {
-      margin: 0 0 24px;
-      color: rgba(248, 241, 227, 0.85);
-      font-size: 17px;
-      line-height: 1.5;
-      max-width: 500px;
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -200px; left: 50%;
+      transform: translateX(-50%);
+      width: 900px; height: 500px;
+      background: radial-gradient(ellipse at center, rgba(212, 175, 55, 0.06) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    @media (max-width: 720px) { .hero { padding: 40px 0 32px; } }
+
+    .hero__grid {
+      display: grid;
+      grid-template-columns: 1.15fr 1fr;
+      gap: 56px;
+      align-items: center;
+      position: relative;
+      z-index: 1;
+    }
+    @media (max-width: 900px) {
+      .hero__grid { grid-template-columns: 1fr; gap: 40px; }
+      .hero__product { order: -1; }
     }
 
-    .welcome {
-      display: flex; gap: 12px; align-items: flex-start;
-      padding: 14px 18px; margin: 20px 0 24px;
-      background: linear-gradient(90deg, rgba(232, 201, 138, 0.15) 0%, rgba(232, 201, 138, 0.03) 100%);
-      border-left: 3px solid #e8c98a;
-      border-radius: 10px;
-      backdrop-filter: blur(4px);
-    }
-    .welcome .material-icons { color: #e8c98a; }
-    .welcome p { margin: 0; font-size: 14px; }
-
-    .hero__stats {
-      display: flex; gap: 32px; margin: 28px 0 20px;
+    .hero__meta {
+      display: flex; gap: 8px; margin-bottom: 24px;
       flex-wrap: wrap;
     }
-    .stat strong {
-      display: block;
-      font-size: clamp(24px, 3vw, 34px);
-      color: #fff;
-      font-weight: 800;
-      letter-spacing: -0.01em;
-      font-variant-numeric: tabular-nums;
-    }
-    .stat small {
-      color: rgba(248, 241, 227, 0.65);
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
+
+    .h-display {
+      margin: 0 0 20px;
+      font-size: clamp(36px, 5vw, 56px);
+      line-height: 1.05;
       font-weight: 700;
+      letter-spacing: -0.03em;
+      color: var(--text);
     }
 
-    .progress {
-      height: 12px;
-      background: rgba(255,255,255,0.1);
+    .h-lead {
+      margin: 0 0 32px;
+      font-size: 17px;
+      line-height: 1.55;
+      color: var(--text-muted);
+      max-width: 520px;
+    }
+    .h-lead-sm { font-size: 15px; margin: 8px 0 0; color: var(--text-muted); }
+
+    /* ============ Stats ============ */
+    .stats {
+      display: flex;
+      align-items: stretch;
+      gap: 28px;
+      padding: 24px 0;
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 28px;
+    }
+    .stat { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+    .stat__value {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.02em;
+      font-variant-numeric: tabular-nums;
+      line-height: 1;
+    }
+    .stat__label {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+    .stat__sep {
+      width: 1px;
+      background: var(--border);
+    }
+    @media (max-width: 540px) {
+      .stats { flex-wrap: wrap; gap: 20px; }
+      .stat__sep { display: none; }
+      .stat { min-width: 45%; }
+    }
+
+    /* ============ Progress ============ */
+    .progress { margin-bottom: 32px; }
+    .progress__track {
+      height: 6px;
+      background: rgba(255, 255, 255, 0.06);
       border-radius: 999px;
       overflow: hidden;
-      box-shadow: inset 0 1px 4px rgba(0,0,0,0.35);
-      position: relative;
-      margin-bottom: 32px;
     }
     .progress__bar {
       height: 100%;
-      background: linear-gradient(90deg, #1ec77b 0%, #e8c98a 100%);
-      box-shadow: 0 0 16px rgba(30, 199, 123, 0.55);
-      transition: width 0.6s ease;
+      background: linear-gradient(90deg, var(--gold) 0%, var(--gold-hover) 100%);
       border-radius: 999px;
-      position: relative;
-      min-width: 8px;
+      transition: width 400ms ease;
     }
-    .progress__bar::after {
-      content: '';
-      position: absolute; inset: 0;
-      background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.35) 50%, transparent 100%);
-      animation: shine 2s linear infinite;
-    }
-    @keyframes shine {
-      0% { transform: translateX(-100%); }
-      100% { transform: translateX(100%); }
+    .progress__meta {
+      display: flex; justify-content: space-between;
+      margin-top: 10px;
+      font-size: 12px;
+      color: var(--text);
     }
 
-    .hero__ctas {
-      display: flex; gap: 12px; flex-wrap: wrap;
-      margin-top: 8px;
+    .cta-row {
+      display: flex; gap: 10px; flex-wrap: wrap;
     }
 
-    /* ============ STAGE del TV — más compacto ============ */
-    .hero__stage {
-      position: relative;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 380px;
-      padding: 12px;
-    }
-    @media (max-width: 900px) { .hero__stage { min-height: 300px; padding: 10px; } }
-
-    .stage__halo {
-      position: absolute;
-      inset: 5% 8%;
-      background:
-        radial-gradient(ellipse at center,
-          rgba(232, 201, 138, 0.4) 0%,
-          rgba(232, 201, 138, 0.15) 30%,
-          transparent 65%);
-      filter: blur(30px);
-      animation: halo-pulse 4s ease-in-out infinite;
-    }
-    @keyframes halo-pulse {
-      0%,100% { opacity: 0.7; transform: scale(1); }
-      50% { opacity: 1; transform: scale(1.1); }
-    }
-
-    .stage__floor {
-      position: absolute;
-      bottom: 12%; left: 50%;
-      transform: translateX(-50%);
-      width: 60%;
-      height: 60px;
-      background: radial-gradient(ellipse at center, rgba(0,0,0,0.5) 0%, transparent 70%);
-      filter: blur(15px);
-      z-index: 1;
-    }
-
-    .stage__frame {
-      position: relative;
-      z-index: 2;
+    /* ============ Product card (hero right) ============ */
+    .hero__product { display: flex; justify-content: center; }
+    .product-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--r-xl);
+      padding: 20px;
       width: 100%;
-      max-width: 640px;
+      max-width: 460px;
+      box-shadow: var(--shadow-md);
+      position: relative;
+      overflow: hidden;
+      transition: border-color var(--t-med);
+    }
+    .product-card:hover { border-color: var(--border-strong); }
+    .product-card__label {
+      display: inline-flex;
+      padding: 4px 10px;
+      background: var(--gold-soft);
+      color: var(--gold);
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      letter-spacing: 0.02em;
+    }
+    .product-card__media {
+      background:
+        radial-gradient(ellipse at center, rgba(212, 175, 55, 0.08) 0%, transparent 60%),
+        var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r-lg);
+      padding: 24px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      aspect-ratio: 4 / 3;
+      margin-bottom: 16px;
+    }
+    .product-card__media img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      transition: transform 500ms cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .product-card:hover .product-card__media img { transform: scale(1.03); }
+    .product-card__body h3 {
+      margin: 0 0 6px;
+      font-size: 17px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+    }
+    .product-card__body p {
+      margin: 0;
+      font-size: 13px;
+      display: inline-flex; align-items: center; gap: 6px;
+    }
+    .product-card__body .material-icons-outlined { font-size: 16px; }
+    .product-card--empty .product-card__body { padding: 40px 0; text-align: center; }
+
+    /* ============================================================
+       COUNTDOWN
+       ============================================================ */
+    .countdown-wrap {
+      padding: 8px 0 32px;
+    }
+    .countdown {
       display: flex;
       align-items: center;
-      justify-content: center;
+      justify-content: space-between;
+      gap: 32px;
+      padding: 24px 28px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r-lg);
     }
-
-    .stage__img {
-      max-width: 100%;
-      max-height: 400px;
-      object-fit: contain;
-      filter:
-        drop-shadow(0 30px 40px rgba(0, 0, 0, 0.6))
-        drop-shadow(0 0 60px rgba(232, 201, 138, 0.2));
-      animation: float 5s ease-in-out infinite;
+    @media (max-width: 720px) {
+      .countdown { flex-direction: column; align-items: flex-start; padding: 20px; gap: 20px; }
     }
-    @keyframes float {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-12px); }
-    }
-
-    .stage__fallback {
-      font-size: clamp(120px, 20vw, 220px);
-      line-height: 1;
-      filter: drop-shadow(0 20px 40px rgba(0, 0, 0, 0.5));
-      animation: float 5s ease-in-out infinite;
-    }
-
-    .stage__ribbon {
-      position: absolute;
-      bottom: 4%;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 3;
-      display: inline-flex; align-items: center; gap: 10px;
-      padding: 12px 24px;
-      background: linear-gradient(90deg, #c9a96e 0%, #e8c98a 50%, #c9a96e 100%);
-      background-size: 200% 100%;
-      color: #1a2942;
+    .countdown__title {
+      display: inline-flex; align-items: center; gap: 8px;
       font-size: 13px;
-      font-weight: 800;
-      border-radius: 999px;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      box-shadow:
-        0 12px 30px rgba(0, 0, 0, 0.4),
-        0 0 40px rgba(232, 201, 138, 0.4),
-        inset 0 1px 0 rgba(255,255,255,0.5);
-      animation: ribbon-shimmer 3s linear infinite;
-      white-space: nowrap;
-      max-width: calc(100% - 40px);
-      overflow: hidden;
-      text-overflow: ellipsis;
+      color: var(--text-muted);
+      font-weight: 500;
     }
-    @keyframes ribbon-shimmer { to { background-position: 200% 0; } }
-    .stage__ribbon .material-icons { font-size: 18px; }
-
-    .stage__sparkle {
-      position: absolute;
-      font-size: 32px;
-      z-index: 3;
-      animation: sparkle-float 4s ease-in-out infinite;
-      filter: drop-shadow(0 0 10px rgba(232, 201, 138, 0.8));
+    .countdown__title .material-icons-outlined { font-size: 16px; color: var(--gold); }
+    .countdown__values {
+      display: flex; gap: 24px;
     }
-    .stage__sparkle--1 { top: 15%; right: 15%; animation-delay: 0s; }
-    .stage__sparkle--2 { top: 25%; left: 8%; animation-delay: 1.2s; font-size: 26px; }
-    .stage__sparkle--3 { bottom: 30%; right: 5%; animation-delay: 2s; font-size: 22px; }
-    @keyframes sparkle-float {
-      0%, 100% { transform: translateY(0) rotate(0deg); opacity: 0.9; }
-      50% { transform: translateY(-15px) rotate(15deg); opacity: 1; }
+    @media (max-width: 480px) { .countdown__values { gap: 14px; } }
+    .cd-unit {
+      display: flex; flex-direction: column; align-items: center;
+      min-width: 56px;
     }
-
-    .hero__scroll {
-      display: flex; justify-content: center;
-      color: rgba(232, 201, 138, 0.6);
-      margin-top: 12px;
-      z-index: 3;
-      animation: scroll-bounce 2s ease-in-out infinite;
-      position: relative;
-    }
-    .hero__scroll .material-icons { font-size: 26px; }
-    @keyframes scroll-bounce {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(6px); }
-    }
-
-    /* ============================================================
-       SECCIONES CENTRADAS — más compactas
-       ============================================================ */
-    .prizes-showcase, .steps, .picker {
-      max-width: 1280px;
-      margin: 0 auto;
-      padding: 32px 24px;
-    }
-    @media (max-width: 720px) {
-      .prizes-showcase, .steps, .picker { padding: 28px 20px; }
-    }
-    .picker { padding-top: 24px; }
-    .prizes-showcase, .steps { padding-top: 48px; padding-bottom: 48px; }
-
-    .section-head { text-align: center; margin-bottom: 28px; }
-    .section-tag {
-      display: inline-block;
-      font-size: 10px;
+    .cd-unit__value {
+      font-size: 26px;
       font-weight: 700;
-      color: #c9a96e;
-      text-transform: uppercase;
-      letter-spacing: 0.28em;
-      margin-bottom: 8px;
-      padding: 4px 0;
-      border-bottom: 1px solid rgba(232, 201, 138, 0.35);
-    }
-    .section-head h2 {
-      margin: 0 0 6px;
-      font-family: 'Playfair Display', Georgia, serif;
-      font-size: clamp(22px, 3vw, 30px);
-      font-weight: 600;
-      color: var(--heading);
       letter-spacing: -0.02em;
-    }
-    .section-head p { margin: 0; color: var(--pg-muted); font-size: 14px; }
-
-    /* ============ BUSCADOR compacto integrado ============ */
-    .quick-search {
-      margin: 0 0 24px;
-      padding: 16px 18px;
-      background: linear-gradient(135deg, rgba(232, 201, 138, 0.1) 0%, rgba(30, 199, 123, 0.06) 100%);
-      border: 1px solid var(--card-border);
-      border-radius: 16px;
-    }
-    .quick-search__label {
-      display: flex; align-items: center; gap: 6px;
-      font-size: 11px;
-      font-weight: 800;
-      color: var(--pg-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      margin-bottom: 10px;
-    }
-    .quick-search__label .material-icons { font-size: 14px; color: #c9a96e; }
-    .quick-search__form { display: flex; gap: 8px; flex-wrap: wrap; }
-    .quick-search__input {
-      flex: 1;
-      min-width: 180px;
-      padding: 12px 16px;
-      background: var(--input-bg);
-      color: var(--input-text);
-      border: 1.5px solid var(--input-border);
-      border-radius: 10px;
-      font-size: 16px;
-      font-weight: 700;
       font-variant-numeric: tabular-nums;
-      transition: border-color 0.15s, box-shadow 0.15s;
+      color: var(--text);
+      line-height: 1;
     }
-    .quick-search__input::placeholder { color: var(--input-placeholder); font-weight: 400; }
-    .quick-search__input:focus {
-      outline: none;
-      border-color: #1ec77b;
-      box-shadow: 0 0 0 3px rgba(30, 199, 123, 0.15);
-    }
-    .btn__spin {
-      display: inline-block;
-      width: 14px; height: 14px;
-      border: 2px solid rgba(255,255,255,0.4);
-      border-top-color: #fff;
-      border-radius: 50%;
-      animation: spin 0.7s linear infinite;
-      margin-right: 6px;
-    }
-
-    .search-result {
-      margin: 14px 0 0;
-      position: relative;
-      display: flex; gap: 12px; align-items: flex-start;
-      padding: 16px 18px;
-      background: var(--card-bg);
-      border-radius: 12px;
-      border-left: 4px solid;
-      box-shadow: var(--card-shadow);
+    .cd-unit__label {
+      font-size: 10px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-top: 6px;
+      font-weight: 600;
     }
 
     /* ============================================================
-       EDITORIAL — sistema de tipografía y layout premium
+       SECTION patterns
        ============================================================ */
-    .editorial {
-      position: relative;
-      padding: 80px 24px 60px;
-      background:
-        radial-gradient(ellipse at 50% 0%, rgba(232, 201, 138, 0.08) 0%, transparent 40%),
-        var(--section-alt-bg);
-      overflow: hidden;
+    .section { padding: 80px 0; }
+    @media (max-width: 720px) { .section { padding: 56px 0; } }
+
+    .section__head {
+      margin-bottom: 40px;
+      max-width: 640px;
     }
-    .editorial::before {
-      content: '';
-      position: absolute;
-      top: 40px; left: 50%;
-      transform: translateX(-50%);
-      width: 60%; max-width: 400px;
-      height: 1px;
-      background: linear-gradient(90deg, transparent 0%, rgba(232, 201, 138, 0.3) 50%, transparent 100%);
-    }
-    .editorial--prizes { padding-top: 100px; }
-    .editorial__inner {
-      max-width: 1120px;
-      margin: 0 auto;
-      position: relative;
-    }
-    .editorial__head {
-      text-align: center;
-      max-width: 720px;
-      margin: 0 auto 56px;
-    }
-    @media (max-width: 720px) {
-      .editorial { padding: 56px 20px 40px; }
-      .editorial__head { margin-bottom: 40px; }
+    .section__head .pill { margin-bottom: 14px; }
+
+    .h-section {
+      margin: 0;
+      font-size: clamp(24px, 3vw, 34px);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      line-height: 1.15;
     }
 
-    /* Eyebrow — pequeño label superior con líneas doradas */
-    .eyebrow {
+    /* ============================================================
+       PICKER — Selector de boletas (protagonista)
+       ============================================================ */
+    .picker {
+      padding: 40px 0 120px;
+      position: relative;
+    }
+
+    .picker__head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 24px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+    .picker__head h2 { margin: 12px 0 6px; font-size: 28px; font-weight: 700; letter-spacing: -0.02em; }
+    .picker__head p { margin: 0; font-size: 14px; }
+
+    .legend {
+      display: flex; flex-wrap: wrap;
+      gap: 6px;
+    }
+    .legend__item {
       display: inline-flex;
       align-items: center;
-      gap: 12px;
-      font-size: 10px;
-      font-weight: 700;
-      color: #c9a96e;
-      text-transform: uppercase;
-      letter-spacing: 0.32em;
-      margin-bottom: 20px;
-    }
-    .eyebrow__line {
-      width: 32px; height: 1px;
-      background: linear-gradient(90deg, transparent 0%, rgba(232, 201, 138, 0.7) 100%);
-    }
-    .eyebrow__line:last-child {
-      background: linear-gradient(90deg, rgba(232, 201, 138, 0.7) 0%, transparent 100%);
-    }
-    .eyebrow--sm { font-size: 9px; letter-spacing: 0.24em; margin-bottom: 12px; }
-
-    /* Display heading — Playfair Display serif italic para "puedes ganar" etc */
-    .display {
-      font-family: 'Playfair Display', Georgia, serif;
-      font-weight: 700;
-      font-size: clamp(32px, 4.5vw, 52px);
-      line-height: 1.05;
-      letter-spacing: -0.02em;
-      color: var(--heading);
-      margin: 0 0 20px;
-    }
-    .display em {
-      font-style: italic;
-      font-weight: 500;
-      background: linear-gradient(120deg, #c9a96e 0%, #e8c98a 60%, #c9a96e 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-    .display--xl {
-      font-size: clamp(30px, 4vw, 44px);
-      margin-bottom: 24px;
-    }
-
-    .lede {
-      font-family: 'Inter', system-ui, sans-serif;
-      color: var(--pg-muted);
-      font-size: 16px;
-      line-height: 1.6;
-      max-width: 560px;
-      margin: 0 auto;
-    }
-
-    /* ============ PREMIO MAYOR — hero card editorial ============ */
-    .prize-hero {
-      display: grid;
-      grid-template-columns: 1.1fr 1fr;
-      gap: 48px;
-      align-items: center;
-      padding: 48px 44px;
-      background:
-        radial-gradient(ellipse at right, rgba(232, 201, 138, 0.12) 0%, transparent 65%),
-        linear-gradient(135deg, rgba(232, 201, 138, 0.04) 0%, transparent 50%),
-        var(--card-bg);
-      border: 1px solid rgba(232, 201, 138, 0.35);
-      border-radius: 4px;
-      position: relative;
-      overflow: hidden;
-      margin-bottom: 64px;
-      box-shadow: 0 40px 80px -30px rgba(0, 0, 0, 0.35);
-    }
-    /* Line-art corners premium */
-    .prize-hero::before,
-    .prize-hero::after {
-      content: '';
-      position: absolute;
-      width: 40px; height: 40px;
-      border-color: rgba(232, 201, 138, 0.5);
-      border-style: solid;
-    }
-    .prize-hero::before {
-      top: 16px; left: 16px;
-      border-width: 1px 0 0 1px;
-    }
-    .prize-hero::after {
-      bottom: 16px; right: 16px;
-      border-width: 0 1px 1px 0;
-    }
-    @media (max-width: 900px) {
-      .prize-hero {
-        grid-template-columns: 1fr;
-        padding: 40px 28px;
-        gap: 32px;
-        margin-bottom: 48px;
-      }
-    }
-
-    .prize-hero__eyebrow {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      margin-bottom: 20px;
-    }
-    .prize-hero__roman {
-      font-family: 'Playfair Display', Georgia, serif;
-      font-size: 52px;
-      line-height: 1;
-      font-style: italic;
-      font-weight: 500;
-      background: linear-gradient(180deg, #e8c98a 0%, #c9a96e 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-    .prize-hero__label {
-      font-family: 'Inter', sans-serif;
-      font-size: 11px;
-      font-weight: 700;
-      color: #c9a96e;
-      text-transform: uppercase;
-      letter-spacing: 0.28em;
-      padding-top: 8px;
-      border-top: 1px solid rgba(232, 201, 138, 0.3);
-      padding-left: 4px;
-      padding-right: 24px;
-    }
-
-    .prize-hero__divider {
-      width: 60px; height: 1px;
-      background: linear-gradient(90deg, #c9a96e 0%, transparent 100%);
-      margin: 20px 0 20px;
-    }
-
-    .prize-hero__date {
-      display: flex;
-      align-items: baseline;
-      gap: 14px;
-      margin-bottom: 24px;
-    }
-    .prize-hero__date-label {
-      font-family: 'Inter', sans-serif;
-      font-size: 10px;
-      font-weight: 700;
-      color: #c9a96e;
-      text-transform: uppercase;
-      letter-spacing: 0.24em;
-    }
-    .prize-hero__date-value {
-      font-family: 'Playfair Display', Georgia, serif;
-      font-style: italic;
-      font-size: 20px;
-      color: var(--heading);
-      font-weight: 500;
-    }
-
-    .prize-hero__note {
-      color: var(--pg-muted);
-      font-size: 13px;
-      line-height: 1.65;
-      margin: 0;
-      max-width: 420px;
-    }
-
-    .prize-hero__visual {
-      position: relative;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 260px;
-    }
-    .prize-hero__visual img {
-      position: relative;
-      z-index: 2;
-      max-width: 100%;
-      max-height: 320px;
-      object-fit: contain;
-      filter: drop-shadow(0 30px 40px rgba(0, 0, 0, 0.4)) drop-shadow(0 0 40px rgba(232, 201, 138, 0.2));
-    }
-    .prize-hero__glyph {
-      position: relative;
-      z-index: 2;
-      font-size: clamp(96px, 12vw, 140px);
-      line-height: 1;
-      filter: drop-shadow(0 20px 40px rgba(0, 0, 0, 0.4));
-    }
-    .prize-hero__glow {
-      position: absolute;
-      inset: 10% 15%;
-      background: radial-gradient(circle, rgba(232, 201, 138, 0.35) 0%, transparent 60%);
-      filter: blur(30px);
-      z-index: 1;
-      animation: hero-glow 4s ease-in-out infinite;
-    }
-    @keyframes hero-glow {
-      0%, 100% { opacity: 0.6; transform: scale(1); }
-      50% { opacity: 1; transform: scale(1.08); }
-    }
-
-    /* ============ Lista de premios secundarios ============ */
-    .prize-list__title {
-      text-align: center;
-      margin-bottom: 24px;
-    }
-
-    .prize-row {
-      display: grid;
-      grid-template-columns: 60px 1fr auto auto;
-      gap: 24px;
-      align-items: center;
-      padding: 24px 32px;
-      border-top: 1px solid var(--card-border);
-      transition: background 0.2s;
-      position: relative;
-      cursor: default;
-    }
-    .prize-row:last-child { border-bottom: 1px solid var(--card-border); }
-    .prize-row::before {
-      content: '';
-      position: absolute;
-      left: 0; top: 0; bottom: 0;
-      width: 3px;
-      background: linear-gradient(180deg, #c9a96e 0%, #e8c98a 100%);
-      opacity: 0;
-      transition: opacity 0.2s;
-    }
-    .prize-row:hover {
-      background: linear-gradient(90deg, rgba(232, 201, 138, 0.06) 0%, transparent 100%);
-    }
-    .prize-row:hover::before { opacity: 1; }
-    .prize-row:hover .prize-row__arrow { transform: translateX(4px); color: #c9a96e; }
-
-    .prize-row__roman {
-      font-family: 'Playfair Display', Georgia, serif;
-      font-style: italic;
-      font-size: 36px;
-      line-height: 1;
-      color: rgba(201, 169, 110, 0.55);
-      text-align: center;
-      font-weight: 500;
-    }
-    .prize-row__body { min-width: 0; }
-    .prize-row__label {
-      font-family: 'Inter', sans-serif;
-      font-size: 10px;
-      color: #c9a96e;
-      text-transform: uppercase;
-      letter-spacing: 0.2em;
-      font-weight: 700;
-      margin-bottom: 4px;
-    }
-    .prize-row h4 {
-      font-family: 'Playfair Display', Georgia, serif;
-      font-size: 20px;
-      font-weight: 600;
-      color: var(--heading);
-      margin: 0;
-      line-height: 1.2;
-    }
-    .prize-row__date {
-      display: flex;
-      flex-direction: column;
-      align-items: flex-end;
-      gap: 2px;
-    }
-    .prize-row__date small {
-      font-size: 9px;
-      color: #c9a96e;
-      text-transform: uppercase;
-      letter-spacing: 0.2em;
-      font-weight: 700;
-    }
-    .prize-row__date strong {
-      font-family: 'Playfair Display', Georgia, serif;
-      font-style: italic;
-      font-weight: 500;
-      color: var(--pg-text);
-      font-size: 15px;
-    }
-    .prize-row__arrow {
-      color: rgba(201, 169, 110, 0.4);
-      transition: transform 0.2s, color 0.2s;
-    }
-    @media (max-width: 720px) {
-      .prize-row {
-        grid-template-columns: 40px 1fr auto;
-        gap: 16px;
-        padding: 20px 16px;
-      }
-      .prize-row__roman { font-size: 28px; }
-      .prize-row__arrow { display: none; }
-      .prize-row__date { align-items: flex-end; }
-      .prize-row__date strong { font-size: 13px; }
-    }
-
-    /* ============ CÓMO FUNCIONA — pasos editorial ============ */
-    .editorial--how {
-      background:
-        radial-gradient(ellipse at 50% 100%, rgba(232, 201, 138, 0.06) 0%, transparent 40%),
-        transparent;
-    }
-    .how-flow {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 48px;
-      position: relative;
-    }
-    @media (max-width: 900px) {
-      .how-flow { grid-template-columns: 1fr; gap: 32px; }
-    }
-
-    .how-step {
-      position: relative;
-      padding: 8px 8px 8px 20px;
-    }
-    .how-step__roman {
-      font-family: 'Playfair Display', Georgia, serif;
-      font-style: italic;
-      font-weight: 500;
-      font-size: clamp(56px, 6vw, 84px);
-      line-height: 0.9;
-      background: linear-gradient(180deg, #c9a96e 0%, #e8c98a 60%, rgba(201, 169, 110, 0.3) 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      margin-bottom: 12px;
-      display: inline-block;
-    }
-    .how-step__line {
-      position: absolute;
-      top: 40px; right: -30px;
-      width: 60px; height: 1px;
-      background: linear-gradient(90deg, rgba(232, 201, 138, 0.4) 0%, transparent 100%);
-      display: none;
-    }
-    @media (min-width: 900px) {
-      .how-step__line { display: block; }
-    }
-    .how-step__label {
-      font-family: 'Inter', sans-serif;
-      font-size: 10px;
-      color: #c9a96e;
-      text-transform: uppercase;
-      letter-spacing: 0.28em;
-      font-weight: 700;
-      margin-bottom: 8px;
-    }
-    .how-step h3 {
-      font-family: 'Playfair Display', Georgia, serif;
-      font-weight: 600;
-      font-size: 24px;
-      color: var(--heading);
-      margin: 0 0 10px;
-      line-height: 1.2;
-    }
-    .how-step p {
-      color: var(--pg-muted);
-      font-size: 14px;
-      line-height: 1.7;
-      margin: 0;
-      max-width: 320px;
-    }
-    .search-result__body { flex: 1; }
-    .search-result .material-icons { font-size: 32px; margin-top: 2px; }
-    .search-result strong { display: block; font-size: 16px; margin-bottom: 6px; color: var(--heading); }
-    .search-result p { margin: 0 0 12px; font-size: 14px; color: var(--pg-text); opacity: 0.85; }
-    .search-result__actions { display: flex; gap: 8px; flex-wrap: wrap; }
-    .search-result__close {
-      position: absolute;
-      top: 8px; right: 10px;
-      background: transparent; border: none;
-      font-size: 22px; line-height: 1;
-      color: var(--pg-muted); cursor: pointer;
-      padding: 4px 8px;
-    }
-    .search-result--available { border-color: #1ec77b; }
-    .search-result--available .material-icons { color: #0b8a4a; }
-    .search-result--sold { border-color: #ef4444; }
-    .search-result--sold .material-icons { color: #b91c1c; }
-    .search-result--reserved { border-color: #f59e0b; }
-    .search-result--reserved .material-icons { color: #b45309; }
-    .search-result--assigned { border-color: #3b82f6; }
-    .search-result--assigned .material-icons { color: #1d4ed8; }
-    .search-result--not_found { border-color: #6b7280; }
-    .search-result--not_found .material-icons { color: #4b5563; }
-
-    /* ============ PICKER + GRID ============ */
-    .picker__head {
-      display: flex; justify-content: space-between; align-items: flex-start;
-      flex-wrap: wrap; gap: 16px; margin-bottom: 28px;
-    }
-    .picker__head h2 {
-      font-family: 'Playfair Display', Georgia, serif;
-      margin: 4px 0 4px;
-      font-size: 30px;
-      color: var(--heading);
-      font-weight: 600;
-      letter-spacing: -0.02em;
-    }
-    .picker__head p { margin: 0; }
-    .picker__legend { display: flex; gap: 8px; }
-    .chip {
-      padding: 6px 14px;
+      gap: 6px;
+      padding: 6px 10px;
+      background: var(--surface);
+      border: 1px solid var(--border);
       border-radius: 999px;
       font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
+      color: var(--text-muted);
+      font-weight: 500;
     }
-    .chip--free { background: rgba(30, 199, 123, 0.12); color: #0b8a4a; border: 1px solid rgba(30, 199, 123, 0.35); }
-    .chip--sel { background: linear-gradient(135deg, #1ec77b 0%, #16a366 100%); color: #fff; }
-
-    .empty {
-      text-align: center;
-      padding: 60px 20px;
-      color: var(--pg-muted);
+    .legend__dot {
+      width: 8px; height: 8px;
+      border-radius: 3px;
     }
-    .empty .big { font-size: 72px; color: #c9a96e; opacity: 0.6; margin-bottom: 12px; }
+    .legend__dot--available { background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); }
+    .legend__dot--selected { background: var(--gold); box-shadow: 0 0 6px var(--gold); }
+    .legend__dot--reserved { background: var(--amber); }
+    .legend__dot--sold { background: var(--red); opacity: 0.5; }
 
+    /* ============ Search inline ============ */
+    .search {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r-md);
+      padding: 6px 6px 6px 14px;
+      margin-bottom: 24px;
+      transition: border-color var(--t-fast);
+    }
+    .search:focus-within {
+      border-color: var(--gold);
+      box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.14);
+    }
+    .search__icon {
+      color: var(--text-dim);
+      font-size: 20px;
+    }
+    .search__input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: var(--text);
+      font-size: 15px;
+      padding: 10px 4px;
+      outline: none;
+      font-family: inherit;
+      font-variant-numeric: tabular-nums;
+      -webkit-appearance: none;
+      appearance: none;
+      -moz-appearance: textfield;
+    }
+    .search__input::-webkit-outer-spin-button,
+    .search__input::-webkit-inner-spin-button {
+      -webkit-appearance: none; margin: 0;
+    }
+    .search__input::placeholder { color: var(--text-dim); }
+
+    /* ============ Search result card ============ */
+    .search-result {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      padding: 16px 18px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--r-md);
+      margin-bottom: 20px;
+      position: relative;
+    }
+    .search-result[data-status="available"] { border-color: rgba(22, 163, 74, 0.35); }
+    .search-result[data-status="available"] .search-result__icon { color: var(--green); }
+    .search-result[data-status="sold"] { border-color: rgba(239, 68, 68, 0.35); }
+    .search-result[data-status="sold"] .search-result__icon { color: var(--red); }
+    .search-result[data-status="reserved"] { border-color: rgba(245, 158, 11, 0.35); }
+    .search-result[data-status="reserved"] .search-result__icon { color: var(--amber); }
+    .search-result[data-status="assigned"] { border-color: rgba(59, 130, 246, 0.35); }
+    .search-result[data-status="assigned"] .search-result__icon { color: var(--blue); }
+    .search-result__icon { font-size: 22px; margin-top: 2px; flex-shrink: 0; }
+    .search-result__body { flex: 1; min-width: 0; }
+    .search-result__body strong { display: block; font-size: 14px; margin-bottom: 4px; }
+    .search-result__body p { margin: 0; font-size: 13px; color: var(--text-muted); }
+    .search-result__actions { display: flex; gap: 8px; flex-shrink: 0; }
+    .search-result__close {
+      background: transparent;
+      border: none;
+      color: var(--text-dim);
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 6px;
+      display: grid; place-items: center;
+    }
+    .search-result__close:hover { color: var(--text); background: rgba(255,255,255,0.06); }
+    .search-result__close .material-icons-outlined { font-size: 18px; }
+    @media (max-width: 640px) {
+      .search-result { flex-wrap: wrap; }
+      .search-result__actions { width: 100%; }
+      .search-result__actions .btn { flex: 1; }
+    }
+
+    /* ============================================================
+       GRID de boletas — protagonista
+       ============================================================ */
     .grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
-      gap: 10px;
-      margin-bottom: 20px;
+      grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+      gap: 8px;
     }
-    .grid-skeleton {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
-      gap: 10px;
+    .grid--skeleton { pointer-events: none; }
+
+    .ticket {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--r-md);
+      padding: 16px 8px;
+      font-family: inherit;
+      color: var(--text);
+      font-weight: 600;
+      font-size: 15px;
+      font-variant-numeric: tabular-nums;
+      cursor: pointer;
+      transition: transform var(--t-fast), background var(--t-fast),
+                  border-color var(--t-fast), box-shadow var(--t-fast);
+      overflow: hidden;
     }
-    .skeleton-cell {
-      height: 54px;
-      background: linear-gradient(90deg, rgba(201, 169, 110, 0.08) 0%, rgba(201, 169, 110, 0.18) 50%, rgba(201, 169, 110, 0.08) 100%);
+    .ticket__number { position: relative; z-index: 1; }
+    .ticket__check {
+      position: absolute;
+      top: 6px; right: 6px;
+      color: var(--bg);
+      font-size: 14px;
+      background: var(--gold);
+      border-radius: 50%;
+      width: 18px; height: 18px;
+      display: grid; place-items: center;
+      z-index: 2;
+    }
+
+    /* Estado disponible: default */
+    .ticket--available:hover {
+      background: var(--card-hover);
+      border-color: var(--border-strong);
+      transform: translateY(-1px);
+    }
+
+    /* Estado seleccionado */
+    .ticket--selected {
+      background: linear-gradient(180deg, rgba(212, 175, 55, 0.14) 0%, rgba(212, 175, 55, 0.06) 100%);
+      border-color: var(--gold);
+      color: var(--text);
+      box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.12);
+    }
+    .ticket--selected:hover { background: rgba(212, 175, 55, 0.18); }
+
+    /* Estado reservado (visual, no clickable en el pool público) */
+    .ticket--reserved {
+      background: var(--surface);
+      color: var(--text-dim);
+      cursor: not-allowed;
+      border-color: rgba(245, 158, 11, 0.2);
+    }
+    .ticket--reserved::after {
+      content: '';
+      position: absolute;
+      top: 6px; right: 6px;
+      width: 6px; height: 6px;
+      background: var(--amber);
+      border-radius: 50%;
+    }
+
+    /* Estado vendido */
+    .ticket--sold {
+      background: transparent;
+      color: var(--text-dim);
+      cursor: not-allowed;
+      border-style: dashed;
+      border-color: var(--border);
+      text-decoration: line-through;
+    }
+
+    /* Pulse animation */
+    .ticket--pulse {
+      animation: ticket-pulse 1.4s ease-in-out 2;
+    }
+    @keyframes ticket-pulse {
+      0%, 100% { transform: scale(1); box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.12); }
+      50% { transform: scale(1.06); box-shadow: 0 0 0 8px rgba(212, 175, 55, 0.18); }
+    }
+
+    /* Skeleton */
+    .ticket--skeleton {
+      background: linear-gradient(90deg, var(--surface) 0%, var(--card-hover) 50%, var(--surface) 100%);
       background-size: 200% 100%;
-      border-radius: 10px;
       animation: skel 1.4s linear infinite;
+      border: 1px solid var(--border);
+      height: 54px;
+      cursor: default;
     }
     @keyframes skel { to { background-position: -200% 0; } }
-    .cell {
-      padding: 14px 4px;
-      background: var(--cell-bg);
-      border: 1.5px solid var(--cell-border);
-      border-radius: 10px;
-      font-family: 'Inter', sans-serif;
-      font-weight: 700;
-      font-size: 15px;
-      color: var(--cell-text);
-      cursor: pointer;
-      transition: all 0.15s;
-      font-variant-numeric: tabular-nums;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.03);
-    }
-    .cell:hover {
-      background: var(--cell-bg-hover);
-      border-color: #c9a96e;
-      transform: translateY(-2px);
-      box-shadow: 0 6px 14px rgba(201, 169, 110, 0.25);
-    }
-    .cell--selected {
-      background: linear-gradient(135deg, #1ec77b 0%, #16a366 100%) !important;
-      color: #fff !important;
-      border-color: #0b8a4a !important;
-      box-shadow: 0 6px 16px rgba(30, 199, 123, 0.4);
-    }
-    .cell--pulse { animation: cell-pulse 1.4s ease-in-out 2; }
-    @keyframes cell-pulse {
-      0%,100% { transform: scale(1); box-shadow: 0 6px 16px rgba(30, 199, 123, 0.4); }
-      50% { transform: scale(1.12); box-shadow: 0 10px 24px rgba(30, 199, 123, 0.6); }
-    }
 
-    .summary {
+    /* Empty state */
+    .empty {
+      text-align: center;
+      padding: 80px 20px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r-lg);
+    }
+    .empty__icon { font-size: 44px; color: var(--text-dim); margin-bottom: 12px; display: block; }
+    .empty h3 { margin: 0 0 6px; font-size: 17px; font-weight: 600; }
+    .empty p { margin: 0; font-size: 14px; }
+
+    /* ============ Bottom bar (sticky) ============ */
+    .picker__bar {
       position: sticky;
       bottom: 16px;
+      z-index: 30;
+      margin-top: 32px;
+      padding: 0 24px;
+    }
+    .picker__bar-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      padding: 16px 20px;
+      background: rgba(27, 28, 32, 0.85);
+      backdrop-filter: saturate(180%) blur(20px);
+      -webkit-backdrop-filter: saturate(180%) blur(20px);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--r-lg);
+      box-shadow: var(--shadow-lg);
+    }
+    .picker__bar-info {
+      display: flex; flex-direction: column; gap: 2px;
+    }
+    .picker__bar-count { font-size: 13px; color: var(--text-muted); font-weight: 500; }
+    .picker__bar-total { font-size: 17px; font-weight: 600; }
+    .picker__bar-total strong { color: var(--text); font-weight: 700; }
+    @media (max-width: 540px) {
+      .picker__bar-inner { padding: 12px 14px; }
+      .picker__bar-info { flex: 1; }
+      .picker__bar-inner .btn { padding: 12px 16px; font-size: 13px; }
+    }
+
+    /* ============================================================
+       PRIZES grid — cards Stripe-style
+       ============================================================ */
+    .prizes-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 16px;
+    }
+    .prize-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--r-lg);
+      padding: 24px;
+      transition: border-color var(--t-med), transform var(--t-med);
+    }
+    .prize-card:hover {
+      border-color: var(--border-strong);
+      transform: translateY(-2px);
+    }
+    .prize-card--top {
+      background:
+        radial-gradient(ellipse at top right, rgba(212, 175, 55, 0.08) 0%, transparent 60%),
+        var(--card);
+      border-color: rgba(212, 175, 55, 0.3);
+    }
+    .prize-card__head {
       display: flex; justify-content: space-between; align-items: center;
-      padding: 20px 24px; margin-top: 24px;
-      background: var(--summary-bg);
-      border-radius: 16px;
-      font-size: 15px;
-      flex-wrap: wrap; gap: 14px;
-      border: 1px solid var(--summary-border);
-      color: var(--pg-text);
-      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
-      backdrop-filter: blur(10px);
+      margin-bottom: 20px;
     }
-    .summary__info strong { color: var(--heading); }
-
-    /* ============ BOTONES ============ */
-    .btn {
-      display: inline-flex; align-items: center; gap: 8px;
-      padding: 12px 22px;
-      border-radius: 12px;
-      font-size: 14px;
-      font-weight: 700;
-      cursor: pointer;
-      border: 1px solid transparent;
-      transition: transform 0.1s, box-shadow 0.15s, filter 0.15s;
-      text-decoration: none;
-      justify-content: center;
-    }
-    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-    .btn.primary {
-      background: linear-gradient(135deg, #1ec77b 0%, #16a366 100%);
-      color: #fff;
-      box-shadow: 0 6px 20px rgba(30, 199, 123, 0.35);
-    }
-    .btn.primary:hover:not(:disabled) {
-      transform: translateY(-1px);
-      filter: brightness(1.08);
-      box-shadow: 0 10px 26px rgba(30, 199, 123, 0.5);
-    }
-    .btn.ghost {
-      background: transparent;
-      border-color: var(--input-border);
-      color: var(--pg-text);
-    }
-    .btn.ghost:hover:not(:disabled) { background: rgba(127, 127, 127, 0.08); }
-    .btn.ghost-light {
-      background: rgba(255, 255, 255, 0.06);
-      border: 1px solid rgba(232, 201, 138, 0.4);
-      color: #f8f1e3;
-      backdrop-filter: blur(6px);
-    }
-    .btn.ghost-light:hover:not(:disabled) {
-      background: rgba(255, 255, 255, 0.12);
-      border-color: rgba(232, 201, 138, 0.7);
-    }
-    .btn--lg { padding: 16px 28px; font-size: 15px; }
-    .btn--xl { padding: 18px 32px; font-size: 16px; border-radius: 14px; }
-    .btn--sm { padding: 8px 14px; font-size: 13px; }
-    .btn .material-icons { font-size: 18px; }
-
-    /* ============ FOOTER ============ */
-    .foot {
-      text-align: center;
-      color: var(--pg-muted);
+    .prize-card__num {
       font-size: 12px;
-      padding: 40px 20px;
-      max-width: 720px;
-      margin: 0 auto;
+      font-weight: 700;
+      color: var(--text-muted);
+      letter-spacing: 0.06em;
+      font-variant-numeric: tabular-nums;
+    }
+    .prize-card--top .prize-card__num { color: var(--gold); }
+    .prize-card__tag {
+      padding: 3px 10px;
+      background: var(--gold-soft);
+      color: var(--gold);
+      border-radius: 999px;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+    .prize-card__title {
+      margin: 0 0 12px;
+      font-size: 18px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      line-height: 1.3;
+    }
+    .prize-card__meta {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+    .prize-card__meta .material-icons-outlined { font-size: 16px; }
+
+    /* ============================================================
+       STEPS — 3 cards
+       ============================================================ */
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+    @media (max-width: 900px) { .steps { grid-template-columns: 1fr; } }
+    .step {
+      position: relative;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--r-lg);
+      padding: 28px 24px;
+      transition: border-color var(--t-med);
+    }
+    .step:hover { border-color: var(--border-strong); }
+    .step__icon {
+      display: grid; place-items: center;
+      width: 44px; height: 44px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      margin-bottom: 20px;
+    }
+    .step__icon .material-icons-outlined { font-size: 22px; color: var(--gold); }
+    .step__num {
+      position: absolute;
+      top: 24px; right: 24px;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-dim);
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 0.05em;
+    }
+    .step h3 { margin: 0 0 8px; font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }
+    .step p { margin: 0; font-size: 14px; line-height: 1.6; }
+
+    /* ============================================================
+       FAQ
+       ============================================================ */
+    .faq { display: flex; flex-direction: column; gap: 8px; }
+    .faq__item {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--r-md);
+      overflow: hidden;
+      transition: border-color var(--t-fast);
+    }
+    .faq__item:hover { border-color: var(--border-strong); }
+    .faq__item[open] { border-color: var(--border-strong); }
+    .faq__q {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 20px 24px;
+      cursor: pointer;
+      font-size: 15px;
+      font-weight: 500;
+      list-style: none;
+      user-select: none;
+    }
+    .faq__q::-webkit-details-marker { display: none; }
+    .faq__chev {
+      font-size: 20px;
+      color: var(--text-muted);
+      transition: transform var(--t-med);
+    }
+    .faq__item[open] .faq__chev { transform: rotate(180deg); color: var(--gold); }
+    .faq__a {
+      padding: 0 24px 20px;
+      color: var(--text-muted);
+      font-size: 14px;
+      line-height: 1.65;
+    }
+    .faq__a p { margin: 0; }
+
+    /* ============================================================
+       FOOTER
+       ============================================================ */
+    .foot {
+      margin-top: auto;
+      padding: 40px 0 32px;
+      border-top: 1px solid var(--border);
+    }
+    .foot__inner {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      font-size: 13px;
+      color: var(--text-muted);
     }
     .foot__brand {
       display: inline-flex; align-items: center; gap: 8px;
-      font-weight: 800;
-      color: var(--heading);
-      font-size: 14px;
-      margin-bottom: 8px;
+      color: var(--text);
+      font-weight: 600;
     }
-    .foot__dot {
-      width: 8px; height: 8px; background: #1ec77b;
-      border-radius: 50%;
-      box-shadow: 0 0 0 4px rgba(30, 199, 123, 0.25);
-    }
-    .foot p { margin: 0 0 4px; }
-    .foot__lot { margin-top: 8px !important; }
+    .foot__meta { display: inline-flex; gap: 8px; flex-wrap: wrap; }
+    .foot__sep { color: var(--text-dim); }
 
-    /* ============ MODAL ============ */
+    /* ============================================================
+       BOTONES
+       ============================================================ */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 10px 18px;
+      border: 1px solid transparent;
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: -0.005em;
+      cursor: pointer;
+      transition: background var(--t-fast), color var(--t-fast),
+                  border-color var(--t-fast), transform var(--t-fast),
+                  box-shadow var(--t-fast);
+      white-space: nowrap;
+      text-decoration: none;
+    }
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    .btn .material-icons-outlined { font-size: 18px; }
+    .btn--sm { padding: 7px 12px; font-size: 13px; border-radius: 8px; }
+    .btn--lg { padding: 13px 22px; font-size: 15px; border-radius: 12px; }
+    .btn--block { width: 100%; }
+
+    .btn--gold {
+      background: var(--gold);
+      color: #1a1300;
+      box-shadow: 0 4px 12px rgba(212, 175, 55, 0.18);
+    }
+    .btn--gold:hover:not(:disabled) {
+      background: var(--gold-hover);
+      transform: translateY(-1px);
+      box-shadow: 0 8px 20px rgba(212, 175, 55, 0.3);
+    }
+    .btn--gold:active:not(:disabled) { transform: translateY(0); }
+    .btn--gold .material-icons-outlined { color: #1a1300; }
+
+    .btn--ghost {
+      background: transparent;
+      border-color: var(--border-strong);
+      color: var(--text);
+    }
+    .btn--ghost:hover:not(:disabled) {
+      background: rgba(255, 255, 255, 0.04);
+      border-color: var(--text-dim);
+    }
+
+    .btn__spin {
+      display: inline-block;
+      width: 14px; height: 14px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-top-color: currentColor;
+      border-radius: 50%;
+      animation: spin 700ms linear infinite;
+    }
+
+    .icon-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      width: 36px; height: 36px;
+      display: grid; place-items: center;
+      cursor: pointer;
+      color: var(--text-muted);
+      transition: background var(--t-fast), color var(--t-fast);
+    }
+    .icon-btn:hover { background: rgba(255,255,255,0.05); color: var(--text); }
+    .icon-btn .material-icons-outlined { font-size: 18px; }
+
+    /* ============================================================
+       FORMULARIO
+       ============================================================ */
+    .form { display: flex; flex-direction: column; gap: 16px; margin-top: 24px; }
+    .field { display: flex; flex-direction: column; gap: 6px; }
+    .field__label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      letter-spacing: 0.02em;
+    }
+    .field__label small {
+      font-size: 11px;
+      color: var(--text-dim);
+      font-weight: 500;
+      margin-left: 4px;
+    }
+    .input {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r-md);
+      padding: 12px 14px;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 15px;
+      transition: border-color var(--t-fast), box-shadow var(--t-fast);
+      outline: none;
+      -webkit-text-fill-color: var(--text);
+    }
+    .input::placeholder { color: var(--text-dim); }
+    .input:focus {
+      border-color: var(--gold);
+      box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.14);
+    }
+    .input:-webkit-autofill,
+    .input:-webkit-autofill:hover,
+    .input:-webkit-autofill:focus {
+      -webkit-box-shadow: 0 0 0 40px var(--surface) inset !important;
+      -webkit-text-fill-color: var(--text) !important;
+      caret-color: var(--text);
+    }
+
+    .or {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 4px 0;
+      color: var(--text-dim);
+      font-size: 12px;
+    }
+    .or::before, .or::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .alert {
+      display: flex; align-items: center; gap: 10px;
+      padding: 12px 14px; margin-top: 12px;
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #fca5a5;
+      border-radius: var(--r-md);
+      font-size: 13px;
+    }
+    .alert .material-icons-outlined { font-size: 18px; }
+
+    /* ============================================================
+       MODAL
+       ============================================================ */
     .modal {
       position: fixed; inset: 0;
-      background: rgba(10, 14, 12, 0.75);
-      backdrop-filter: blur(6px);
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 16px;
+      padding: 20px;
       z-index: 100;
-      animation: fadeIn 0.18s;
+      animation: fadeIn 200ms ease;
     }
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     .modal__card {
-      position: relative;
-      background: var(--card-bg);
-      color: var(--pg-text);
-      border-radius: 20px;
-      padding: 32px 28px;
-      max-width: 460px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--r-xl);
+      padding: 28px;
+      max-width: 480px;
       width: 100%;
       max-height: 92vh;
       overflow-y: auto;
-      box-shadow: 0 25px 70px rgba(0,0,0,0.4);
-      border: 1px solid var(--card-border);
-      backdrop-filter: blur(10px);
+      box-shadow: var(--shadow-lg);
+      animation: modalIn 240ms cubic-bezier(0.4, 0, 0.2, 1);
     }
-    .modal__card--wide { max-width: 620px; padding: 24px 20px; }
-    .modal__close {
-      position: absolute;
-      top: 12px; right: 14px;
-      background: transparent; border: none;
-      font-size: 28px; line-height: 1;
-      color: var(--pg-muted); cursor: pointer;
-      padding: 4px 10px;
-      border-radius: 8px;
-      z-index: 2;
+    .modal__card--wide { max-width: 620px; padding: 24px; }
+    @keyframes modalIn {
+      from { opacity: 0; transform: translateY(12px) scale(0.98); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
     }
-    .modal__close:hover { background: rgba(127,127,127,0.1); color: var(--heading); }
-    .modal__card h2 { margin: 0 0 6px; font-size: 22px; color: var(--heading); }
-    .modal__lead { margin: 0 0 8px; color: var(--pg-muted); font-size: 14px; }
-
-    /* ============ PREVIEW ============ */
-    .preview-head { text-align: center; margin-bottom: 16px; padding-top: 6px; }
-    .preview-head h2 { font-size: 22px; margin-bottom: 4px; color: var(--heading); }
-    .preview-head p { margin: 0; color: var(--pg-muted); font-size: 13px; }
-    .preview-ticket {
-      display: flex;
-      justify-content: center;
-      padding: 8px 0 16px;
+    .modal__head {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      gap: 16px;
+      margin-bottom: 20px;
     }
-    .preview-actions {
+    .modal__head h2 { margin: 8px 0 4px; font-size: 22px; font-weight: 700; letter-spacing: -0.02em; }
+    .modal__head p { margin: 0; font-size: 13px; }
+    .modal__actions {
       display: flex;
       flex-direction: column;
       gap: 10px;
-      padding-top: 8px;
-      border-top: 1px solid var(--card-border);
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border);
     }
 
-    /* ============ FORMULARIO ============ */
-    .form { display: grid; gap: 14px; margin-top: 20px; }
-    .field { display: grid; gap: 6px; }
-    .field span {
-      font-weight: 700; letter-spacing: 0.02em;
-      color: var(--pg-muted); text-transform: uppercase; font-size: 11px;
-    }
-    .field input {
-      background: var(--input-bg) !important;
-      color: var(--input-text) !important;
-      -webkit-text-fill-color: var(--input-text) !important;
-      caret-color: var(--input-text);
-      padding: 14px 16px;
-      border: 1.5px solid var(--input-border);
-      border-radius: 10px;
-      font-size: 15px;
-      font-family: inherit;
-      transition: border-color 0.15s, box-shadow 0.15s;
-    }
-    .field input::placeholder { color: var(--input-placeholder) !important; opacity: 1; }
-    .field input:focus {
-      outline: none;
-      border-color: #1ec77b;
-      box-shadow: 0 0 0 4px rgba(30, 199, 123, 0.15);
-    }
-    .field input:-webkit-autofill,
-    .field input:-webkit-autofill:hover,
-    .field input:-webkit-autofill:focus {
-      -webkit-box-shadow: 0 0 0 40px #ffffff inset !important;
-      -webkit-text-fill-color: #1a2942 !important;
-    }
-    :host-context([data-theme="dark"]) .field input:-webkit-autofill,
-    :host-context([data-theme="dark"]) .field input:-webkit-autofill:hover,
-    :host-context([data-theme="dark"]) .field input:-webkit-autofill:focus {
-      -webkit-box-shadow: 0 0 0 40px #142240 inset !important;
-      -webkit-text-fill-color: #f8f1e3 !important;
-    }
-
-    .or { text-align: center; margin: 6px 0; color: var(--pg-muted); font-size: 12px; }
-    .muted { color: var(--pg-muted); font-size: 13px; margin: 4px 0 0; }
-
-    .alert {
-      display: flex; align-items: center; gap: 8px;
-      padding: 12px 14px; margin-top: 14px;
-      background: rgba(239, 68, 68, 0.1);
-      color: #b91c1c;
-      border-radius: 10px;
-      font-size: 13px;
+    /* ============ Preview ticket ============ */
+    .preview-ticket {
+      display: flex;
+      justify-content: center;
+      padding: 8px 0;
     }
   `],
 })
-export class PublicPurchaseComponent implements OnInit {
+export class PublicPurchaseComponent implements OnInit, OnDestroy {
   private readonly svc = inject(PublicSalesService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
-  readonly theme = inject(ThemeService);
 
   loading = signal(true);
   loadingTickets = signal(false);
@@ -1795,11 +1646,43 @@ export class PublicPurchaseComponent implements OnInit {
   searchResult = signal<TicketLookup | null>(null);
   pulseTicketId = signal<number | null>(null);
 
-  // Preview de boleta (modal con diseño real de cancha + números)
   previewOpen = signal(false);
   previewLoading = signal(false);
   previewData = signal<PublicTicketDetail | null>(null);
   previewTicketId = signal<number | null>(null);
+
+  // Countdown reactivo — se actualiza cada segundo
+  countdown = signal<{ days: string; hours: string; minutes: string; seconds: string } | null>(null);
+  private countdownInterval: ReturnType<typeof setInterval> | null = null;
+
+  skeletonRange = Array.from({ length: 30 }, (_, i) => i);
+
+  faq = [
+    {
+      q: '¿Cómo garantizan la transparencia del sorteo?',
+      a: 'El sorteo se realiza con la lotería oficial anunciada en la rifa. Los números y fechas quedan registrados en la plataforma antes del sorteo y son verificables públicamente con el QR de cada boleta.',
+    },
+    {
+      q: '¿Qué métodos de pago aceptan?',
+      a: 'Nequi, PSE, Bancolombia y tarjeta de crédito/débito a través de Wompi. También transferencia manual con comprobante que el organizador aprueba en menos de 24 horas.',
+    },
+    {
+      q: '¿Cuánto tiempo tengo para pagar mi boleta reservada?',
+      a: 'Al elegir una boleta la reservamos por 24 horas. Recibirás un recordatorio antes de que expire. Si no pagas, la boleta vuelve a estar disponible para otros compradores.',
+    },
+    {
+      q: '¿Cómo sabré si gané?',
+      a: 'Después del sorteo te notificamos por correo electrónico y WhatsApp automáticamente. También puedes verificar el resultado desde el enlace de tu boleta.',
+    },
+    {
+      q: '¿Mis datos personales están seguros?',
+      a: 'Sí. Solo pedimos la información mínima para entregarte el premio si ganas. No compartimos tu información con terceros ni la usamos para publicidad.',
+    },
+    {
+      q: '¿Puedo comprar varias boletas?',
+      a: 'Sí, puedes seleccionar hasta 10 boletas por compra. Si quieres más, puedes hacer múltiples compras.',
+    },
+  ];
 
   form = {
     customer_document: '',
@@ -1825,6 +1708,8 @@ export class PublicPurchaseComponent implements OnInit {
       .join(', ');
   });
 
+  availableCount = computed(() => this.available().length);
+
   searchPlaceholder = computed(() => {
     const r = this.overview();
     if (!r) return '2565';
@@ -1838,8 +1723,6 @@ export class PublicPurchaseComponent implements OnInit {
     return [...r.prizes].sort((a, b) => a.position - b.position)[0].name;
   });
 
-  /** Adapta la PublicTicketDetail al modelo Ticket que TicketDesignComponent
-   *  espera. Solo mapea los campos que el diseño usa. */
   previewTicket = computed(() => {
     const pd = this.previewData();
     if (!pd) return null;
@@ -1866,39 +1749,6 @@ export class PublicPurchaseComponent implements OnInit {
     }));
   });
 
-  prizeEmoji(name: string): string {
-    const n = (name || '').toLowerCase();
-    if (!n) return '🏆';
-    if (/(televisor|tele\b|\btv\b|pantalla|smart tv)/.test(n)) return '📺';
-    if (/(moto|scooter|motocicleta)/.test(n)) return '🏍️';
-    if (/(carro|auto\b|vehículo|camioneta)/.test(n)) return '🚗';
-    if (/(celular|iphone|samsung|smartphone|teléfono)/.test(n)) return '📱';
-    if (/(nevera|refrigerador)/.test(n)) return '🧊';
-    if (/(lavadora)/.test(n)) return '🧺';
-    if (/(bono|efectivo|dinero|plata|cash)/.test(n)) return '💵';
-    if (/(portátil|computador|laptop|pc\b|notebook)/.test(n)) return '💻';
-    if (/(bicicleta|bici)/.test(n)) return '🚴';
-    if (/(mercado|canasta)/.test(n)) return '🛒';
-    if (/(consola|ps5|xbox|nintendo)/.test(n)) return '🎮';
-    if (/(reloj|smartwatch)/.test(n)) return '⌚';
-    if (/(cámara|camara)/.test(n)) return '📷';
-    return '🏆';
-  }
-
-  heroPrizeEmoji = computed(() => this.prizeEmoji(this.topPrizeName()));
-
-  /** Convierte 1..12 a números romanos para el layout editorial. */
-  roman(n: number): string {
-    const table: Array<[number, string]> = [
-      [10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I'],
-    ];
-    let out = '';
-    for (const [v, s] of table) {
-      while (n >= v) { out += s; n -= v; }
-    }
-    return out;
-  }
-
   ngOnInit(): void {
     const id = Number(this.route.snapshot.paramMap.get('id'));
     if (!id) {
@@ -1918,12 +1768,47 @@ export class PublicPurchaseComponent implements OnInit {
         this.overview.set(r);
         this.loading.set(false);
         this.loadAvailable();
+        this.startCountdown(r);
       },
       error: (e) => {
         this.error.set(e?.error?.detail ?? 'No se pudo cargar la rifa');
         this.loading.set(false);
       },
     });
+  }
+
+  ngOnDestroy(): void {
+    if (this.countdownInterval) clearInterval(this.countdownInterval);
+  }
+
+  private startCountdown(r: PublicRaffleOverview) {
+    // Solo mostramos el countdown si la fecha está pública (threshold alcanzado o programada)
+    if (!r.show_draw_date || !r.final_draw_date) return;
+
+    const target = new Date(r.final_draw_date + (r.final_draw_date.length === 10 ? 'T20:00:00' : '')).getTime();
+    if (isNaN(target)) return;
+
+    const tick = () => {
+      const now = Date.now();
+      const diff = target - now;
+      if (diff <= 0) {
+        this.countdown.set(null);
+        if (this.countdownInterval) clearInterval(this.countdownInterval);
+        return;
+      }
+      const days = Math.floor(diff / 86400000);
+      const hours = Math.floor((diff % 86400000) / 3600000);
+      const minutes = Math.floor((diff % 3600000) / 60000);
+      const seconds = Math.floor((diff % 60000) / 1000);
+      this.countdown.set({
+        days: String(days).padStart(2, '0'),
+        hours: String(hours).padStart(2, '0'),
+        minutes: String(minutes).padStart(2, '0'),
+        seconds: String(seconds).padStart(2, '0'),
+      });
+    };
+    tick();
+    this.countdownInterval = setInterval(tick, 1000);
   }
 
   loadAvailable() {
@@ -1949,8 +1834,6 @@ export class PublicPurchaseComponent implements OnInit {
     this.selected.set(set);
   }
 
-  /** Al hacer clic en una celda del grid, abre el modal de preview con el
-   *  diseño real de la boleta (los 20 números en la cancha). */
   openTicketPreview(t: AvailableTicket) {
     this.previewTicketId.set(t.id);
     this.previewOpen.set(true);
@@ -1973,14 +1856,12 @@ export class PublicPurchaseComponent implements OnInit {
     this.previewTicketId.set(null);
   }
 
-  /** Agrega la boleta previewed a la selección y cierra el modal. */
   selectAndClosePreview() {
     const id = this.previewTicketId();
     if (id != null) this.toggle(id);
     this.closePreview();
   }
 
-  /** Camino rápido: reserva la boleta previewed y abre checkout ya. */
   reserveAndCheckoutNow() {
     const id = this.previewTicketId();
     if (id == null) return;
@@ -2009,9 +1890,8 @@ export class PublicPurchaseComponent implements OnInit {
       error: () => {
         this.searching.set(false);
         this.searchResult.set({
-          status: 'not_found', number_label: q,
-          ticket_id: null,
-          message: 'No pudimos buscar ese número. Intenta de nuevo.',
+          status: 'not_found', number_label: q, ticket_id: null,
+          message: 'No pudimos buscar ese número.',
         });
       },
     });
@@ -2035,8 +1915,8 @@ export class PublicPurchaseComponent implements OnInit {
     document.getElementById('grid-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
-  scrollToSearch() {
-    document.getElementById('search-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  scrollToPrizes() {
+    document.getElementById('prizes-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   private scrollToTicket(ticketId: number) {
@@ -2094,7 +1974,7 @@ export class PublicPurchaseComponent implements OnInit {
   }
 
   switchManual() {
-    alert('Transferencia manual: pronto disponible. Contacta al organizador por WhatsApp mientras tanto.');
+    alert('Transferencia manual: pronto disponible. Contacta al organizador por WhatsApp.');
   }
 
   formatNumber(n: number): string {
