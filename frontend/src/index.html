@@ -133,16 +133,17 @@
 
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,500;0,600;0,700;0,800;0,900;1,500&display=swap">
 
-  <!-- Material Icons cargado async -->
-  <link rel="preload" as="style" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+  <!-- Material Icons + Outlined variant (portal público SaaS usa outlined) -->
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/icon?family=Material+Icons|Material+Icons+Outlined">
   <link rel="stylesheet" media="print" onload="this.onload=null;this.media='all'"
-        href="https://fonts.googleapis.com/icon?family=Material+Icons">
-  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons"></noscript>
+        href="https://fonts.googleapis.com/icon?family=Material+Icons|Material+Icons+Outlined">
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons|Material+Icons+Outlined"></noscript>
 
   <!-- Evita el flash del nombre del ícono como texto plano antes de que
        cargue la fuente Material Icons. Se activa con clase en body. -->
   <style>
-    body:not(.icons-ready) .material-icons { visibility: hidden; }
+    body:not(.icons-ready) .material-icons,
+    body:not(.icons-ready) .material-icons-outlined { visibility: hidden; }
 
     /* ============================================================
        PRE-BOOTSTRAP SPLASH para landing pages públicas (/r/:id, /rifa/:id)
