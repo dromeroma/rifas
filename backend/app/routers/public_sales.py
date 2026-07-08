@@ -32,7 +32,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel, EmailStr, Field
-from sqlalchemy import and_, exists, func, or_, select
+from sqlalchemy import Integer, and_, cast, exists, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -349,6 +349,97 @@ async def public_available_tickets(
     )
     tickets = (await db.execute(q)).scalars().all()
     return [AvailableTicketOut(id=t.id, number_label=t.number_label) for t in tickets]
+
+
+class TicketLookupOut(BaseModel):
+    """Resultado de buscar una boleta por su número.
+
+    status:
+      - available  → disponible pública. Devuelve ticket_id para seleccionar.
+      - reserved   → reservada por otro comprador (24h).
+      - sold       → ya pagada.
+      - assigned   → asignada a un vendedor humano (fuera del pool público).
+      - not_found  → ese número no existe en la rifa.
+    """
+    status: str
+    number_label: str
+    ticket_id: int | None = None
+    message: str
+
+
+@router.get("/raffles/{raffle_id}/lookup", response_model=TicketLookupOut)
+async def public_lookup_ticket(
+    raffle_id: int,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    number: str = Query(..., min_length=1, max_length=20, description="Número a buscar (ej 2565)"),
+):
+    """Busca una boleta por su número (label). Solo compara el valor
+    numérico — 25, 025 y 0025 encuentran la misma boleta si el padding
+    coincide con el ancho de la rifa."""
+    raffle = (await db.execute(
+        select(Raffle).where(Raffle.id == raffle_id, Raffle.is_public.is_(True))
+    )).scalar_one_or_none()
+    if not raffle:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "rifa no encontrada")
+
+    # Normalizar: input viene como string ("2565" o "02565"). Comparo
+    # contra number_label con CAST INTEGER para tolerar padding distinto.
+    try:
+        n = int(number.strip())
+    except ValueError:
+        return TicketLookupOut(
+            status="not_found", number_label=number,
+            message=f"'{number}' no es un número válido.",
+        )
+    if n < raffle.number_min or n > raffle.number_max:
+        return TicketLookupOut(
+            status="not_found", number_label=str(n),
+            message=f"El número {n} está fuera del rango de esta rifa "
+                    f"({raffle.number_min}-{raffle.number_max}).",
+        )
+
+    t = (await db.execute(
+        select(Ticket).where(
+            Ticket.raffle_id == raffle_id,
+            cast(Ticket.number_label, Integer) == n,
+        )
+    )).scalars().first()
+    if not t:
+        return TicketLookupOut(
+            status="not_found", number_label=str(n),
+            message=f"La boleta {n} no existe en esta rifa.",
+        )
+
+    label = t.number_label
+    # 1) Vendida (pagada / ganadora)
+    if t.status in (TicketStatus.PAID, TicketStatus.WINNING):
+        return TicketLookupOut(
+            status="sold", number_label=label, message=f"La boleta {label} ya fue vendida.",
+        )
+    # 2) Reservada (por otro comprador o pending_payment)
+    if t.status in (TicketStatus.RESERVED, TicketStatus.PENDING_PAYMENT, TicketStatus.PARTIALLY_PAID):
+        return TicketLookupOut(
+            status="reserved", number_label=label,
+            message=f"La boleta {label} está reservada por otro comprador. Vuelve más tarde.",
+        )
+    # 3) Asignada a vendedor humano
+    if t.seller_id is not None:
+        return TicketLookupOut(
+            status="assigned", number_label=label,
+            message=f"La boleta {label} la vende un vendedor autorizado. "
+                    f"Cómprala directamente con él/ella.",
+        )
+    # 4) Disponible pública
+    if t.status == TicketStatus.AVAILABLE and t.customer_id is None:
+        return TicketLookupOut(
+            status="available", number_label=label, ticket_id=t.id,
+            message=f"¡La boleta {label} está disponible!",
+        )
+    # Fallback (expired u otro)
+    return TicketLookupOut(
+        status="reserved", number_label=label,
+        message=f"La boleta {label} no está disponible en este momento.",
+    )
 
 
 @router.post("/raffles/{raffle_id}/checkout", response_model=CheckoutResponse, status_code=201)

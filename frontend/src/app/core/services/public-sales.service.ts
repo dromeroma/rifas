@@ -34,6 +34,13 @@ export interface AvailableTicket {
   number_label: string;
 }
 
+export interface TicketLookup {
+  status: 'available' | 'sold' | 'reserved' | 'assigned' | 'not_found';
+  number_label: string;
+  ticket_id: number | null;
+  message: string;
+}
+
 export interface CheckoutRequest {
   ticket_ids: number[];
   customer_document: string;
@@ -95,6 +102,13 @@ export class PublicSalesService {
   availableTickets(raffleId: number, skip = 0, limit = 500): Observable<AvailableTicket[]> {
     return this.http.get<AvailableTicket[]>(
       `${this.api}/public/raffles/${raffleId}/available?skip=${skip}&limit=${limit}`,
+    );
+  }
+
+  lookupTicket(raffleId: number, number: string): Observable<TicketLookup> {
+    const q = encodeURIComponent(number.trim());
+    return this.http.get<TicketLookup>(
+      `${this.api}/public/raffles/${raffleId}/lookup?number=${q}`,
     );
   }
 
