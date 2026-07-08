@@ -49,19 +49,34 @@ import {
         </section>
       } @else if (overview(); as r) {
 
-        <!-- HERO PREMIUM: info + card del premio -->
+        <!-- ============ HERO PREMIUM ============ -->
         <header class="hero">
-          <div class="hero__ornament hero__ornament--tl"></div>
-          <div class="hero__ornament hero__ornament--br"></div>
+          <!-- Ornamentos decorativos -->
+          <div class="hero__glow hero__glow--gold"></div>
+          <div class="hero__glow hero__glow--emerald"></div>
+          <div class="hero__stars" aria-hidden="true">
+            <span></span><span></span><span></span><span></span>
+            <span></span><span></span><span></span><span></span>
+          </div>
 
           <div class="hero__grid">
+
+            <!-- COL izquierda: info + premios + stats -->
             <div class="hero__info">
               <div class="badge">
                 <span class="badge__dot"></span>
                 <span>Rifa activa</span>
+                @if (r.prizes.length) {
+                  <span class="badge__sep">·</span>
+                  <span>{{ r.prizes.length }} premios</span>
+                }
               </div>
-              <h1>{{ r.name }}</h1>
-              @if (r.description) { <p class="hero__desc">{{ r.description }}</p> }
+
+              <h1 class="hero__title">{{ r.name }}</h1>
+
+              @if (r.description) {
+                <p class="hero__desc">{{ r.description }}</p>
+              }
 
               @if (r.public_welcome_message) {
                 <div class="welcome">
@@ -70,65 +85,69 @@ import {
                 </div>
               }
 
-              <div class="hero__stats">
-                <div class="stat">
-                  <strong>{{ r.sold_pct }}%</strong>
-                  <small>vendido</small>
+              <!-- STRIP de premios: cards horizontales sobre gold accent -->
+              @if (r.prizes.length) {
+                <div class="prize-strip">
+                  @for (p of r.prizes; track p.position; let idx = $index) {
+                    <div class="prize-mini" [class.prize-mini--top]="idx === 0">
+                      <div class="prize-mini__emoji">{{ prizeEmoji(p.name) }}</div>
+                      <div class="prize-mini__body">
+                        <small>{{ idx === 0 ? 'Premio mayor' : 'Premio ' + (idx + 1) }}</small>
+                        <strong>{{ p.name }}</strong>
+                        @if (p.draw_date) {
+                          <em>sorteo · {{ formatDate(p.draw_date) }}</em>
+                        }
+                      </div>
+                    </div>
+                  }
                 </div>
+              }
+
+              <!-- STATS -->
+              <div class="hero__stats">
                 <div class="stat">
                   <strong>\${{ formatNumber(r.ticket_price) }}</strong>
                   <small>por boleta</small>
                 </div>
+                <div class="stat">
+                  <strong>{{ r.sold_pct }}%</strong>
+                  <small>vendido</small>
+                </div>
                 @if (r.show_draw_date && r.final_draw_date) {
                   <div class="stat">
                     <strong>{{ formatDate(r.final_draw_date) }}</strong>
-                    <small>sorteo</small>
+                    <small>último sorteo</small>
                   </div>
                 }
               </div>
 
-              <div class="progress">
+              <div class="progress" [attr.aria-label]="r.sold_pct + '% vendido'">
                 <div class="progress__bar" [style.width.%]="r.sold_pct"></div>
               </div>
             </div>
 
-            <!-- Card del premio (imagen o placeholder con emoji) -->
-            <aside class="hero__prize">
-              @if (r.logo_url) {
-                <img [src]="r.logo_url" [alt]="r.name" class="hero__prize-img" />
-              } @else if (heroPrizeEmoji(); as emoji) {
-                <div class="hero__prize-fallback">
-                  <div class="hero__prize-emoji">{{ emoji }}</div>
-                  <div class="hero__prize-name">{{ topPrizeName() }}</div>
-                </div>
-              }
-              <div class="hero__prize-ribbon">
+            <!-- COL derecha: display luxe del premio mayor -->
+            <aside class="hero__display">
+              <div class="hero__display-frame">
+                @if (r.logo_url) {
+                  <img [src]="r.logo_url" [alt]="topPrizeName()"
+                       class="hero__display-img" />
+                } @else {
+                  <div class="hero__display-fallback">
+                    <div class="hero__display-emoji">{{ heroPrizeEmoji() || '🏆' }}</div>
+                  </div>
+                }
+                <div class="hero__display-glow"></div>
+              </div>
+
+              <div class="hero__display-ribbon">
                 <span class="material-icons">emoji_events</span>
-                Premio mayor
+                <span>{{ topPrizeName() }}</span>
               </div>
             </aside>
           </div>
         </header>
 
-        <!-- PREMIOS -->
-        @if (r.prizes.length) {
-          <section class="prizes">
-            <h2><span class="section__icon">🏆</span> Premios</h2>
-            <ul>
-              @for (p of r.prizes; track p.position) {
-                <li>
-                  <span class="prize__pos">{{ p.position }}°</span>
-                  <div class="prize__body">
-                    <strong>{{ p.name }}</strong>
-                    @if (p.draw_date) {
-                      <small>sorteo · {{ formatDate(p.draw_date) }}</small>
-                    }
-                  </div>
-                </li>
-              }
-            </ul>
-          </section>
-        }
 
         <!-- BUSCADOR POR NÚMERO -->
         <section class="search-card">
@@ -347,158 +366,323 @@ import {
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* ============ HERO PREMIUM ============ */
+    /* ============ HERO PREMIUM v2 ============ */
     .hero {
       position: relative;
       background:
-        radial-gradient(circle at 100% 0%, rgba(201, 169, 110, 0.25), transparent 55%),
-        linear-gradient(135deg, #0f1a2e 0%, #1a2942 40%, #2a3a5a 100%);
+        radial-gradient(circle at 100% 0%, rgba(201, 169, 110, 0.22), transparent 55%),
+        radial-gradient(circle at 0% 100%, rgba(30, 199, 123, 0.15), transparent 55%),
+        linear-gradient(135deg, #0a1424 0%, #142240 40%, #1e3057 100%);
       color: #f8f1e3;
-      border-radius: 24px;
-      padding: 40px 32px;
+      border-radius: 28px;
+      padding: 48px 40px;
       margin-bottom: 32px;
       box-shadow:
-        0 30px 80px -20px rgba(15, 26, 46, 0.5),
-        0 0 0 1px rgba(201, 169, 110, 0.15);
+        0 40px 100px -30px rgba(10, 20, 36, 0.7),
+        0 0 0 1px rgba(201, 169, 110, 0.18),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
       overflow: hidden;
     }
-    .hero__ornament {
+    @media (max-width: 720px) { .hero { padding: 28px 22px; border-radius: 22px; } }
+
+    /* Glow decorativos animados */
+    .hero__glow {
       position: absolute;
-      width: 240px; height: 240px;
-      background: radial-gradient(circle, rgba(201, 169, 110, 0.35) 0%, transparent 65%);
+      border-radius: 50%;
+      filter: blur(60px);
       pointer-events: none;
+      animation: glow-drift 12s ease-in-out infinite;
     }
-    .hero__ornament--tl { top: -60px; left: -60px; }
-    .hero__ornament--br { bottom: -80px; right: -80px; background: radial-gradient(circle, rgba(30, 199, 123, 0.28) 0%, transparent 65%); }
+    .hero__glow--gold {
+      width: 380px; height: 380px;
+      top: -140px; right: -100px;
+      background: radial-gradient(circle, rgba(232, 201, 138, 0.45) 0%, transparent 65%);
+    }
+    .hero__glow--emerald {
+      width: 320px; height: 320px;
+      bottom: -120px; left: -80px;
+      background: radial-gradient(circle, rgba(30, 199, 123, 0.4) 0%, transparent 65%);
+      animation-delay: -6s;
+    }
+    @keyframes glow-drift {
+      0%, 100% { transform: translate(0, 0); opacity: 0.85; }
+      50% { transform: translate(30px, -20px); opacity: 1; }
+    }
+
+    /* Estrellas / partículas sutiles */
+    .hero__stars {
+      position: absolute; inset: 0;
+      pointer-events: none;
+      overflow: hidden;
+    }
+    .hero__stars span {
+      position: absolute;
+      width: 3px; height: 3px;
+      background: #e8c98a;
+      border-radius: 50%;
+      box-shadow: 0 0 8px rgba(232, 201, 138, 0.8);
+      animation: twinkle 3s ease-in-out infinite;
+    }
+    .hero__stars span:nth-child(1) { top: 12%; left: 8%; animation-delay: 0s; }
+    .hero__stars span:nth-child(2) { top: 22%; left: 42%; animation-delay: 0.4s; }
+    .hero__stars span:nth-child(3) { top: 68%; left: 12%; animation-delay: 0.8s; }
+    .hero__stars span:nth-child(4) { top: 84%; left: 38%; animation-delay: 1.2s; }
+    .hero__stars span:nth-child(5) { top: 18%; left: 78%; animation-delay: 0.2s; }
+    .hero__stars span:nth-child(6) { top: 46%; left: 88%; animation-delay: 0.6s; }
+    .hero__stars span:nth-child(7) { top: 74%; left: 72%; animation-delay: 1.0s; }
+    .hero__stars span:nth-child(8) { top: 92%; left: 62%; animation-delay: 1.4s; }
+    @keyframes twinkle { 0%,100% { opacity: 0.3; transform: scale(1); } 50% { opacity: 1; transform: scale(1.4); } }
 
     .hero__grid {
       position: relative;
       display: grid;
-      grid-template-columns: 1.4fr 1fr;
-      gap: 32px;
+      grid-template-columns: 1.35fr 1fr;
+      gap: 40px;
       align-items: center;
+      z-index: 2;
     }
-    @media (max-width: 720px) {
-      .hero { padding: 28px 20px; border-radius: 20px; }
-      .hero__grid { grid-template-columns: 1fr; gap: 24px; }
-    }
+    @media (max-width: 900px) { .hero__grid { grid-template-columns: 1fr; gap: 32px; } }
 
     .badge {
       display: inline-flex; align-items: center; gap: 8px;
-      padding: 6px 14px;
-      background: rgba(30, 199, 123, 0.18);
-      color: #7fecb3;
-      border: 1px solid rgba(30, 199, 123, 0.35);
+      padding: 7px 16px;
+      background: linear-gradient(135deg, rgba(30, 199, 123, 0.22) 0%, rgba(201, 169, 110, 0.18) 100%);
+      color: #f8f1e3;
+      border: 1px solid rgba(201, 169, 110, 0.4);
       border-radius: 999px;
       font-size: 12px;
       font-weight: 700;
-      margin-bottom: 18px;
-      letter-spacing: 0.03em;
+      margin-bottom: 20px;
+      letter-spacing: 0.04em;
       text-transform: uppercase;
+      backdrop-filter: blur(4px);
     }
     .badge__dot {
       width: 8px; height: 8px;
       background: #1ec77b;
       border-radius: 50%;
-      box-shadow: 0 0 0 4px rgba(30, 199, 123, 0.3);
+      box-shadow: 0 0 0 4px rgba(30, 199, 123, 0.3), 0 0 12px #1ec77b;
       animation: badge-pulse 1.6s ease-in-out infinite;
     }
-    @keyframes badge-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+    .badge__sep { color: rgba(232, 201, 138, 0.6); }
+    @keyframes badge-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.6; } }
 
-    .hero h1 {
-      margin: 0 0 12px;
-      font-size: 34px;
-      line-height: 1.1;
+    .hero__title {
+      margin: 0 0 14px;
+      font-size: 40px;
+      line-height: 1.05;
       color: #fff;
       font-weight: 800;
-      letter-spacing: -0.01em;
+      letter-spacing: -0.02em;
+      background: linear-gradient(180deg, #ffffff 0%, #f8f1e3 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      text-shadow: 0 4px 30px rgba(232, 201, 138, 0.15);
     }
-    @media (max-width: 720px) { .hero h1 { font-size: 26px; } }
-    .hero__desc { margin: 0 0 20px; color: rgba(248, 241, 227, 0.85); font-size: 15px; line-height: 1.5; }
+    @media (max-width: 720px) { .hero__title { font-size: 28px; } }
+    .hero__desc { margin: 0 0 18px; color: rgba(248, 241, 227, 0.85); font-size: 15px; line-height: 1.5; }
 
     .welcome {
       display: flex; gap: 12px; align-items: flex-start;
       padding: 14px 18px; margin: 16px 0 20px;
-      background: rgba(201, 169, 110, 0.18);
-      border-left: 3px solid #c9a96e;
+      background: linear-gradient(90deg, rgba(232, 201, 138, 0.15) 0%, rgba(232, 201, 138, 0.05) 100%);
+      border-left: 3px solid #e8c98a;
       border-radius: 10px;
+      backdrop-filter: blur(4px);
     }
-    .welcome .material-icons { color: #c9a96e; }
+    .welcome .material-icons { color: #e8c98a; }
     .welcome p { margin: 0; font-size: 14px; }
 
-    .hero__stats { display: flex; gap: 20px; margin: 24px 0 16px; flex-wrap: wrap; }
-    .stat { flex: 1; min-width: 100px; }
-    .stat strong { display: block; font-size: 26px; color: #fff; font-weight: 800; }
-    .stat small { color: rgba(248, 241, 227, 0.7); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; }
+    /* ============ Strip de premios (mini-cards) ============ */
+    .prize-strip {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 10px;
+      margin: 20px 0 24px;
+    }
+    .prize-mini {
+      position: relative;
+      display: flex; gap: 10px; align-items: center;
+      padding: 12px 14px;
+      background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 100%);
+      border: 1px solid rgba(201, 169, 110, 0.25);
+      border-radius: 12px;
+      backdrop-filter: blur(6px);
+      transition: transform 0.15s, border-color 0.15s;
+    }
+    .prize-mini:hover { transform: translateY(-2px); border-color: rgba(232, 201, 138, 0.5); }
+    .prize-mini--top {
+      background: linear-gradient(135deg, rgba(232, 201, 138, 0.2) 0%, rgba(201, 169, 110, 0.08) 100%);
+      border-color: rgba(232, 201, 138, 0.6);
+      box-shadow: 0 0 20px rgba(232, 201, 138, 0.15);
+    }
+    .prize-mini__emoji {
+      font-size: 28px;
+      line-height: 1;
+      flex-shrink: 0;
+      filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4));
+    }
+    .prize-mini__body { display: flex; flex-direction: column; min-width: 0; }
+    .prize-mini__body small {
+      color: #e8c98a;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-weight: 700;
+    }
+    .prize-mini__body strong {
+      color: #fff;
+      font-size: 13px;
+      font-weight: 700;
+      line-height: 1.2;
+      margin-top: 2px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+    }
+    .prize-mini__body em {
+      color: rgba(248, 241, 227, 0.55);
+      font-style: normal;
+      font-size: 10px;
+      margin-top: 2px;
+    }
+
+    /* ============ Stats + progreso ============ */
+    .hero__stats { display: flex; gap: 24px; margin: 20px 0 14px; flex-wrap: wrap; }
+    .stat { flex: 1; min-width: 110px; }
+    .stat strong {
+      display: block;
+      font-size: 28px;
+      color: #fff;
+      font-weight: 800;
+      letter-spacing: -0.01em;
+      font-variant-numeric: tabular-nums;
+    }
+    .stat small { color: rgba(248, 241, 227, 0.65); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; }
 
     .progress {
-      height: 10px;
+      height: 12px;
       background: rgba(255,255,255,0.08);
       border-radius: 999px;
       overflow: hidden;
-      box-shadow: inset 0 1px 3px rgba(0,0,0,0.2);
+      box-shadow: inset 0 1px 4px rgba(0,0,0,0.35);
+      position: relative;
     }
     .progress__bar {
       height: 100%;
-      background: linear-gradient(90deg, #1ec77b 0%, #c9a96e 100%);
-      box-shadow: 0 0 12px rgba(30, 199, 123, 0.5);
+      background: linear-gradient(90deg, #1ec77b 0%, #e8c98a 100%);
+      box-shadow: 0 0 16px rgba(30, 199, 123, 0.55);
       transition: width 0.6s ease;
       border-radius: 999px;
+      position: relative;
+    }
+    .progress__bar::after {
+      content: '';
+      position: absolute; inset: 0;
+      background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.35) 50%, transparent 100%);
+      animation: shine 2s linear infinite;
+    }
+    @keyframes shine {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
     }
 
-    /* ============ Card del premio ============ */
-    .hero__prize {
+    /* ============ Display luxe del premio mayor ============ */
+    .hero__display {
       position: relative;
-      background: linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%);
-      border: 1px solid rgba(201, 169, 110, 0.3);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+    .hero__display-frame {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      background:
+        radial-gradient(ellipse at center, rgba(232, 201, 138, 0.2) 0%, transparent 60%),
+        linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.01) 100%);
+      border: 1.5px solid rgba(232, 201, 138, 0.35);
       border-radius: 20px;
-      padding: 20px;
-      min-height: 200px;
+      padding: 24px;
       display: flex;
       align-items: center;
       justify-content: center;
       overflow: hidden;
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.08),
+        0 20px 60px -20px rgba(10, 20, 36, 0.6);
     }
-    .hero__prize-img {
-      max-width: 100%;
-      max-height: 240px;
-      object-fit: contain;
-      filter: drop-shadow(0 12px 24px rgba(0,0,0,0.3));
-    }
-    .hero__prize-fallback {
-      text-align: center;
-      color: rgba(248, 241, 227, 0.9);
-    }
-    .hero__prize-emoji {
-      font-size: 92px;
-      line-height: 1;
-      margin-bottom: 12px;
-      filter: drop-shadow(0 8px 16px rgba(0,0,0,0.4));
-    }
-    .hero__prize-name {
-      font-weight: 700;
-      font-size: 15px;
-      letter-spacing: 0.02em;
-      color: #f8f1e3;
-    }
-    .hero__prize-ribbon {
+    /* Halo dorado detrás del producto */
+    .hero__display-glow {
       position: absolute;
-      top: 12px; right: 12px;
-      display: inline-flex; align-items: center; gap: 4px;
-      padding: 5px 10px;
-      background: linear-gradient(90deg, #c9a96e 0%, #e8c98a 100%);
+      inset: 20% 15%;
+      background: radial-gradient(circle, rgba(232, 201, 138, 0.35) 0%, transparent 70%);
+      filter: blur(20px);
+      z-index: 0;
+      animation: display-pulse 4s ease-in-out infinite;
+    }
+    @keyframes display-pulse { 0%,100% { opacity: 0.7; transform: scale(1); } 50% { opacity: 1; transform: scale(1.05); } }
+
+    .hero__display-img {
+      position: relative;
+      z-index: 1;
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      filter: drop-shadow(0 20px 30px rgba(0,0,0,0.5));
+      animation: float 4s ease-in-out infinite;
+    }
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+
+    .hero__display-fallback {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+    }
+    .hero__display-emoji {
+      font-size: 140px;
+      line-height: 1;
+      filter: drop-shadow(0 20px 32px rgba(0,0,0,0.5));
+      animation: float 4s ease-in-out infinite;
+    }
+    @media (max-width: 720px) { .hero__display-emoji { font-size: 100px; } }
+
+    .hero__display-ribbon {
+      display: inline-flex;
+      align-items: center; gap: 8px;
+      padding: 10px 20px;
+      background: linear-gradient(90deg, #c9a96e 0%, #e8c98a 50%, #c9a96e 100%);
+      background-size: 200% 100%;
       color: #1a2942;
-      font-size: 11px;
-      font-weight: 700;
+      font-size: 12px;
+      font-weight: 800;
       border-radius: 999px;
       text-transform: uppercase;
-      letter-spacing: 0.06em;
-      box-shadow: 0 4px 12px rgba(201, 169, 110, 0.5);
+      letter-spacing: 0.08em;
+      box-shadow:
+        0 8px 20px rgba(201, 169, 110, 0.5),
+        inset 0 1px 0 rgba(255,255,255,0.4);
+      animation: ribbon-shimmer 3s linear infinite;
+      max-width: 100%;
     }
-    .hero__prize-ribbon .material-icons { font-size: 14px; }
+    @keyframes ribbon-shimmer { to { background-position: 200% 0; } }
+    .hero__display-ribbon .material-icons { font-size: 16px; }
+    .hero__display-ribbon span:not(.material-icons) {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 320px;
+    }
 
-    /* ============ SECCIONES ============ */
-    .prizes, .search-card, .picker {
+    /* ============ SECCIONES (buscador + picker) ============ */
+    .search-card, .picker {
       background: #fff;
       border-radius: 20px;
       padding: 24px 28px;
@@ -508,36 +692,13 @@ import {
         0 0 0 1px rgba(201, 169, 110, 0.12);
     }
     @media (max-width: 720px) {
-      .prizes, .search-card, .picker { padding: 20px; border-radius: 16px; }
+      .search-card, .picker { padding: 20px; border-radius: 16px; }
     }
 
-    .prizes h2, .search-card h2, .picker h2 {
+    .search-card h2, .picker h2 {
       margin: 0 0 12px; font-size: 20px; font-weight: 700; color: #1a2942;
       display: inline-flex; align-items: center; gap: 8px;
     }
-    .section__icon { font-size: 20px; }
-
-    .prizes ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
-    .prizes li {
-      display: flex; gap: 14px; align-items: center;
-      padding: 12px 14px;
-      background: linear-gradient(90deg, rgba(201, 169, 110, 0.08) 0%, transparent 100%);
-      border-radius: 10px;
-      border-left: 3px solid #c9a96e;
-    }
-    .prize__pos {
-      display: inline-flex; align-items: center; justify-content: center;
-      min-width: 34px; height: 34px;
-      background: linear-gradient(135deg, #c9a96e 0%, #e8c98a 100%);
-      color: #1a2942;
-      font-weight: 800;
-      border-radius: 50%;
-      font-size: 13px;
-      box-shadow: 0 3px 8px rgba(201, 169, 110, 0.35);
-    }
-    .prize__body { display: flex; flex-direction: column; gap: 2px; }
-    .prize__body strong { font-size: 15px; color: #1a2942; }
-    .prize__body small { color: #6b7280; font-size: 12px; }
 
     /* ============ BUSCADOR ============ */
     .search-card__head {
@@ -910,22 +1071,31 @@ export class PublicPurchaseComponent implements OnInit {
     return [...r.prizes].sort((a, b) => a.position - b.position)[0].name;
   });
 
-  /** Emoji del premio mayor — heurística por keywords. Solo se muestra si
-   *  la rifa NO tiene logo_url configurado. */
-  heroPrizeEmoji = computed(() => {
-    const name = this.topPrizeName().toLowerCase();
-    if (!name) return null;
-    if (/(televisor|tele|tv|pantalla|smart tv)/.test(name)) return '📺';
-    if (/(moto|scooter|motocicleta)/.test(name)) return '🏍️';
-    if (/(carro|auto|vehículo|camioneta)/.test(name)) return '🚗';
-    if (/(celular|iphone|samsung|smartphone|teléfono)/.test(name)) return '📱';
-    if (/(nevera|refrigerador)/.test(name)) return '🧊';
-    if (/(lavadora)/.test(name)) return '🧺';
-    if (/(bono|efectivo|dinero|plata|premio)/.test(name)) return '💰';
-    if (/(portátil|computador|laptop|pc)/.test(name)) return '💻';
-    if (/(bicicleta|bici)/.test(name)) return '🚴';
-    if (/(mercado|canasta)/.test(name)) return '🛒';
+  /** Heurística general: mapea el nombre del premio a un emoji visual. */
+  prizeEmoji(name: string): string {
+    const n = (name || '').toLowerCase();
+    if (!n) return '🏆';
+    if (/(televisor|tele\b|\btv\b|pantalla|smart tv)/.test(n)) return '📺';
+    if (/(moto|scooter|motocicleta)/.test(n)) return '🏍️';
+    if (/(carro|auto\b|vehículo|camioneta)/.test(n)) return '🚗';
+    if (/(celular|iphone|samsung|smartphone|teléfono)/.test(n)) return '📱';
+    if (/(nevera|refrigerador)/.test(n)) return '🧊';
+    if (/(lavadora)/.test(n)) return '🧺';
+    if (/(bono|efectivo|dinero|plata|cash)/.test(n)) return '💵';
+    if (/(portátil|computador|laptop|pc\b|notebook)/.test(n)) return '💻';
+    if (/(bicicleta|bici)/.test(n)) return '🚴';
+    if (/(mercado|canasta)/.test(n)) return '🛒';
+    if (/(consola|ps5|xbox|nintendo)/.test(n)) return '🎮';
+    if (/(reloj|smartwatch)/.test(n)) return '⌚';
+    if (/(cámara|camara)/.test(n)) return '📷';
+    if (/(mesa|silla|mueble)/.test(n)) return '🪑';
     return '🏆';
+  }
+
+  /** Emoji del premio mayor — solo se muestra si la rifa NO tiene logo_url. */
+  heroPrizeEmoji = computed(() => {
+    const name = this.topPrizeName();
+    return name ? this.prizeEmoji(name) : '🏆';
   });
 
   ngOnInit(): void {
