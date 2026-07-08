@@ -31,6 +31,7 @@ class UserOut(BaseModel):
     phone: Optional[str]
     is_active: bool
     default_commission: Optional[Decimal]
+    public_slug: Optional[str] = None  # solo SELLER
 
     class Config:
         from_attributes = True
@@ -44,6 +45,7 @@ class SellerSummary(BaseModel):
     phone: Optional[str] = None
     is_active: bool
     default_commission: Optional[Decimal] = None
+    public_slug: Optional[str] = None  # para armar el link personal
     assigned_tickets: int = 0
     paid_tickets: int
     commission_total: Decimal

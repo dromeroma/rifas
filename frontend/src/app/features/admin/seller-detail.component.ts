@@ -10,6 +10,7 @@ import { ToastService } from '@core/services/toast.service';
 import {
   AvatarComponent, ButtonComponent, ChipComponent, EmptyComponent, ModalComponent,
 } from '@shared/ui';
+import { SellerShareLinkComponent } from '@shared/components/seller-share-link/seller-share-link.component';
 
 interface PrintMode {
   raffleId: number;
@@ -29,6 +30,7 @@ interface PrintMode {
   imports: [
     CommonModule, FormsModule,
     AvatarComponent, ButtonComponent, ChipComponent, EmptyComponent, ModalComponent,
+    SellerShareLinkComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -102,6 +104,15 @@ interface PrintMode {
                 Agregar boletas
               </app-button>
             </div>
+
+            <!-- Link personal del vendedor para compartir la rifa por WhatsApp -->
+            @if (seller()?.public_slug) {
+              <app-seller-share-link
+                [slug]="seller()!.public_slug"
+                [raffleId]="r.raffle_id"
+                [sellerName]="seller()?.full_name ?? ''"
+                [raffleName]="r.raffle_name" />
+            }
 
             <div class="ticket-grid">
               @for (t of r.tickets; track t.id) {

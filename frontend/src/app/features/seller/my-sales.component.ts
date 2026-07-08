@@ -12,6 +12,7 @@ import { NumberSearchComponent } from '@shared/components/number-search/number-s
 import {
   CardComponent, EmptyComponent, KpiComponent,
 } from '@shared/ui';
+import { SellerShareLinkComponent } from '@shared/components/seller-share-link/seller-share-link.component';
 import { PackageSaleModalComponent } from './package-sale-modal.component';
 import { TicketActionsModalComponent } from './ticket-actions-modal.component';
 
@@ -23,6 +24,7 @@ import { TicketActionsModalComponent } from './ticket-actions-modal.component';
     CardComponent, EmptyComponent, KpiComponent,
     NumberSearchComponent,
     TicketActionsModalComponent, PackageSaleModalComponent,
+    SellerShareLinkComponent,
   ],
   template: `
     <div class="page">
@@ -64,6 +66,15 @@ import { TicketActionsModalComponent } from './ticket-actions-modal.component';
         }
 
         @if (selectedRaffle(); as r) {
+
+          <!-- Link personal del vendedor para esta rifa -->
+          @if (user()?.public_slug) {
+            <app-seller-share-link
+              [slug]="user()?.public_slug"
+              [raffleId]="r.id"
+              [sellerName]="user()?.full_name ?? ''"
+              [raffleName]="r.name" />
+          }
 
           <!-- Modo PREMIUM: panel de venta por paquetes -->
           @if (r.mode === 'package') {
@@ -409,6 +420,10 @@ export class MySalesComponent implements OnInit {
   private readonly admin = inject(AdminService);
   private readonly raffleSvc = inject(RaffleService);
   private readonly auth = inject(AuthService);
+
+  /** User actual expuesto al template (para leer public_slug del vendedor
+   *  y armar su link de share). */
+  readonly user = this.auth.user;
 
   loading = signal(true);
   assignments = signal<SellerAssignment[]>([]);

@@ -24,6 +24,9 @@ export interface User {
   is_active: boolean;
   tenant_id?: number | null;
   tenant?: UserTenantInfo | null;
+  /** Solo para role='seller': slug para el link personal
+   *  /rifa/:id/comprar?v=<slug>. */
+  public_slug?: string | null;
 }
 
 export interface TokenPair {

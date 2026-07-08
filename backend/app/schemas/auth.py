@@ -38,6 +38,9 @@ class UserOut(BaseModel):
     is_active: bool
     tenant_id: Optional[int] = None
     tenant: Optional[TenantInfo] = None
+    # Solo para role=SELLER: slug para su link público de venta
+    # (/rifa/:id/comprar?v=<slug>). Null para admins.
+    public_slug: Optional[str] = None
 
     class Config:
         from_attributes = True

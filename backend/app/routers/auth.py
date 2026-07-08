@@ -97,4 +97,5 @@ async def me(
         is_active=user.is_active,
         tenant_id=user.tenant_id,
         tenant=tenant_info,
+        public_slug=user.public_slug,
     )

@@ -1,3 +1,4 @@
+import secrets
 from typing import Annotated, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
@@ -12,6 +13,23 @@ from app.models.ticket import Ticket, TicketStatus
 from app.models.user import User, UserRole
 from app.schemas.user import SellerSummary, UserCreate, UserOut, UserUpdate
 from app.services.audit_service import log_action
+
+
+# Alfabeto sin ambiguos (0/O, 1/I/l) para public_slug
+_SLUG_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+
+
+async def _generate_public_slug(db: AsyncSession, length: int = 5) -> str:
+    """Genera un slug único para el link personal de venta del seller.
+    Colisiona 1 en 33M — retry hasta 10 veces por seguridad."""
+    for _ in range(10):
+        slug = "".join(secrets.choice(_SLUG_ALPHABET) for _ in range(length))
+        exists = await db.scalar(
+            select(User.id).where(User.public_slug == slug).limit(1)
+        )
+        if not exists:
+            return slug
+    raise HTTPException(500, "no se pudo generar slug único, intenta de nuevo")
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -113,6 +131,7 @@ async def sellers_summary(
                 phone=s.phone,
                 is_active=s.is_active,
                 default_commission=s.default_commission,
+                public_slug=s.public_slug,
                 assigned_tickets=assigned_by_seller.get(s.id, 0),
                 paid_tickets=paid_by_seller.get(s.id, 0),
                 commission_total=total,
@@ -165,6 +184,9 @@ async def create_user(
         is_active=True,
         tenant_id=new_tenant_id,
     )
+    # Vendedores obtienen slug automático para su link personal.
+    if payload.role == UserRole.SELLER:
+        user.public_slug = await _generate_public_slug(db)
     db.add(user)
     await db.flush()
     await log_action(

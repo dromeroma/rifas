@@ -36,6 +36,8 @@ export interface SellerUser {
   phone?: string | null;
   is_active: boolean;
   default_commission?: number | null;
+  /** Slug para el link personal /rifa/:id/comprar?v=<slug>. */
+  public_slug?: string | null;
 }
 
 export interface SellerSummary {
@@ -45,6 +47,8 @@ export interface SellerSummary {
   phone?: string | null;
   is_active: boolean;
   default_commission?: number | null;
+  /** Slug para el link personal /rifa/:id/comprar?v=<slug>. */
+  public_slug?: string | null;
   /** Total de boletas con seller_id == este vendedor (todos los estados). */
   assigned_tickets: number;
   paid_tickets: number;
