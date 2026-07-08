@@ -154,128 +154,10 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
           </div>
         </section>
 
-        <!-- ============ GRID DE PREMIOS ============ -->
-        @if (r.prizes.length) {
-          <section class="prizes-showcase">
-            <div class="section-head">
-              <span class="section-tag">🏆 Los premios</span>
-              <h2>Gana con cada boleta que compras</h2>
-              <p>Múltiples chances de ganar en diferentes sorteos.</p>
-            </div>
-
-            <div class="prizes-grid">
-              @for (p of r.prizes; track p.position; let idx = $index) {
-                <article class="prize-card" [class.prize-card--top]="idx === 0">
-                  @if (idx === 0) { <div class="prize-card__crown">👑</div> }
-                  <div class="prize-card__emoji">{{ prizeEmoji(p.name) }}</div>
-                  <div class="prize-card__pos">
-                    {{ idx === 0 ? 'Premio mayor' : 'Premio ' + (idx + 1) }}
-                  </div>
-                  <h3>{{ p.name }}</h3>
-                  @if (p.draw_date) {
-                    <div class="prize-card__date">
-                      <span class="material-icons">event</span>
-                      {{ formatDate(p.draw_date) }}
-                    </div>
-                  }
-                </article>
-              }
-            </div>
-          </section>
-        }
-
-        <!-- ============ CÓMO FUNCIONA ============ -->
-        <section class="steps">
-          <div class="section-head">
-            <span class="section-tag">📋 Fácil y rápido</span>
-            <h2>Cómo funciona</h2>
-          </div>
-          <div class="steps__grid">
-            <div class="step">
-              <div class="step__num">1</div>
-              <span class="material-icons">confirmation_number</span>
-              <h3>Elige tu boleta</h3>
-              <p>Explora todas las boletas disponibles y ve el diseño antes de reservar.</p>
-            </div>
-            <div class="step">
-              <div class="step__num">2</div>
-              <span class="material-icons">payments</span>
-              <h3>Paga en línea</h3>
-              <p>Con Nequi, PSE, tarjeta o transferencia con comprobante. Reserva de 24 horas.</p>
-            </div>
-            <div class="step">
-              <div class="step__num">3</div>
-              <span class="material-icons">emoji_events</span>
-              <h3>Gana premios</h3>
-              <p>Cuando se sortee, recibes notificación por correo y WhatsApp si ganaste.</p>
-            </div>
-          </div>
-        </section>
-
-        <!-- ============ BUSCADOR POR NÚMERO ============ -->
-        <section class="search-card" #searchSection id="search-section">
-          <div class="search-card__head">
-            <span class="material-icons">search</span>
-            <div>
-              <h2>¿Buscas un número en específico?</h2>
-              <p>Escribe el número (ej: <strong>{{ searchPlaceholder() }}</strong>) y te decimos si está disponible.</p>
-            </div>
-          </div>
-          <form class="search-form" (ngSubmit)="doSearch()">
-            <input
-              type="number"
-              class="search-input"
-              [(ngModel)]="searchInput"
-              name="searchInput"
-              [placeholder]="'Ej: ' + searchPlaceholder()"
-              [min]="1"
-              inputmode="numeric" />
-            <button type="submit" class="btn primary btn--lg" [disabled]="searching()">
-              @if (searching()) {
-                <span class="btn__spin"></span> Buscando...
-              } @else {
-                <span class="material-icons">search</span> Buscar
-              }
-            </button>
-          </form>
-
-          @if (searchResult(); as sr) {
-            <div class="search-result search-result--{{ sr.status }}">
-              <span class="material-icons">
-                {{ sr.status === 'available' ? 'check_circle'
-                 : sr.status === 'sold' ? 'block'
-                 : sr.status === 'reserved' ? 'lock_clock'
-                 : sr.status === 'assigned' ? 'person_search'
-                 : 'help_outline' }}
-              </span>
-              <div class="search-result__body">
-                <strong>Boleta {{ sr.number_label }}</strong>
-                <p>{{ sr.message }}</p>
-                @if (sr.status === 'available' && sr.ticket_id) {
-                  <div class="search-result__actions">
-                    <button type="button" class="btn primary btn--sm"
-                            (click)="openTicketPreviewById(sr.ticket_id!)">
-                      <span class="material-icons">visibility</span>
-                      Ver la boleta
-                    </button>
-                    <button type="button" class="btn ghost btn--sm"
-                            (click)="selectFromSearch(sr.ticket_id!)">
-                      <span class="material-icons">add_shopping_cart</span>
-                      Reservar directo
-                    </button>
-                  </div>
-                }
-              </div>
-              <button class="search-result__close" (click)="clearSearch()"
-                      aria-label="Cerrar">×</button>
-            </div>
-          }
-        </section>
-
-        <!-- ============ GRID DE BOLETAS ============ -->
+        <!-- ============ BUSCADOR compacto + GRID (justo debajo del hero) ============ -->
         <section class="picker" #gridSection id="grid-section">
           <div class="picker__head">
-            <div>
+            <div class="picker__title">
               <span class="section-tag">🎟️ Todas las boletas</span>
               <h2>Elige tu boleta favorita</h2>
               <p class="muted">Haz clic en una boleta para ver su diseño antes de reservar.</p>
@@ -284,6 +166,60 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
               <span class="chip chip--free">Disponible</span>
               <span class="chip chip--sel">Seleccionada</span>
             </div>
+          </div>
+
+          <!-- Buscador inline: chip elegante integrado al picker -->
+          <div class="quick-search" id="search-section">
+            <div class="quick-search__label">
+              <span class="material-icons">search</span>
+              <span>Buscar número</span>
+            </div>
+            <form class="quick-search__form" (ngSubmit)="doSearch()">
+              <input type="number" class="quick-search__input"
+                     [(ngModel)]="searchInput" name="searchInput"
+                     [placeholder]="'Ej: ' + searchPlaceholder()"
+                     [min]="1" inputmode="numeric" />
+              <button type="submit" class="btn primary" [disabled]="searching()">
+                @if (searching()) {
+                  <span class="btn__spin"></span>
+                } @else {
+                  <span class="material-icons">search</span>
+                }
+                Buscar
+              </button>
+            </form>
+
+            @if (searchResult(); as sr) {
+              <div class="search-result search-result--{{ sr.status }}">
+                <span class="material-icons">
+                  {{ sr.status === 'available' ? 'check_circle'
+                   : sr.status === 'sold' ? 'block'
+                   : sr.status === 'reserved' ? 'lock_clock'
+                   : sr.status === 'assigned' ? 'person_search'
+                   : 'help_outline' }}
+                </span>
+                <div class="search-result__body">
+                  <strong>Boleta {{ sr.number_label }}</strong>
+                  <p>{{ sr.message }}</p>
+                  @if (sr.status === 'available' && sr.ticket_id) {
+                    <div class="search-result__actions">
+                      <button type="button" class="btn primary btn--sm"
+                              (click)="openTicketPreviewById(sr.ticket_id!)">
+                        <span class="material-icons">visibility</span>
+                        Ver la boleta
+                      </button>
+                      <button type="button" class="btn ghost btn--sm"
+                              (click)="selectFromSearch(sr.ticket_id!)">
+                        <span class="material-icons">add_shopping_cart</span>
+                        Reservar directo
+                      </button>
+                    </div>
+                  }
+                </div>
+                <button class="search-result__close" (click)="clearSearch()"
+                        aria-label="Cerrar">×</button>
+              </div>
+            }
           </div>
 
           @if (loadingTickets()) {
@@ -325,6 +261,80 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
               </button>
             </div>
           }
+        </section>
+
+        <!-- ============ GRID DE PREMIOS (rediseñado — mosaico premium) ============ -->
+        @if (r.prizes.length) {
+          <section class="prizes-showcase">
+            <div class="section-head">
+              <span class="section-tag">🏆 Los premios en juego</span>
+              <h2>Todos los premios que puedes ganar</h2>
+              <p>Cada boleta juega por múltiples premios en fechas distintas.</p>
+            </div>
+
+            <div class="prizes-mosaic">
+              @for (p of r.prizes; track p.position; let idx = $index) {
+                <article class="prize-tile" [class.prize-tile--top]="idx === 0">
+                  <div class="prize-tile__index">{{ (idx + 1) < 10 ? '0' : '' }}{{ idx + 1 }}</div>
+                  <div class="prize-tile__icon">
+                    <span>{{ prizeEmoji(p.name) }}</span>
+                  </div>
+                  <div class="prize-tile__body">
+                    <div class="prize-tile__tag">
+                      {{ idx === 0 ? '★ Premio mayor' : 'Premio ' + (idx + 1) }}
+                    </div>
+                    <h3>{{ p.name }}</h3>
+                    @if (p.draw_date) {
+                      <div class="prize-tile__date">
+                        <span class="material-icons">event</span>
+                        {{ formatDate(p.draw_date) }}
+                      </div>
+                    }
+                  </div>
+                </article>
+              }
+            </div>
+          </section>
+        }
+
+        <!-- ============ CÓMO FUNCIONA — pasos con connector ============ -->
+        <section class="steps">
+          <div class="section-head">
+            <span class="section-tag">✨ Simple en 3 pasos</span>
+            <h2>Comprar tu boleta es muy fácil</h2>
+          </div>
+          <div class="steps__flow">
+            <div class="step-item">
+              <div class="step-item__badge">
+                <span class="step-item__num">01</span>
+                <span class="material-icons">confirmation_number</span>
+              </div>
+              <h3>Elige tu boleta</h3>
+              <p>Explora las boletas disponibles y ve el diseño real antes de reservar.</p>
+            </div>
+            <div class="steps__connector" aria-hidden="true">
+              <svg viewBox="0 0 60 24" width="60" height="24"><path d="M0 12 L52 12 M46 5 L54 12 L46 19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <div class="step-item">
+              <div class="step-item__badge">
+                <span class="step-item__num">02</span>
+                <span class="material-icons">payments</span>
+              </div>
+              <h3>Paga en línea</h3>
+              <p>Nequi, PSE, tarjeta o transferencia con comprobante. Tu boleta queda reservada 24 horas.</p>
+            </div>
+            <div class="steps__connector" aria-hidden="true">
+              <svg viewBox="0 0 60 24" width="60" height="24"><path d="M0 12 L52 12 M46 5 L54 12 L46 19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <div class="step-item">
+              <div class="step-item__badge">
+                <span class="step-item__num">03</span>
+                <span class="material-icons">emoji_events</span>
+              </div>
+              <h3>Gana premios</h3>
+              <p>Te notificamos por correo y WhatsApp cuando se sortee. Verificación pública instantánea.</p>
+            </div>
+          </div>
         </section>
 
         <!-- FOOTER premium -->
@@ -578,23 +588,19 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
     @keyframes spin { to { transform: rotate(360deg); } }
 
     /* ============================================================
-       HERO FULL-BLEED — el TV es la estrella
+       HERO FULL-BLEED compacto — TV protagonista, sin espacio muerto
        ============================================================ */
     .hero {
       position: relative;
-      min-height: 720px;
-      padding: 60px 24px 40px;
+      padding: 32px 24px 20px;
       background:
         radial-gradient(ellipse at 30% 40%, #1e3057 0%, transparent 50%),
         radial-gradient(ellipse at 70% 60%, #0f1a2e 0%, transparent 60%),
         linear-gradient(135deg, #050a14 0%, #0a1424 60%, #0f1e38 100%);
       color: #f8f1e3;
       overflow: hidden;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
     }
-    @media (max-width: 900px) { .hero { min-height: auto; padding: 48px 20px 32px; } }
+    @media (max-width: 900px) { .hero { padding: 40px 20px 24px; } }
 
     /* Mesh gradient + luces + partículas */
     .hero__bg { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
@@ -784,16 +790,16 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
       margin-top: 8px;
     }
 
-    /* ============ STAGE del TV ============ */
+    /* ============ STAGE del TV — más compacto ============ */
     .hero__stage {
       position: relative;
       display: flex;
       align-items: center;
       justify-content: center;
-      min-height: 480px;
-      padding: 20px;
+      min-height: 380px;
+      padding: 12px;
     }
-    @media (max-width: 900px) { .hero__stage { min-height: 340px; padding: 10px; } }
+    @media (max-width: 900px) { .hero__stage { min-height: 300px; padding: 10px; } }
 
     .stage__halo {
       position: absolute;
@@ -834,7 +840,7 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
 
     .stage__img {
       max-width: 100%;
-      max-height: 480px;
+      max-height: 400px;
       object-fit: contain;
       filter:
         drop-shadow(0 30px 40px rgba(0, 0, 0, 0.6))
@@ -898,33 +904,34 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
     }
 
     .hero__scroll {
-      position: absolute;
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
+      display: flex; justify-content: center;
       color: rgba(232, 201, 138, 0.6);
+      margin-top: 12px;
       z-index: 3;
       animation: scroll-bounce 2s ease-in-out infinite;
+      position: relative;
     }
-    .hero__scroll .material-icons { font-size: 32px; }
+    .hero__scroll .material-icons { font-size: 26px; }
     @keyframes scroll-bounce {
-      0%, 100% { transform: translate(-50%, 0); }
-      50% { transform: translate(-50%, 8px); }
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(6px); }
     }
 
     /* ============================================================
-       SECCIONES CENTRADAS
+       SECCIONES CENTRADAS — más compactas
        ============================================================ */
-    .prizes-showcase, .steps, .search-card, .picker {
+    .prizes-showcase, .steps, .picker {
       max-width: 1280px;
       margin: 0 auto;
-      padding: 60px 24px;
+      padding: 32px 24px;
     }
     @media (max-width: 720px) {
-      .prizes-showcase, .steps, .search-card, .picker { padding: 40px 20px; }
+      .prizes-showcase, .steps, .picker { padding: 28px 20px; }
     }
+    .picker { padding-top: 24px; }
+    .prizes-showcase, .steps { padding-top: 48px; padding-bottom: 48px; }
 
-    .section-head { text-align: center; margin-bottom: 40px; }
+    .section-head { text-align: center; margin-bottom: 28px; }
     .section-tag {
       display: inline-block;
       padding: 6px 16px;
@@ -932,165 +939,58 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
       color: var(--pg-text);
       border: 1px solid var(--card-border);
       border-radius: 999px;
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 700;
-      letter-spacing: 0.06em;
+      letter-spacing: 0.08em;
       text-transform: uppercase;
-      margin-bottom: 16px;
+      margin-bottom: 12px;
     }
     .section-head h2 {
-      margin: 0 0 8px;
-      font-size: clamp(24px, 4vw, 36px);
+      margin: 0 0 6px;
+      font-size: clamp(22px, 3vw, 30px);
       font-weight: 800;
       color: var(--heading);
       letter-spacing: -0.02em;
     }
-    .section-head p { margin: 0; color: var(--pg-muted); font-size: 15px; }
+    .section-head p { margin: 0; color: var(--pg-muted); font-size: 14px; }
 
-    /* ============ PREMIOS GRID ============ */
-    .prizes-showcase { background: var(--section-alt-bg); }
-    .prizes-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-      gap: 20px;
-    }
-    .prize-card {
-      position: relative;
-      background: var(--card-bg);
+    /* ============ BUSCADOR compacto integrado ============ */
+    .quick-search {
+      margin: 0 0 24px;
+      padding: 16px 18px;
+      background: linear-gradient(135deg, rgba(232, 201, 138, 0.1) 0%, rgba(30, 199, 123, 0.06) 100%);
       border: 1px solid var(--card-border);
-      border-radius: 20px;
-      padding: 32px 24px 28px;
-      text-align: center;
-      box-shadow: var(--card-shadow);
-      transition: transform 0.2s, box-shadow 0.2s;
-      backdrop-filter: blur(6px);
+      border-radius: 16px;
     }
-    .prize-card:hover { transform: translateY(-6px); box-shadow: 0 20px 40px rgba(201, 169, 110, 0.25); }
-    .prize-card--top {
-      border-color: rgba(232, 201, 138, 0.6);
-      background:
-        radial-gradient(ellipse at top, rgba(232, 201, 138, 0.15) 0%, transparent 60%),
-        var(--card-bg);
-      box-shadow:
-        0 12px 30px rgba(201, 169, 110, 0.25),
-        0 0 0 1px rgba(232, 201, 138, 0.4);
-    }
-    .prize-card__crown {
-      position: absolute;
-      top: -14px; left: 50%;
-      transform: translateX(-50%);
-      font-size: 26px;
-      background: linear-gradient(135deg, #c9a96e 0%, #e8c98a 100%);
-      width: 44px; height: 44px;
-      display: grid; place-items: center;
-      border-radius: 50%;
-      box-shadow: 0 8px 20px rgba(201, 169, 110, 0.5);
-    }
-    .prize-card__emoji { font-size: 72px; line-height: 1; margin-bottom: 12px; filter: drop-shadow(0 6px 12px rgba(0,0,0,0.15)); }
-    .prize-card__pos {
-      display: inline-block;
-      padding: 4px 12px;
-      background: linear-gradient(135deg, #c9a96e 0%, #e8c98a 100%);
-      color: #1a2942;
+    .quick-search__label {
+      display: flex; align-items: center; gap: 6px;
       font-size: 11px;
-      font-weight: 700;
-      border-radius: 999px;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      margin-bottom: 12px;
-    }
-    .prize-card h3 {
-      margin: 0 0 12px;
-      font-size: 18px;
-      color: var(--heading);
-      font-weight: 700;
-    }
-    .prize-card__date {
-      display: inline-flex; align-items: center; gap: 4px;
+      font-weight: 800;
       color: var(--pg-muted);
-      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 10px;
     }
-    .prize-card__date .material-icons { font-size: 14px; }
-
-    /* ============ CÓMO FUNCIONA ============ */
-    .steps__grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-      gap: 20px;
-      margin-top: 12px;
-    }
-    .step {
-      position: relative;
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: 20px;
-      padding: 40px 24px 24px;
-      text-align: center;
-      box-shadow: var(--card-shadow);
-    }
-    .step__num {
-      position: absolute;
-      top: -18px; left: 50%;
-      transform: translateX(-50%);
-      width: 36px; height: 36px;
-      display: grid; place-items: center;
-      background: linear-gradient(135deg, #1ec77b 0%, #16a366 100%);
-      color: #fff;
-      font-weight: 900;
-      border-radius: 50%;
-      font-size: 15px;
-      box-shadow: 0 8px 20px rgba(30, 199, 123, 0.4);
-    }
-    .step .material-icons { font-size: 44px; color: #c9a96e; margin-bottom: 8px; }
-    .step h3 { margin: 8px 0 6px; font-size: 17px; color: var(--heading); }
-    .step p { margin: 0; color: var(--pg-muted); font-size: 13px; line-height: 1.5; }
-
-    /* ============ BUSCADOR ============ */
-    .search-card { background: var(--section-alt-bg); }
-    .search-card > .search-card__head {
-      max-width: 720px;
-      margin: 0 auto 20px;
-      display: flex; gap: 14px; align-items: flex-start;
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: 20px;
-      padding: 24px;
-      box-shadow: var(--card-shadow);
-    }
-    .search-card__head .material-icons {
-      font-size: 32px;
-      color: #c9a96e;
-      background: rgba(201, 169, 110, 0.14);
-      padding: 8px;
-      border-radius: 12px;
-      flex-shrink: 0;
-    }
-    .search-card__head h2 { margin: 0 0 4px; font-size: 18px; color: var(--heading); }
-    .search-card__head p { margin: 0; color: var(--pg-muted); font-size: 13px; }
-
-    .search-form {
-      max-width: 720px;
-      margin: 0 auto;
-      display: flex; gap: 10px; flex-wrap: wrap;
-    }
-    .search-input {
+    .quick-search__label .material-icons { font-size: 14px; color: #c9a96e; }
+    .quick-search__form { display: flex; gap: 8px; flex-wrap: wrap; }
+    .quick-search__input {
       flex: 1;
-      min-width: 200px;
-      padding: 16px 22px;
+      min-width: 180px;
+      padding: 12px 16px;
       background: var(--input-bg);
       color: var(--input-text);
       border: 1.5px solid var(--input-border);
-      border-radius: 12px;
-      font-size: 19px;
+      border-radius: 10px;
+      font-size: 16px;
       font-weight: 700;
       font-variant-numeric: tabular-nums;
       transition: border-color 0.15s, box-shadow 0.15s;
     }
-    .search-input::placeholder { color: var(--input-placeholder); font-weight: 400; }
-    .search-input:focus {
+    .quick-search__input::placeholder { color: var(--input-placeholder); font-weight: 400; }
+    .quick-search__input:focus {
       outline: none;
       border-color: #1ec77b;
-      box-shadow: 0 0 0 4px rgba(30, 199, 123, 0.15);
+      box-shadow: 0 0 0 3px rgba(30, 199, 123, 0.15);
     }
     .btn__spin {
       display: inline-block;
@@ -1103,15 +1003,209 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
     }
 
     .search-result {
-      max-width: 720px;
-      margin: 20px auto 0;
+      margin: 14px 0 0;
       position: relative;
-      display: flex; gap: 14px; align-items: flex-start;
-      padding: 20px 22px;
+      display: flex; gap: 12px; align-items: flex-start;
+      padding: 16px 18px;
       background: var(--card-bg);
-      border-radius: 14px;
+      border-radius: 12px;
       border-left: 4px solid;
       box-shadow: var(--card-shadow);
+    }
+
+    /* ============ PREMIOS MOSAICO PREMIUM ============ */
+    .prizes-showcase { background: var(--section-alt-bg); }
+    .prizes-mosaic {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 16px;
+    }
+    .prize-tile {
+      position: relative;
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 16px;
+      align-items: center;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: var(--card-shadow);
+      transition: transform 0.18s, box-shadow 0.18s, border-color 0.18s;
+      overflow: hidden;
+    }
+    .prize-tile::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: linear-gradient(135deg, rgba(232, 201, 138, 0.08) 0%, transparent 50%);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.18s;
+    }
+    .prize-tile:hover {
+      transform: translateY(-3px);
+      border-color: rgba(232, 201, 138, 0.5);
+      box-shadow: 0 20px 40px rgba(201, 169, 110, 0.18);
+    }
+    .prize-tile:hover::before { opacity: 1; }
+
+    .prize-tile--top {
+      grid-column: 1 / -1;
+      grid-template-columns: auto 1fr auto;
+      background:
+        radial-gradient(ellipse at right, rgba(232, 201, 138, 0.15) 0%, transparent 60%),
+        var(--card-bg);
+      border-color: rgba(232, 201, 138, 0.55);
+      box-shadow:
+        0 12px 30px rgba(201, 169, 110, 0.22),
+        0 0 0 1px rgba(232, 201, 138, 0.35);
+      padding: 24px 28px;
+    }
+    .prize-tile--top::after {
+      content: '★';
+      position: absolute;
+      top: 12px; right: 16px;
+      color: #e8c98a;
+      font-size: 20px;
+      filter: drop-shadow(0 0 8px rgba(232, 201, 138, 0.8));
+    }
+
+    .prize-tile__index {
+      display: grid; place-items: center;
+      width: 44px; height: 44px;
+      background: linear-gradient(135deg, rgba(232, 201, 138, 0.2) 0%, rgba(201, 169, 110, 0.1) 100%);
+      color: #c9a96e;
+      font-weight: 900;
+      font-size: 15px;
+      font-variant-numeric: tabular-nums;
+      border-radius: 12px;
+      border: 1px solid rgba(232, 201, 138, 0.3);
+      letter-spacing: -0.02em;
+    }
+    .prize-tile--top .prize-tile__index {
+      background: linear-gradient(135deg, #c9a96e 0%, #e8c98a 100%);
+      color: #1a2942;
+      border-color: transparent;
+      box-shadow: 0 4px 12px rgba(201, 169, 110, 0.5);
+    }
+
+    .prize-tile__icon {
+      display: grid; place-items: center;
+      width: 56px; height: 56px;
+      background: linear-gradient(135deg, rgba(30, 199, 123, 0.1) 0%, rgba(232, 201, 138, 0.06) 100%);
+      border-radius: 14px;
+      border: 1px solid rgba(232, 201, 138, 0.2);
+    }
+    .prize-tile__icon span {
+      font-size: 34px;
+      line-height: 1;
+      filter: drop-shadow(0 3px 6px rgba(0,0,0,0.15));
+    }
+    .prize-tile--top .prize-tile__icon {
+      width: 72px; height: 72px;
+      background: linear-gradient(135deg, rgba(232, 201, 138, 0.25) 0%, rgba(201, 169, 110, 0.15) 100%);
+      border-color: rgba(232, 201, 138, 0.5);
+    }
+    .prize-tile--top .prize-tile__icon span { font-size: 44px; }
+
+    .prize-tile__body { min-width: 0; }
+    .prize-tile__tag {
+      font-size: 10px;
+      font-weight: 800;
+      color: #c9a96e;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 4px;
+    }
+    .prize-tile h3 {
+      margin: 0 0 6px;
+      font-size: 16px;
+      color: var(--heading);
+      font-weight: 700;
+      line-height: 1.25;
+    }
+    .prize-tile--top h3 { font-size: 22px; }
+    .prize-tile__date {
+      display: inline-flex; align-items: center; gap: 4px;
+      color: var(--pg-muted);
+      font-size: 12px;
+    }
+    .prize-tile__date .material-icons { font-size: 14px; }
+
+    /* Reemplazamos las clases viejas por si algo aún las referencia */
+    .prizes-grid, .prize-card, .prize-card--top, .prize-card__crown,
+    .prize-card__emoji, .prize-card__pos, .prize-card__date { display: none; }
+
+    /* ============ CÓMO FUNCIONA — flow horizontal con connectors ============ */
+    .steps__flow {
+      display: flex;
+      align-items: stretch;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .step-item {
+      flex: 1;
+      min-width: 220px;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 18px;
+      padding: 24px 22px 22px;
+      text-align: center;
+      box-shadow: var(--card-shadow);
+      transition: transform 0.18s, border-color 0.18s;
+    }
+    .step-item:hover { transform: translateY(-3px); border-color: rgba(30, 199, 123, 0.35); }
+
+    .step-item__badge {
+      position: relative;
+      width: 68px; height: 68px;
+      margin: 0 auto 16px;
+      display: grid; place-items: center;
+      background: linear-gradient(135deg, #1ec77b 0%, #16a366 100%);
+      border-radius: 20px;
+      box-shadow:
+        0 10px 26px rgba(30, 199, 123, 0.4),
+        inset 0 1px 0 rgba(255,255,255,0.3);
+    }
+    .step-item__badge .material-icons { font-size: 32px; color: #fff; }
+    .step-item__num {
+      position: absolute;
+      top: -8px; right: -8px;
+      background: linear-gradient(135deg, #c9a96e 0%, #e8c98a 100%);
+      color: #1a2942;
+      font-weight: 900;
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      box-shadow: 0 3px 8px rgba(201, 169, 110, 0.5);
+      letter-spacing: 0.02em;
+    }
+    .step-item h3 {
+      margin: 0 0 6px;
+      font-size: 17px;
+      color: var(--heading);
+      font-weight: 700;
+    }
+    .step-item p {
+      margin: 0;
+      color: var(--pg-muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .steps__connector {
+      display: grid; place-items: center;
+      color: rgba(201, 169, 110, 0.55);
+      flex-shrink: 0;
+      align-self: center;
+    }
+    @media (max-width: 900px) {
+      .steps__connector { transform: rotate(90deg); }
+      .step-item { min-width: 100%; }
+    }
+    @media (max-width: 720px) {
+      .steps__connector { display: none; }
     }
     .search-result__body { flex: 1; }
     .search-result .material-icons { font-size: 32px; margin-top: 2px; }
