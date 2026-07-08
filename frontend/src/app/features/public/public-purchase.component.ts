@@ -11,6 +11,7 @@ import {
   PublicSalesService,
   TicketLookup,
 } from '@core/services/public-sales.service';
+import { ThemeService } from '@core/services/theme.service';
 
 /**
  * Portal PÚBLICO de compra online de boletas.
@@ -48,6 +49,14 @@ import {
           <a routerLink="/" class="btn">Volver al inicio</a>
         </section>
       } @else if (overview(); as r) {
+
+        <!-- Toggle claro/oscuro flotante -->
+        <button class="theme-toggle" type="button"
+                (click)="theme.toggle()"
+                [attr.aria-label]="theme.isDark() ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'"
+                [title]="theme.isDark() ? 'Modo claro' : 'Modo oscuro'">
+          <span class="material-icons">{{ theme.isDark() ? 'light_mode' : 'dark_mode' }}</span>
+        </button>
 
         <!-- ============ HERO PREMIUM ============ -->
         <header class="hero">
@@ -338,22 +347,111 @@ import {
     </main>
   `,
   styles: [`
+    /* ============ TEMA CLARO (default) ============ */
     :host {
       display: block;
-      background:
+      min-height: 100vh;
+      font-family: 'Inter', system-ui, sans-serif;
+
+      --pg-bg:
         radial-gradient(circle at 20% 0%, rgba(201, 169, 110, 0.25), transparent 40%),
         radial-gradient(circle at 80% 100%, rgba(30, 199, 123, 0.18), transparent 45%),
         linear-gradient(180deg, #faf6ee 0%, #f0e5c8 100%);
-      min-height: 100vh;
-      color: #1a2942;
-      font-family: 'Inter', system-ui, sans-serif;
+      --pg-text: #1a2942;
+      --pg-muted: #6b7280;
+
+      --card-bg: #ffffff;
+      --card-border: rgba(201, 169, 110, 0.12);
+      --card-shadow: 0 4px 24px rgba(26, 41, 66, 0.06);
+
+      --input-bg: #ffffff;
+      --input-text: #1a2942;
+      --input-border: rgba(26, 41, 66, 0.15);
+      --input-placeholder: #9ca3af;
+
+      --cell-bg: linear-gradient(180deg, #fff 0%, #f8f1e3 100%);
+      --cell-bg-hover: #ffffff;
+      --cell-text: #1a2942;
+      --cell-border: rgba(26, 41, 66, 0.12);
+
+      --summary-bg: linear-gradient(90deg, #f8f1e3 0%, #f0e5c8 100%);
+      --summary-border: rgba(201, 169, 110, 0.3);
+
+      --toggle-bg: rgba(255, 255, 255, 0.9);
+      --toggle-text: #1a2942;
+      --toggle-border: rgba(201, 169, 110, 0.35);
+
+      --heading: #1a2942;
+
+      background: var(--pg-bg);
+      color: var(--pg-text);
     }
-    .page { max-width: 1080px; margin: 0 auto; padding: 24px 16px 60px; }
+
+    /* ============ TEMA OSCURO ============ */
+    :host-context([data-theme="dark"]) {
+      --pg-bg:
+        radial-gradient(circle at 20% 0%, rgba(201, 169, 110, 0.2), transparent 45%),
+        radial-gradient(circle at 80% 100%, rgba(30, 199, 123, 0.15), transparent 50%),
+        linear-gradient(180deg, #0a1424 0%, #142240 100%);
+      --pg-text: #f8f1e3;
+      --pg-muted: rgba(248, 241, 227, 0.6);
+
+      --card-bg: linear-gradient(180deg, rgba(20, 34, 64, 0.75) 0%, rgba(15, 26, 46, 0.75) 100%);
+      --card-border: rgba(201, 169, 110, 0.25);
+      --card-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+
+      --input-bg: rgba(10, 20, 36, 0.7);
+      --input-text: #f8f1e3;
+      --input-border: rgba(201, 169, 110, 0.25);
+      --input-placeholder: rgba(248, 241, 227, 0.4);
+
+      --cell-bg: linear-gradient(180deg, rgba(30, 48, 87, 0.6) 0%, rgba(20, 34, 64, 0.6) 100%);
+      --cell-bg-hover: rgba(30, 48, 87, 0.9);
+      --cell-text: #f8f1e3;
+      --cell-border: rgba(201, 169, 110, 0.25);
+
+      --summary-bg: linear-gradient(90deg, rgba(30, 48, 87, 0.6) 0%, rgba(20, 34, 64, 0.6) 100%);
+      --summary-border: rgba(201, 169, 110, 0.35);
+
+      --toggle-bg: rgba(20, 34, 64, 0.85);
+      --toggle-text: #e8c98a;
+      --toggle-border: rgba(232, 201, 138, 0.35);
+
+      --heading: #f8f1e3;
+    }
+
+    .page { max-width: 1080px; margin: 0 auto; padding: 24px 16px 60px; position: relative; }
+
+    /* ============ TOGGLE claro/oscuro ============ */
+    .theme-toggle {
+      position: fixed;
+      top: 20px; right: 20px;
+      width: 46px; height: 46px;
+      display: grid; place-items: center;
+      background: var(--toggle-bg);
+      color: var(--toggle-text);
+      border: 1.5px solid var(--toggle-border);
+      border-radius: 50%;
+      cursor: pointer;
+      z-index: 50;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+      transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+    }
+    .theme-toggle:hover {
+      transform: translateY(-2px) rotate(15deg);
+      border-color: rgba(232, 201, 138, 0.7);
+      box-shadow: 0 12px 32px rgba(232, 201, 138, 0.35);
+    }
+    .theme-toggle .material-icons { font-size: 22px; }
+    @media (max-width: 720px) {
+      .theme-toggle { top: 14px; right: 14px; width: 40px; height: 40px; }
+    }
 
     .state {
       text-align: center;
       padding: 80px 20px;
-      color: #6b7280;
+      color: var(--pg-muted);
     }
     .spinner {
       display: inline-block;
@@ -683,20 +781,19 @@ import {
 
     /* ============ SECCIONES (buscador + picker) ============ */
     .search-card, .picker {
-      background: #fff;
+      background: var(--card-bg);
       border-radius: 20px;
       padding: 24px 28px;
       margin-bottom: 24px;
-      box-shadow:
-        0 4px 24px rgba(26, 41, 66, 0.06),
-        0 0 0 1px rgba(201, 169, 110, 0.12);
+      box-shadow: var(--card-shadow), 0 0 0 1px var(--card-border);
+      backdrop-filter: blur(6px);
     }
     @media (max-width: 720px) {
       .search-card, .picker { padding: 20px; border-radius: 16px; }
     }
 
     .search-card h2, .picker h2 {
-      margin: 0 0 12px; font-size: 20px; font-weight: 700; color: #1a2942;
+      margin: 0 0 12px; font-size: 20px; font-weight: 700; color: var(--heading);
       display: inline-flex; align-items: center; gap: 8px;
     }
 
@@ -713,25 +810,23 @@ import {
       border-radius: 12px;
     }
     .search-card__head h2 { margin: 0 0 2px; font-size: 17px; }
-    .search-card__head p { margin: 0; color: #6b7280; font-size: 13px; }
+    .search-card__head p { margin: 0; color: var(--pg-muted); font-size: 13px; }
 
     .search-form { display: flex; gap: 10px; flex-wrap: wrap; }
     .search-input {
       flex: 1;
       min-width: 160px;
       padding: 14px 18px;
-      /* CRÍTICO: background y color explícitos para no heredar
-         de las variables oscuras del admin en algún caso raro. */
-      background: #ffffff !important;
-      color: #1a2942 !important;
-      border: 1.5px solid rgba(26, 41, 66, 0.15);
+      background: var(--input-bg);
+      color: var(--input-text);
+      border: 1.5px solid var(--input-border);
       border-radius: 12px;
       font-size: 17px;
       font-weight: 700;
       font-variant-numeric: tabular-nums;
       transition: border-color 0.15s, box-shadow 0.15s;
     }
-    .search-input::placeholder { color: #9ca3af; font-weight: 400; }
+    .search-input::placeholder { color: var(--input-placeholder); font-weight: 400; }
     .search-input:focus {
       outline: none;
       border-color: #1ec77b;
@@ -756,13 +851,14 @@ import {
     }
     .search-result .material-icons { font-size: 28px; margin-top: 2px; }
     .search-result strong { display: block; font-size: 15px; margin-bottom: 4px; }
-    .search-result p { margin: 0 0 8px; font-size: 13px; color: #4b5563; }
+    .search-result strong { color: var(--heading); }
+    .search-result p { margin: 0 0 8px; font-size: 13px; color: var(--pg-text); opacity: 0.85; }
     .search-result__close {
       position: absolute;
       top: 8px; right: 10px;
       background: transparent; border: none;
       font-size: 22px; line-height: 1;
-      color: #6b7280; cursor: pointer;
+      color: var(--pg-muted); cursor: pointer;
       padding: 4px 8px;
     }
     .search-result--available {
@@ -811,9 +907,9 @@ import {
     .empty {
       text-align: center;
       padding: 40px 20px;
-      color: #6b7280;
+      color: var(--pg-muted);
     }
-    .empty .big { font-size: 56px; color: #d1c4a3; margin-bottom: 12px; }
+    .empty .big { font-size: 56px; color: #c9a96e; opacity: 0.6; margin-bottom: 12px; }
 
     .grid {
       display: grid;
@@ -823,20 +919,20 @@ import {
     }
     .cell {
       padding: 14px 4px;
-      background: linear-gradient(180deg, #fff 0%, #f8f1e3 100%);
-      border: 1.5px solid rgba(26, 41, 66, 0.12);
+      background: var(--cell-bg);
+      border: 1.5px solid var(--cell-border);
       border-radius: 10px;
       font-family: 'Inter', sans-serif;
       font-weight: 700;
       font-size: 15px;
-      color: #1a2942;
+      color: var(--cell-text);
       cursor: pointer;
       transition: all 0.15s;
       font-variant-numeric: tabular-nums;
       box-shadow: 0 1px 2px rgba(0,0,0,0.03);
     }
     .cell:hover {
-      background: #fff;
+      background: var(--cell-bg-hover);
       border-color: #c9a96e;
       transform: translateY(-2px);
       box-shadow: 0 6px 14px rgba(201, 169, 110, 0.25);
@@ -858,13 +954,14 @@ import {
     .summary {
       display: flex; justify-content: space-between; align-items: center;
       padding: 20px 24px; margin-top: 20px;
-      background: linear-gradient(90deg, #f8f1e3 0%, #f0e5c8 100%);
+      background: var(--summary-bg);
       border-radius: 14px;
       font-size: 15px;
       flex-wrap: wrap; gap: 14px;
-      border: 1px solid rgba(201, 169, 110, 0.3);
+      border: 1px solid var(--summary-border);
+      color: var(--pg-text);
     }
-    .summary__info strong { color: #1a2942; }
+    .summary__info strong { color: var(--heading); }
 
     .btn {
       display: inline-flex; align-items: center; gap: 8px;
@@ -891,10 +988,10 @@ import {
     }
     .btn.ghost {
       background: transparent;
-      border-color: rgba(26, 41, 66, 0.2);
-      color: #1a2942;
+      border-color: var(--input-border);
+      color: var(--pg-text);
     }
-    .btn.ghost:hover:not(:disabled) { background: rgba(26, 41, 66, 0.05); }
+    .btn.ghost:hover:not(:disabled) { background: rgba(127, 127, 127, 0.08); }
     .btn--lg { padding: 16px 28px; font-size: 15px; }
     .btn--sm { padding: 8px 14px; font-size: 13px; }
     .btn .material-icons { font-size: 18px; }
@@ -902,14 +999,14 @@ import {
     /* ============ FOOTER ============ */
     .foot {
       text-align: center;
-      color: rgba(26, 41, 66, 0.65);
+      color: var(--pg-muted);
       font-size: 12px;
       padding: 24px 0 8px;
     }
     .foot__brand {
       display: inline-flex; align-items: center; gap: 8px;
       font-weight: 800;
-      color: #1a2942;
+      color: var(--heading);
       margin-bottom: 4px;
     }
     .foot__dot {
@@ -934,28 +1031,30 @@ import {
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     .modal__card {
       position: relative;
-      background: #fff;
+      background: var(--card-bg);
+      color: var(--pg-text);
       border-radius: 20px;
       padding: 32px 28px;
       max-width: 460px;
       width: 100%;
       max-height: 92vh;
       overflow-y: auto;
-      box-shadow: 0 25px 70px rgba(0,0,0,0.35);
-      border: 1px solid rgba(201, 169, 110, 0.2);
+      box-shadow: 0 25px 70px rgba(0,0,0,0.4);
+      border: 1px solid var(--card-border);
+      backdrop-filter: blur(10px);
     }
     .modal__close {
       position: absolute;
       top: 12px; right: 14px;
       background: transparent; border: none;
       font-size: 28px; line-height: 1;
-      color: #6b7280; cursor: pointer;
+      color: var(--pg-muted); cursor: pointer;
       padding: 4px 10px;
       border-radius: 8px;
     }
-    .modal__close:hover { background: rgba(0,0,0,0.05); color: #1a2942; }
-    .modal__card h2 { margin: 0 0 6px; font-size: 22px; color: #1a2942; }
-    .modal__lead { margin: 0 0 8px; color: #4b5563; font-size: 14px; }
+    .modal__close:hover { background: rgba(127,127,127,0.1); color: var(--heading); }
+    .modal__card h2 { margin: 0 0 6px; font-size: 22px; color: var(--heading); }
+    .modal__lead { margin: 0 0 8px; color: var(--pg-muted); font-size: 14px; }
 
     /* ============ FORMULARIO — legibilidad garantizada ============
        Problema anterior: en algunos navegadores el input heredaba estilos
@@ -966,22 +1065,25 @@ import {
     .field { display: grid; gap: 6px; }
     .field span {
       font-weight: 700; letter-spacing: 0.02em;
-      color: #4b5563; text-transform: uppercase; font-size: 11px;
+      color: var(--pg-muted); text-transform: uppercase; font-size: 11px;
     }
     .field input {
-      /* Colores forzados — inputs claros, letra oscura */
-      background: #ffffff !important;
-      color: #1a2942 !important;
+      /* Colores por theme — variables + !important para blindar contra
+         estilos oscuros que hereden del contexto padre (ej si el user
+         viene desde el admin con --input-bg dark heredado). */
+      background: var(--input-bg) !important;
+      color: var(--input-text) !important;
+      -webkit-text-fill-color: var(--input-text) !important;
+      caret-color: var(--input-text);
       padding: 14px 16px;
-      border: 1.5px solid rgba(26, 41, 66, 0.15);
+      border: 1.5px solid var(--input-border);
       border-radius: 10px;
       font-size: 15px;
       font-family: inherit;
       transition: border-color 0.15s, box-shadow 0.15s;
-      -webkit-text-fill-color: #1a2942;  /* iOS Safari override */
     }
     .field input::placeholder {
-      color: #9ca3af !important;
+      color: var(--input-placeholder) !important;
       opacity: 1;
     }
     .field input:focus {
@@ -989,17 +1091,24 @@ import {
       border-color: #1ec77b;
       box-shadow: 0 0 0 4px rgba(30, 199, 123, 0.15);
     }
-    /* Chrome autofill: quita el fondo amarillo/dark y respeta nuestra paleta */
+    /* Chrome autofill: usa un box-shadow del color del theme para evitar
+       el amarillo default de Chrome. Referenciamos color-mix para el
+       modo dark, con fallback al blanco. */
     .field input:-webkit-autofill,
     .field input:-webkit-autofill:hover,
     .field input:-webkit-autofill:focus {
       -webkit-box-shadow: 0 0 0 40px #ffffff inset !important;
       -webkit-text-fill-color: #1a2942 !important;
-      caret-color: #1a2942;
+    }
+    :host-context([data-theme="dark"]) .field input:-webkit-autofill,
+    :host-context([data-theme="dark"]) .field input:-webkit-autofill:hover,
+    :host-context([data-theme="dark"]) .field input:-webkit-autofill:focus {
+      -webkit-box-shadow: 0 0 0 40px #142240 inset !important;
+      -webkit-text-fill-color: #f8f1e3 !important;
     }
 
-    .or { text-align: center; margin: 6px 0; color: #6b7280; font-size: 12px; }
-    .muted { color: #6b7280; font-size: 13px; margin: 4px 0 0; }
+    .or { text-align: center; margin: 6px 0; color: var(--pg-muted); font-size: 12px; }
+    .muted { color: var(--pg-muted); font-size: 13px; margin: 4px 0 0; }
 
     .alert {
       display: flex; align-items: center; gap: 8px;
@@ -1015,6 +1124,7 @@ export class PublicPurchaseComponent implements OnInit {
   private readonly svc = inject(PublicSalesService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  readonly theme = inject(ThemeService);
 
   loading = signal(true);
   loadingTickets = signal(false);
