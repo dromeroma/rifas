@@ -88,8 +88,11 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
               </div>
 
               <h1 class="hero__title">
-                Tu rifa, <em>profesional</em><br>
-                desde el primer ticket.
+                @if (heroTitleParts(); as ht) {
+                  <span>{{ ht.left }}</span>@if (ht.right) {<em>{{ ht.right }}</em>}
+                } @else {
+                  {{ r.name }}
+                }
               </h1>
 
               <p class="hero__desc">
@@ -873,8 +876,8 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
     .hero__grid {
       position: relative; z-index: 1;
       display: grid;
-      grid-template-columns: 1.05fr 1.1fr;
-      gap: 48px;
+      grid-template-columns: 1fr 1.3fr;
+      gap: 32px;
       align-items: center;
     }
     @media (max-width: 960px) {
@@ -957,9 +960,9 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
       display: flex;
       align-items: center;
       justify-content: center;
-      min-height: 460px;
+      min-height: 560px;
     }
-    @media (max-width: 960px) { .hero__stage { min-height: 380px; } }
+    @media (max-width: 960px) { .hero__stage { min-height: 400px; } }
 
     .stage__product {
       position: relative;
@@ -967,29 +970,29 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
       align-items: center;
       justify-content: center;
       width: 100%;
-      max-width: 620px;
+      max-width: 780px;
     }
     .stage__product::before {
       content: '';
       position: absolute;
-      inset: 10% 10%;
-      background: radial-gradient(circle, rgba(34, 197, 94, 0.35) 0%, transparent 60%);
-      filter: blur(30px);
+      inset: 5% 5%;
+      background: radial-gradient(circle, rgba(34, 197, 94, 0.4) 0%, transparent 60%);
+      filter: blur(40px);
       z-index: 0;
       animation: halo-pulse 4s ease-in-out infinite;
     }
     @keyframes halo-pulse {
-      0%, 100% { opacity: 0.65; transform: scale(1); }
-      50% { opacity: 1; transform: scale(1.06); }
+      0%, 100% { opacity: 0.7; transform: scale(1); }
+      50% { opacity: 1; transform: scale(1.08); }
     }
     .stage__product img {
       position: relative;
       z-index: 1;
       max-width: 100%;
-      max-height: 460px;
+      max-height: 560px;
       object-fit: contain;
-      filter: drop-shadow(0 30px 40px rgba(0,0,0,0.5))
-              drop-shadow(0 0 50px rgba(34, 197, 94, 0.2));
+      filter: drop-shadow(0 40px 50px rgba(0,0,0,0.55))
+              drop-shadow(0 0 60px rgba(34, 197, 94, 0.25));
     }
     .stage__fallback {
       position: relative;
@@ -999,68 +1002,68 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
       filter: drop-shadow(0 20px 40px rgba(0,0,0,0.5));
     }
 
-    /* Card flotante de boleta */
+    /* Card flotante de boleta — más compacta */
     .ticket-card {
       position: absolute;
-      bottom: 6%;
-      left: 4%;
+      bottom: 8%;
+      left: 2%;
       z-index: 3;
-      width: min(340px, 90%);
-      background: rgba(4, 22, 19, 0.88);
+      width: min(260px, 78%);
+      background: rgba(4, 22, 19, 0.9);
       backdrop-filter: blur(16px);
       -webkit-backdrop-filter: blur(16px);
       border: 1px solid var(--border-md);
-      border-radius: var(--r-lg);
-      padding: 18px 20px;
-      box-shadow: 0 24px 60px rgba(0,0,0,0.5),
-                  0 0 30px rgba(34, 197, 94, 0.15);
+      border-radius: var(--r-md);
+      padding: 12px 14px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.55),
+                  0 0 24px rgba(34, 197, 94, 0.18);
       transform: rotate(-3deg);
       animation: card-float 5s ease-in-out infinite;
     }
     @keyframes card-float {
       0%, 100% { transform: rotate(-3deg) translateY(0); }
-      50% { transform: rotate(-3deg) translateY(-6px); }
+      50% { transform: rotate(-3deg) translateY(-5px); }
     }
     .ticket-card__head {
       display: flex; justify-content: space-between; align-items: baseline;
-      margin-bottom: 12px;
-      font-size: 13px;
+      margin-bottom: 10px;
+      font-size: 12px;
     }
     .ticket-card__label {
       font-weight: 700;
       color: var(--text);
-      font-size: 17px;
+      font-size: 14px;
       letter-spacing: -0.01em;
       font-variant-numeric: tabular-nums;
     }
     .ticket-card__code {
       color: var(--text-muted);
       font-family: 'JetBrains Mono', 'Menlo', ui-monospace, monospace;
-      font-size: 11px;
+      font-size: 9.5px;
       letter-spacing: 0.06em;
     }
     .ticket-card__grid {
       display: grid;
       grid-template-columns: repeat(5, 1fr);
-      gap: 6px;
-      margin-bottom: 12px;
+      gap: 4px;
+      margin-bottom: 10px;
     }
     .ticket-card__num {
       display: grid; place-items: center;
-      padding: 6px 4px;
+      padding: 4px 2px;
       background: var(--brand-soft);
       border: 1px solid var(--border-md);
-      border-radius: 8px;
-      font-size: 12px;
+      border-radius: 6px;
+      font-size: 10px;
       font-weight: 700;
       color: var(--brand-glow);
       font-variant-numeric: tabular-nums;
     }
     .ticket-card__foot {
-      font-size: 11px;
+      font-size: 9.5px;
       color: var(--text-muted);
       text-align: center;
-      padding-top: 10px;
+      padding-top: 8px;
       border-top: 1px dashed var(--border-md);
     }
 
@@ -1770,18 +1773,34 @@ export class PublicPurchaseComponent implements OnInit, OnDestroy {
   skeletonRange = Array.from({ length: 30 }, (_, i) => i);
 
   faq = [
-    { q: '¿Cómo garantizan la transparencia del sorteo?',
-      a: 'El sorteo se realiza con la lotería oficial anunciada en la rifa. Los números y fechas quedan registrados en la plataforma antes del sorteo y son verificables públicamente con el QR de cada boleta.' },
-    { q: '¿Qué métodos de pago aceptan?',
-      a: 'Nequi, PSE, Bancolombia y tarjeta de crédito/débito a través de Wompi. También transferencia manual con comprobante que el organizador aprueba en menos de 24 horas.' },
-    { q: '¿Cuánto tiempo tengo para pagar mi boleta reservada?',
-      a: 'Al elegir una boleta la reservamos por 24 horas. Recibirás un recordatorio antes de que expire. Si no pagas, la boleta vuelve a estar disponible para otros compradores.' },
-    { q: '¿Cómo sabré si gané?',
-      a: 'Después del sorteo te notificamos por correo electrónico y WhatsApp automáticamente. También puedes verificar el resultado desde el enlace de tu boleta.' },
-    { q: '¿Mis datos personales están seguros?',
-      a: 'Sí. Solo pedimos la información mínima para entregarte el premio si ganas. No compartimos tu información con terceros ni la usamos para publicidad.' },
-    { q: '¿Puedo comprar varias boletas?',
-      a: 'Sí, puedes seleccionar hasta 10 boletas por compra. Si quieres más, puedes hacer múltiples compras.' },
+    {
+      q: '¿Y si soy el afortunado, cómo me entero?',
+      a: 'Muy fácil. En el momento en que se juegue el sorteo, te enviamos un mensaje al correo y por WhatsApp con tu boleta ganadora. Además, publicamos el ganador con evidencia en nuestras redes. Tu boleta tiene un QR que puedes escanear en cualquier momento para verificar el estado.',
+    },
+    {
+      q: '¿Cómo puedo estar seguro de que esto no es una estafa?',
+      a: 'La rifa se juega con la lotería oficial que ves publicada, no somos nosotros los que definimos los números ganadores. Cada boleta tiene un código único registrado antes del sorteo, verificable públicamente por cualquiera. Todo el proceso queda trazable — nada sale de la plataforma sin quedar registrado.',
+    },
+    {
+      q: '¿Qué formas de pago aceptan?',
+      a: 'Pagas al instante con Nequi, PSE, Bancolombia o tarjeta débito/crédito a través de Wompi (100% seguro). Si prefieres, también puedes hacer transferencia manual y subir el comprobante — el organizador lo aprueba en menos de 24 horas.',
+    },
+    {
+      q: 'Reservé una boleta pero aún no he pagado. ¿Qué pasa?',
+      a: 'Tranquilo, tu boleta queda reservada solo para ti durante 24 horas. Antes de que se venza recibes un recordatorio por WhatsApp. Si no alcanzas a pagar, la boleta vuelve a estar disponible y puedes intentar de nuevo con otra.',
+    },
+    {
+      q: '¿Puedo comprar varias boletas de una?',
+      a: '¡Claro! Puedes seleccionar hasta 10 boletas por compra y todas quedan a nombre tuyo con un solo pago. Si quieres más de 10, simplemente haces otra compra — sin límite total.',
+    },
+    {
+      q: '¿Qué pasa con mis datos personales?',
+      a: 'Solo te pedimos cédula, nombre, email y celular — la información mínima que necesitamos para entregarte el premio si ganas. No los compartimos con nadie, ni los usamos para spam ni publicidad. Todo cifrado, todo privado.',
+    },
+    {
+      q: '¿Y si tengo un problema o quiero cancelar?',
+      a: 'Estamos a un WhatsApp de distancia. Toca el botón verde flotante y te respondemos rápido. Si tu boleta aún no ha sido pagada, puedes soltarla sin problema. Si ya pagaste, revisamos tu caso.',
+    },
   ];
 
   form = {
@@ -1824,6 +1843,22 @@ export class PublicPurchaseComponent implements OnInit, OnDestroy {
     const r = this.overview();
     if (!r?.prizes?.length) return '';
     return [...r.prizes].sort((a, b) => a.position - b.position)[0].name;
+  });
+
+  /** Divide el nombre de la rifa por " + " para pintar la parte después del +
+   *  en verde brillante. Ejemplo: "Televisor de 50" + 3 bonos de 200k" →
+   *  { left: 'Televisor de 50"', right: '3 bonos de 200k' } que renderiza
+   *  como "Televisor de 50" <em>+ 3 bonos de 200k</em>". */
+  heroTitleParts = computed<{ left: string; right: string } | null>(() => {
+    const r = this.overview();
+    if (!r) return null;
+    const name = r.name || '';
+    const idx = name.indexOf(' + ');
+    if (idx === -1) return { left: name, right: '' };
+    return {
+      left: name.slice(0, idx + 1),      // "Televisor de 50" "
+      right: '+ ' + name.slice(idx + 3), // "+ 3 bonos de 200k"
+    };
   });
 
   /** Un ticket de muestra para la card flotante del hero. Toma el primer
@@ -1935,7 +1970,10 @@ export class PublicPurchaseComponent implements OnInit, OnDestroy {
   }
 
   private startCountdown(r: PublicRaffleOverview) {
-    if (!r.show_draw_date || !r.final_draw_date) return;
+    // Mostrar countdown siempre que haya fecha final. La fecha proviene de la
+    // rifa (r.final_draw_date), independiente del threshold — el cliente
+    // quiere ver "cuánto falta" desde el inicio para generar urgencia.
+    if (!r.final_draw_date) return;
     const target = new Date(r.final_draw_date + (r.final_draw_date.length === 10 ? 'T20:00:00' : '')).getTime();
     if (isNaN(target)) return;
     const tick = () => {
