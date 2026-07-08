@@ -263,76 +263,136 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
           }
         </section>
 
-        <!-- ============ GRID DE PREMIOS (rediseñado — mosaico premium) ============ -->
+        <!-- ============ PREMIOS — layout editorial de lujo ============ -->
         @if (r.prizes.length) {
-          <section class="prizes-showcase">
-            <div class="section-head">
-              <span class="section-tag">🏆 Los premios en juego</span>
-              <h2>Todos los premios que puedes ganar</h2>
-              <p>Cada boleta juega por múltiples premios en fechas distintas.</p>
-            </div>
+          <section class="editorial editorial--prizes">
+            <div class="editorial__inner">
+              <div class="editorial__head">
+                <span class="eyebrow">
+                  <span class="eyebrow__line"></span>
+                  <span>Premios en juego</span>
+                  <span class="eyebrow__line"></span>
+                </span>
+                <h2 class="display">Todo lo que <em>puedes ganar</em></h2>
+                <p class="lede">
+                  Cada boleta juega por múltiples premios en distintas fechas de sorteo.
+                  Una sola compra, muchas oportunidades.
+                </p>
+              </div>
 
-            <div class="prizes-mosaic">
-              @for (p of r.prizes; track p.position; let idx = $index) {
-                <article class="prize-tile" [class.prize-tile--top]="idx === 0">
-                  <div class="prize-tile__index">{{ (idx + 1) < 10 ? '0' : '' }}{{ idx + 1 }}</div>
-                  <div class="prize-tile__icon">
-                    <span>{{ prizeEmoji(p.name) }}</span>
-                  </div>
-                  <div class="prize-tile__body">
-                    <div class="prize-tile__tag">
-                      {{ idx === 0 ? '★ Premio mayor' : 'Premio ' + (idx + 1) }}
+              <!-- Premio mayor: hero card editorial -->
+              @if (r.prizes[0]; as top) {
+                <article class="prize-hero">
+                  <div class="prize-hero__meta">
+                    <div class="prize-hero__eyebrow">
+                      <span class="prize-hero__roman">I</span>
+                      <span class="prize-hero__label">Premio mayor</span>
                     </div>
-                    <h3>{{ p.name }}</h3>
-                    @if (p.draw_date) {
-                      <div class="prize-tile__date">
-                        <span class="material-icons">event</span>
-                        {{ formatDate(p.draw_date) }}
+                    <h3 class="display display--xl">{{ top.name }}</h3>
+                    <div class="prize-hero__divider"></div>
+                    @if (top.draw_date) {
+                      <div class="prize-hero__date">
+                        <span class="prize-hero__date-label">Sorteo</span>
+                        <span class="prize-hero__date-value">{{ formatDate(top.draw_date) }}</span>
                       </div>
                     }
+                    <p class="prize-hero__note">
+                      El objeto principal de la rifa. Se sortea junto con la lotería nacional
+                      para garantizar transparencia total.
+                    </p>
+                  </div>
+                  <div class="prize-hero__visual">
+                    @if (r.logo_url) {
+                      <img [src]="r.logo_url" [alt]="top.name" />
+                    } @else {
+                      <div class="prize-hero__glyph">{{ prizeEmoji(top.name) }}</div>
+                    }
+                    <div class="prize-hero__glow"></div>
                   </div>
                 </article>
+              }
+
+              <!-- Premios secundarios: lista editorial vertical -->
+              @if (r.prizes.length > 1) {
+                <div class="prize-list">
+                  <div class="prize-list__title">
+                    <span class="eyebrow eyebrow--sm">
+                      <span class="eyebrow__line"></span>
+                      <span>Premios adicionales</span>
+                    </span>
+                  </div>
+                  @for (p of r.prizes.slice(1); track p.position; let idx = $index) {
+                    <article class="prize-row">
+                      <div class="prize-row__roman">{{ roman(idx + 2) }}</div>
+                      <div class="prize-row__body">
+                        <div class="prize-row__label">Premio · {{ idx + 2 }}</div>
+                        <h4>{{ p.name }}</h4>
+                      </div>
+                      @if (p.draw_date) {
+                        <div class="prize-row__date">
+                          <small>Sorteo</small>
+                          <strong>{{ formatDate(p.draw_date) }}</strong>
+                        </div>
+                      }
+                      <div class="prize-row__arrow">
+                        <svg viewBox="0 0 24 24" width="20" height="20">
+                          <path d="M5 12 L19 12 M13 6 L19 12 L13 18"
+                                fill="none" stroke="currentColor" stroke-width="1.5"
+                                stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                      </div>
+                    </article>
+                  }
+                </div>
               }
             </div>
           </section>
         }
 
-        <!-- ============ CÓMO FUNCIONA — pasos con connector ============ -->
-        <section class="steps">
-          <div class="section-head">
-            <span class="section-tag">✨ Simple en 3 pasos</span>
-            <h2>Comprar tu boleta es muy fácil</h2>
-          </div>
-          <div class="steps__flow">
-            <div class="step-item">
-              <div class="step-item__badge">
-                <span class="step-item__num">01</span>
-                <span class="material-icons">confirmation_number</span>
-              </div>
-              <h3>Elige tu boleta</h3>
-              <p>Explora las boletas disponibles y ve el diseño real antes de reservar.</p>
+        <!-- ============ CÓMO FUNCIONA — layout editorial ============ -->
+        <section class="editorial editorial--how">
+          <div class="editorial__inner">
+            <div class="editorial__head">
+              <span class="eyebrow">
+                <span class="eyebrow__line"></span>
+                <span>Cómo funciona</span>
+                <span class="eyebrow__line"></span>
+              </span>
+              <h2 class="display">Comprar es <em>elegantemente simple</em></h2>
             </div>
-            <div class="steps__connector" aria-hidden="true">
-              <svg viewBox="0 0 60 24" width="60" height="24"><path d="M0 12 L52 12 M46 5 L54 12 L46 19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </div>
-            <div class="step-item">
-              <div class="step-item__badge">
-                <span class="step-item__num">02</span>
-                <span class="material-icons">payments</span>
-              </div>
-              <h3>Paga en línea</h3>
-              <p>Nequi, PSE, tarjeta o transferencia con comprobante. Tu boleta queda reservada 24 horas.</p>
-            </div>
-            <div class="steps__connector" aria-hidden="true">
-              <svg viewBox="0 0 60 24" width="60" height="24"><path d="M0 12 L52 12 M46 5 L54 12 L46 19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </div>
-            <div class="step-item">
-              <div class="step-item__badge">
-                <span class="step-item__num">03</span>
-                <span class="material-icons">emoji_events</span>
-              </div>
-              <h3>Gana premios</h3>
-              <p>Te notificamos por correo y WhatsApp cuando se sortee. Verificación pública instantánea.</p>
+
+            <div class="how-flow">
+              <article class="how-step">
+                <div class="how-step__roman">I</div>
+                <div class="how-step__line" aria-hidden="true"></div>
+                <div class="how-step__body">
+                  <div class="how-step__label">Paso uno</div>
+                  <h3>Elige tu boleta</h3>
+                  <p>Explora las boletas disponibles y ve el diseño real antes de reservar.
+                    Cada una es única.</p>
+                </div>
+              </article>
+
+              <article class="how-step">
+                <div class="how-step__roman">II</div>
+                <div class="how-step__line" aria-hidden="true"></div>
+                <div class="how-step__body">
+                  <div class="how-step__label">Paso dos</div>
+                  <h3>Paga en línea</h3>
+                  <p>Nequi, PSE, tarjeta o transferencia con comprobante.
+                    Tu boleta queda reservada por 24 horas.</p>
+                </div>
+              </article>
+
+              <article class="how-step">
+                <div class="how-step__roman">III</div>
+                <div class="how-step__body">
+                  <div class="how-step__label">Paso tres</div>
+                  <h3>Gana premios</h3>
+                  <p>Te notificamos por correo y WhatsApp cuando se sortee.
+                    Verificación pública instantánea.</p>
+                </div>
+              </article>
             </div>
           </div>
         </section>
@@ -705,13 +765,14 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
     @keyframes badge-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.6; } }
 
     .hero__title {
+      font-family: 'Playfair Display', Georgia, serif;
       margin: 0 0 20px;
-      font-size: clamp(36px, 5vw, 60px);
-      line-height: 1.02;
+      font-size: clamp(36px, 5.2vw, 68px);
+      line-height: 1;
       color: #fff;
-      font-weight: 900;
-      letter-spacing: -0.03em;
-      background: linear-gradient(180deg, #ffffff 0%, #f8f1e3 60%, #e8c98a 120%);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      background: linear-gradient(180deg, #ffffff 0%, #f8f1e3 60%, #e8c98a 130%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
@@ -934,21 +995,20 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
     .section-head { text-align: center; margin-bottom: 28px; }
     .section-tag {
       display: inline-block;
-      padding: 6px 16px;
-      background: linear-gradient(135deg, rgba(30, 199, 123, 0.15) 0%, rgba(232, 201, 138, 0.12) 100%);
-      color: var(--pg-text);
-      border: 1px solid var(--card-border);
-      border-radius: 999px;
-      font-size: 11px;
+      font-size: 10px;
       font-weight: 700;
-      letter-spacing: 0.08em;
+      color: #c9a96e;
       text-transform: uppercase;
-      margin-bottom: 12px;
+      letter-spacing: 0.28em;
+      margin-bottom: 8px;
+      padding: 4px 0;
+      border-bottom: 1px solid rgba(232, 201, 138, 0.35);
     }
     .section-head h2 {
       margin: 0 0 6px;
+      font-family: 'Playfair Display', Georgia, serif;
       font-size: clamp(22px, 3vw, 30px);
-      font-weight: 800;
+      font-weight: 600;
       color: var(--heading);
       letter-spacing: -0.02em;
     }
@@ -1013,199 +1073,402 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
       box-shadow: var(--card-shadow);
     }
 
-    /* ============ PREMIOS MOSAICO PREMIUM ============ */
-    .prizes-showcase { background: var(--section-alt-bg); }
-    .prizes-mosaic {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-      gap: 16px;
-    }
-    .prize-tile {
+    /* ============================================================
+       EDITORIAL — sistema de tipografía y layout premium
+       ============================================================ */
+    .editorial {
       position: relative;
-      display: grid;
-      grid-template-columns: auto 1fr;
-      gap: 16px;
-      align-items: center;
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: 16px;
-      padding: 20px;
-      box-shadow: var(--card-shadow);
-      transition: transform 0.18s, box-shadow 0.18s, border-color 0.18s;
+      padding: 80px 24px 60px;
+      background:
+        radial-gradient(ellipse at 50% 0%, rgba(232, 201, 138, 0.08) 0%, transparent 40%),
+        var(--section-alt-bg);
       overflow: hidden;
     }
-    .prize-tile::before {
+    .editorial::before {
       content: '';
-      position: absolute; inset: 0;
-      background: linear-gradient(135deg, rgba(232, 201, 138, 0.08) 0%, transparent 50%);
-      pointer-events: none;
-      opacity: 0;
-      transition: opacity 0.18s;
-    }
-    .prize-tile:hover {
-      transform: translateY(-3px);
-      border-color: rgba(232, 201, 138, 0.5);
-      box-shadow: 0 20px 40px rgba(201, 169, 110, 0.18);
-    }
-    .prize-tile:hover::before { opacity: 1; }
-
-    .prize-tile--top {
-      grid-column: 1 / -1;
-      grid-template-columns: auto 1fr auto;
-      background:
-        radial-gradient(ellipse at right, rgba(232, 201, 138, 0.15) 0%, transparent 60%),
-        var(--card-bg);
-      border-color: rgba(232, 201, 138, 0.55);
-      box-shadow:
-        0 12px 30px rgba(201, 169, 110, 0.22),
-        0 0 0 1px rgba(232, 201, 138, 0.35);
-      padding: 24px 28px;
-    }
-    .prize-tile--top::after {
-      content: '★';
       position: absolute;
-      top: 12px; right: 16px;
-      color: #e8c98a;
-      font-size: 20px;
-      filter: drop-shadow(0 0 8px rgba(232, 201, 138, 0.8));
+      top: 40px; left: 50%;
+      transform: translateX(-50%);
+      width: 60%; max-width: 400px;
+      height: 1px;
+      background: linear-gradient(90deg, transparent 0%, rgba(232, 201, 138, 0.3) 50%, transparent 100%);
     }
-
-    .prize-tile__index {
-      display: grid; place-items: center;
-      width: 44px; height: 44px;
-      background: linear-gradient(135deg, rgba(232, 201, 138, 0.2) 0%, rgba(201, 169, 110, 0.1) 100%);
-      color: #c9a96e;
-      font-weight: 900;
-      font-size: 15px;
-      font-variant-numeric: tabular-nums;
-      border-radius: 12px;
-      border: 1px solid rgba(232, 201, 138, 0.3);
-      letter-spacing: -0.02em;
-    }
-    .prize-tile--top .prize-tile__index {
-      background: linear-gradient(135deg, #c9a96e 0%, #e8c98a 100%);
-      color: #1a2942;
-      border-color: transparent;
-      box-shadow: 0 4px 12px rgba(201, 169, 110, 0.5);
-    }
-
-    .prize-tile__icon {
-      display: grid; place-items: center;
-      width: 56px; height: 56px;
-      background: linear-gradient(135deg, rgba(30, 199, 123, 0.1) 0%, rgba(232, 201, 138, 0.06) 100%);
-      border-radius: 14px;
-      border: 1px solid rgba(232, 201, 138, 0.2);
-    }
-    .prize-tile__icon span {
-      font-size: 34px;
-      line-height: 1;
-      filter: drop-shadow(0 3px 6px rgba(0,0,0,0.15));
-    }
-    .prize-tile--top .prize-tile__icon {
-      width: 72px; height: 72px;
-      background: linear-gradient(135deg, rgba(232, 201, 138, 0.25) 0%, rgba(201, 169, 110, 0.15) 100%);
-      border-color: rgba(232, 201, 138, 0.5);
-    }
-    .prize-tile--top .prize-tile__icon span { font-size: 44px; }
-
-    .prize-tile__body { min-width: 0; }
-    .prize-tile__tag {
-      font-size: 10px;
-      font-weight: 800;
-      color: #c9a96e;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      margin-bottom: 4px;
-    }
-    .prize-tile h3 {
-      margin: 0 0 6px;
-      font-size: 16px;
-      color: var(--heading);
-      font-weight: 700;
-      line-height: 1.25;
-    }
-    .prize-tile--top h3 { font-size: 22px; }
-    .prize-tile__date {
-      display: inline-flex; align-items: center; gap: 4px;
-      color: var(--pg-muted);
-      font-size: 12px;
-    }
-    .prize-tile__date .material-icons { font-size: 14px; }
-
-    /* Reemplazamos las clases viejas por si algo aún las referencia */
-    .prizes-grid, .prize-card, .prize-card--top, .prize-card__crown,
-    .prize-card__emoji, .prize-card__pos, .prize-card__date { display: none; }
-
-    /* ============ CÓMO FUNCIONA — flow horizontal con connectors ============ */
-    .steps__flow {
-      display: flex;
-      align-items: stretch;
-      justify-content: space-between;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-    .step-item {
-      flex: 1;
-      min-width: 220px;
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: 18px;
-      padding: 24px 22px 22px;
-      text-align: center;
-      box-shadow: var(--card-shadow);
-      transition: transform 0.18s, border-color 0.18s;
-    }
-    .step-item:hover { transform: translateY(-3px); border-color: rgba(30, 199, 123, 0.35); }
-
-    .step-item__badge {
+    .editorial--prizes { padding-top: 100px; }
+    .editorial__inner {
+      max-width: 1120px;
+      margin: 0 auto;
       position: relative;
-      width: 68px; height: 68px;
-      margin: 0 auto 16px;
-      display: grid; place-items: center;
-      background: linear-gradient(135deg, #1ec77b 0%, #16a366 100%);
-      border-radius: 20px;
-      box-shadow:
-        0 10px 26px rgba(30, 199, 123, 0.4),
-        inset 0 1px 0 rgba(255,255,255,0.3);
     }
-    .step-item__badge .material-icons { font-size: 32px; color: #fff; }
-    .step-item__num {
-      position: absolute;
-      top: -8px; right: -8px;
-      background: linear-gradient(135deg, #c9a96e 0%, #e8c98a 100%);
-      color: #1a2942;
-      font-weight: 900;
-      font-size: 11px;
-      padding: 3px 8px;
-      border-radius: 999px;
-      box-shadow: 0 3px 8px rgba(201, 169, 110, 0.5);
-      letter-spacing: 0.02em;
-    }
-    .step-item h3 {
-      margin: 0 0 6px;
-      font-size: 17px;
-      color: var(--heading);
-      font-weight: 700;
-    }
-    .step-item p {
-      margin: 0;
-      color: var(--pg-muted);
-      font-size: 13px;
-      line-height: 1.5;
-    }
-
-    .steps__connector {
-      display: grid; place-items: center;
-      color: rgba(201, 169, 110, 0.55);
-      flex-shrink: 0;
-      align-self: center;
-    }
-    @media (max-width: 900px) {
-      .steps__connector { transform: rotate(90deg); }
-      .step-item { min-width: 100%; }
+    .editorial__head {
+      text-align: center;
+      max-width: 720px;
+      margin: 0 auto 56px;
     }
     @media (max-width: 720px) {
-      .steps__connector { display: none; }
+      .editorial { padding: 56px 20px 40px; }
+      .editorial__head { margin-bottom: 40px; }
+    }
+
+    /* Eyebrow — pequeño label superior con líneas doradas */
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 10px;
+      font-weight: 700;
+      color: #c9a96e;
+      text-transform: uppercase;
+      letter-spacing: 0.32em;
+      margin-bottom: 20px;
+    }
+    .eyebrow__line {
+      width: 32px; height: 1px;
+      background: linear-gradient(90deg, transparent 0%, rgba(232, 201, 138, 0.7) 100%);
+    }
+    .eyebrow__line:last-child {
+      background: linear-gradient(90deg, rgba(232, 201, 138, 0.7) 0%, transparent 100%);
+    }
+    .eyebrow--sm { font-size: 9px; letter-spacing: 0.24em; margin-bottom: 12px; }
+
+    /* Display heading — Playfair Display serif italic para "puedes ganar" etc */
+    .display {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-weight: 700;
+      font-size: clamp(32px, 4.5vw, 52px);
+      line-height: 1.05;
+      letter-spacing: -0.02em;
+      color: var(--heading);
+      margin: 0 0 20px;
+    }
+    .display em {
+      font-style: italic;
+      font-weight: 500;
+      background: linear-gradient(120deg, #c9a96e 0%, #e8c98a 60%, #c9a96e 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .display--xl {
+      font-size: clamp(30px, 4vw, 44px);
+      margin-bottom: 24px;
+    }
+
+    .lede {
+      font-family: 'Inter', system-ui, sans-serif;
+      color: var(--pg-muted);
+      font-size: 16px;
+      line-height: 1.6;
+      max-width: 560px;
+      margin: 0 auto;
+    }
+
+    /* ============ PREMIO MAYOR — hero card editorial ============ */
+    .prize-hero {
+      display: grid;
+      grid-template-columns: 1.1fr 1fr;
+      gap: 48px;
+      align-items: center;
+      padding: 48px 44px;
+      background:
+        radial-gradient(ellipse at right, rgba(232, 201, 138, 0.12) 0%, transparent 65%),
+        linear-gradient(135deg, rgba(232, 201, 138, 0.04) 0%, transparent 50%),
+        var(--card-bg);
+      border: 1px solid rgba(232, 201, 138, 0.35);
+      border-radius: 4px;
+      position: relative;
+      overflow: hidden;
+      margin-bottom: 64px;
+      box-shadow: 0 40px 80px -30px rgba(0, 0, 0, 0.35);
+    }
+    /* Line-art corners premium */
+    .prize-hero::before,
+    .prize-hero::after {
+      content: '';
+      position: absolute;
+      width: 40px; height: 40px;
+      border-color: rgba(232, 201, 138, 0.5);
+      border-style: solid;
+    }
+    .prize-hero::before {
+      top: 16px; left: 16px;
+      border-width: 1px 0 0 1px;
+    }
+    .prize-hero::after {
+      bottom: 16px; right: 16px;
+      border-width: 0 1px 1px 0;
+    }
+    @media (max-width: 900px) {
+      .prize-hero {
+        grid-template-columns: 1fr;
+        padding: 40px 28px;
+        gap: 32px;
+        margin-bottom: 48px;
+      }
+    }
+
+    .prize-hero__eyebrow {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+    .prize-hero__roman {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: 52px;
+      line-height: 1;
+      font-style: italic;
+      font-weight: 500;
+      background: linear-gradient(180deg, #e8c98a 0%, #c9a96e 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .prize-hero__label {
+      font-family: 'Inter', sans-serif;
+      font-size: 11px;
+      font-weight: 700;
+      color: #c9a96e;
+      text-transform: uppercase;
+      letter-spacing: 0.28em;
+      padding-top: 8px;
+      border-top: 1px solid rgba(232, 201, 138, 0.3);
+      padding-left: 4px;
+      padding-right: 24px;
+    }
+
+    .prize-hero__divider {
+      width: 60px; height: 1px;
+      background: linear-gradient(90deg, #c9a96e 0%, transparent 100%);
+      margin: 20px 0 20px;
+    }
+
+    .prize-hero__date {
+      display: flex;
+      align-items: baseline;
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+    .prize-hero__date-label {
+      font-family: 'Inter', sans-serif;
+      font-size: 10px;
+      font-weight: 700;
+      color: #c9a96e;
+      text-transform: uppercase;
+      letter-spacing: 0.24em;
+    }
+    .prize-hero__date-value {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-style: italic;
+      font-size: 20px;
+      color: var(--heading);
+      font-weight: 500;
+    }
+
+    .prize-hero__note {
+      color: var(--pg-muted);
+      font-size: 13px;
+      line-height: 1.65;
+      margin: 0;
+      max-width: 420px;
+    }
+
+    .prize-hero__visual {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 260px;
+    }
+    .prize-hero__visual img {
+      position: relative;
+      z-index: 2;
+      max-width: 100%;
+      max-height: 320px;
+      object-fit: contain;
+      filter: drop-shadow(0 30px 40px rgba(0, 0, 0, 0.4)) drop-shadow(0 0 40px rgba(232, 201, 138, 0.2));
+    }
+    .prize-hero__glyph {
+      position: relative;
+      z-index: 2;
+      font-size: clamp(96px, 12vw, 140px);
+      line-height: 1;
+      filter: drop-shadow(0 20px 40px rgba(0, 0, 0, 0.4));
+    }
+    .prize-hero__glow {
+      position: absolute;
+      inset: 10% 15%;
+      background: radial-gradient(circle, rgba(232, 201, 138, 0.35) 0%, transparent 60%);
+      filter: blur(30px);
+      z-index: 1;
+      animation: hero-glow 4s ease-in-out infinite;
+    }
+    @keyframes hero-glow {
+      0%, 100% { opacity: 0.6; transform: scale(1); }
+      50% { opacity: 1; transform: scale(1.08); }
+    }
+
+    /* ============ Lista de premios secundarios ============ */
+    .prize-list__title {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+
+    .prize-row {
+      display: grid;
+      grid-template-columns: 60px 1fr auto auto;
+      gap: 24px;
+      align-items: center;
+      padding: 24px 32px;
+      border-top: 1px solid var(--card-border);
+      transition: background 0.2s;
+      position: relative;
+      cursor: default;
+    }
+    .prize-row:last-child { border-bottom: 1px solid var(--card-border); }
+    .prize-row::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 3px;
+      background: linear-gradient(180deg, #c9a96e 0%, #e8c98a 100%);
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .prize-row:hover {
+      background: linear-gradient(90deg, rgba(232, 201, 138, 0.06) 0%, transparent 100%);
+    }
+    .prize-row:hover::before { opacity: 1; }
+    .prize-row:hover .prize-row__arrow { transform: translateX(4px); color: #c9a96e; }
+
+    .prize-row__roman {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-style: italic;
+      font-size: 36px;
+      line-height: 1;
+      color: rgba(201, 169, 110, 0.55);
+      text-align: center;
+      font-weight: 500;
+    }
+    .prize-row__body { min-width: 0; }
+    .prize-row__label {
+      font-family: 'Inter', sans-serif;
+      font-size: 10px;
+      color: #c9a96e;
+      text-transform: uppercase;
+      letter-spacing: 0.2em;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .prize-row h4 {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--heading);
+      margin: 0;
+      line-height: 1.2;
+    }
+    .prize-row__date {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 2px;
+    }
+    .prize-row__date small {
+      font-size: 9px;
+      color: #c9a96e;
+      text-transform: uppercase;
+      letter-spacing: 0.2em;
+      font-weight: 700;
+    }
+    .prize-row__date strong {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-style: italic;
+      font-weight: 500;
+      color: var(--pg-text);
+      font-size: 15px;
+    }
+    .prize-row__arrow {
+      color: rgba(201, 169, 110, 0.4);
+      transition: transform 0.2s, color 0.2s;
+    }
+    @media (max-width: 720px) {
+      .prize-row {
+        grid-template-columns: 40px 1fr auto;
+        gap: 16px;
+        padding: 20px 16px;
+      }
+      .prize-row__roman { font-size: 28px; }
+      .prize-row__arrow { display: none; }
+      .prize-row__date { align-items: flex-end; }
+      .prize-row__date strong { font-size: 13px; }
+    }
+
+    /* ============ CÓMO FUNCIONA — pasos editorial ============ */
+    .editorial--how {
+      background:
+        radial-gradient(ellipse at 50% 100%, rgba(232, 201, 138, 0.06) 0%, transparent 40%),
+        transparent;
+    }
+    .how-flow {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 48px;
+      position: relative;
+    }
+    @media (max-width: 900px) {
+      .how-flow { grid-template-columns: 1fr; gap: 32px; }
+    }
+
+    .how-step {
+      position: relative;
+      padding: 8px 8px 8px 20px;
+    }
+    .how-step__roman {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-style: italic;
+      font-weight: 500;
+      font-size: clamp(56px, 6vw, 84px);
+      line-height: 0.9;
+      background: linear-gradient(180deg, #c9a96e 0%, #e8c98a 60%, rgba(201, 169, 110, 0.3) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 12px;
+      display: inline-block;
+    }
+    .how-step__line {
+      position: absolute;
+      top: 40px; right: -30px;
+      width: 60px; height: 1px;
+      background: linear-gradient(90deg, rgba(232, 201, 138, 0.4) 0%, transparent 100%);
+      display: none;
+    }
+    @media (min-width: 900px) {
+      .how-step__line { display: block; }
+    }
+    .how-step__label {
+      font-family: 'Inter', sans-serif;
+      font-size: 10px;
+      color: #c9a96e;
+      text-transform: uppercase;
+      letter-spacing: 0.28em;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .how-step h3 {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-weight: 600;
+      font-size: 24px;
+      color: var(--heading);
+      margin: 0 0 10px;
+      line-height: 1.2;
+    }
+    .how-step p {
+      color: var(--pg-muted);
+      font-size: 14px;
+      line-height: 1.7;
+      margin: 0;
+      max-width: 320px;
     }
     .search-result__body { flex: 1; }
     .search-result .material-icons { font-size: 32px; margin-top: 2px; }
@@ -1236,7 +1499,14 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
       display: flex; justify-content: space-between; align-items: flex-start;
       flex-wrap: wrap; gap: 16px; margin-bottom: 28px;
     }
-    .picker__head h2 { margin: 4px 0 4px; font-size: 26px; color: var(--heading); font-weight: 800; letter-spacing: -0.02em; }
+    .picker__head h2 {
+      font-family: 'Playfair Display', Georgia, serif;
+      margin: 4px 0 4px;
+      font-size: 30px;
+      color: var(--heading);
+      font-weight: 600;
+      letter-spacing: -0.02em;
+    }
     .picker__head p { margin: 0; }
     .picker__legend { display: flex; gap: 8px; }
     .chip {
@@ -1616,6 +1886,18 @@ export class PublicPurchaseComponent implements OnInit {
   }
 
   heroPrizeEmoji = computed(() => this.prizeEmoji(this.topPrizeName()));
+
+  /** Convierte 1..12 a números romanos para el layout editorial. */
+  roman(n: number): string {
+    const table: Array<[number, string]> = [
+      [10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I'],
+    ];
+    let out = '';
+    for (const [v, s] of table) {
+      while (n >= v) { out += s; n -= v; }
+    }
+    return out;
+  }
 
   ngOnInit(): void {
     const id = Number(this.route.snapshot.paramMap.get('id'));
