@@ -8,6 +8,7 @@
     "start": "ng serve --host 0.0.0.0 --port 4200",
     "prebuild": "node scripts/inject-env.mjs",
     "build": "ng build",
+    "postbuild": "node scripts/fix-html-assets.mjs",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "lint": "ng lint"
