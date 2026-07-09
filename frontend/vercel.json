@@ -6,6 +6,11 @@
   "framework": null,
   "rewrites": [
     { "source": "/verify/:code", "destination": "https://rifas-nehd.onrender.com/v/:code" },
+    {
+      "//comment": "Angular 21 builder inyecta <link href='styles-XXX.css'> ANTES del <base href='/'> y del <!doctype>. Al abrir rutas profundas (F5 en /admin/raffles/3), el browser pide el asset relativo a la ruta (/admin/raffles/styles-XXX.css) — que no existe. Este rewrite lo sirve desde raíz sin importar la ruta desde donde se pida. Aplica también a main-*.js, chunk-*.js, polyfills-*.js.",
+      "source": "/(?:.*/)?(styles-[A-Z0-9]+\\.css|main-[A-Z0-9]+\\.js|chunk-[A-Z0-9]+\\.js|polyfills-[A-Z0-9]+\\.js|manifest\\.webmanifest|favicon\\.svg|favicon\\.ico)",
+      "destination": "/$1"
+    },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "headers": [
