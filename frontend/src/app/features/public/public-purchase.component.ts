@@ -667,27 +667,119 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
                        placeholder="Ej. Valledupar" />
               </label>
 
-              @if (overview()?.enable_online_purchase) {
-                <button type="submit" class="btn btn--primary btn--lg btn--block"
-                        [disabled]="submitting()">
-                  @if (submitting()) {
-                    <span class="btn__spin"></span> Redirigiendo…
-                  } @else {
-                    Pagar con Wompi
-                    <span class="material-icons-outlined">arrow_forward</span>
-                  }
-                </button>
-                <small class="muted center">Nequi · PSE · Bancolombia · Tarjeta</small>
-              }
+              <!-- ============ MÉTODOS DE PAGO ============ -->
+              <div class="pay-methods">
+                <div class="pay-methods__label">Elige cómo quieres pagar</div>
 
-              @if (overview()?.enable_manual_transfer) {
-                <div class="or"><span>o</span></div>
-                <button type="button" class="btn btn--ghost btn--lg btn--block"
-                        (click)="switchManual()">
-                  <span class="material-icons-outlined">receipt_long</span>
-                  Subir comprobante de transferencia
-                </button>
-              }
+                <!-- Método 1: Wompi (si el tenant lo configuró) -->
+                @if (overview()?.enable_online_purchase) {
+                  <button type="submit" class="btn btn--primary btn--lg btn--block"
+                          [disabled]="submitting()">
+                    @if (submitting() && !manualMode()) {
+                      <span class="btn__spin"></span> Redirigiendo…
+                    } @else {
+                      <span class="material-icons-outlined">credit_card</span>
+                      Pagar en línea con Wompi
+                      <span class="material-icons-outlined">arrow_forward</span>
+                    }
+                  </button>
+                  <small class="muted center">Nequi · PSE · Bancolombia · Tarjeta · 100% seguro</small>
+                }
+
+                @if (overview()?.enable_online_purchase && overview()?.enable_manual_transfer) {
+                  <div class="or"><span>o</span></div>
+                }
+
+                <!-- Método 2: Transferencia con comprobante -->
+                @if (overview()?.enable_manual_transfer) {
+                  <div class="method-block">
+                    <div class="method-block__head">
+                      <span class="material-icons-outlined">receipt_long</span>
+                      <div>
+                        <strong>Transferencia con comprobante</strong>
+                        <small>Nequi, Daviplata o Bancolombia. Reserva 24h.</small>
+                      </div>
+                    </div>
+
+                    <!-- Método de pago dropdown -->
+                    <label class="field">
+                      <span class="field__label">¿Con qué banco/billetera?</span>
+                      <select class="input" [(ngModel)]="manualForm.payment_method" name="pm">
+                        <option value="NEQUI">Nequi</option>
+                        <option value="DAVIPLATA">Daviplata</option>
+                        <option value="BANCOLOMBIA_TRANSFER">Bancolombia</option>
+                        <option value="OTHER">Otro</option>
+                      </select>
+                    </label>
+
+                    <!-- Preview del comprobante subido -->
+                    @if (proofPreviewUrl(); as pu) {
+                      <div class="proof-preview">
+                        @if (isProofImage()) {
+                          <img [src]="pu" alt="Comprobante" />
+                        } @else {
+                          <div class="proof-preview__doc">
+                            <span class="material-icons-outlined">picture_as_pdf</span>
+                            <span>{{ proofFileName() }}</span>
+                          </div>
+                        }
+                        <button type="button" class="proof-preview__remove"
+                                (click)="removeProof()"
+                                aria-label="Quitar comprobante">
+                          <span class="material-icons-outlined">close</span>
+                        </button>
+                      </div>
+                    }
+
+                    <!-- Input file oculto + botón trigger -->
+                    <input type="file" #proofInput hidden
+                           accept="image/png,image/jpeg,image/webp,application/pdf"
+                           (change)="onProofSelected($event)" />
+
+                    @if (!proofPreviewUrl()) {
+                      <button type="button" class="btn btn--ghost btn--block"
+                              (click)="proofInput.click()"
+                              [disabled]="uploadingProof()">
+                        @if (uploadingProof()) {
+                          <span class="btn__spin"></span> Subiendo…
+                        } @else {
+                          <span class="material-icons-outlined">cloud_upload</span>
+                          Elegir comprobante (JPG, PNG o PDF)
+                        }
+                      </button>
+                      <small class="muted center">Máx 5MB. Recuerda incluir tu nombre y monto.</small>
+                    }
+
+                    <button type="button" class="btn btn--primary btn--lg btn--block"
+                            (click)="submitManualTransfer()"
+                            [disabled]="submitting() || !proofPreviewUrl()">
+                      @if (submitting() && manualMode()) {
+                        <span class="btn__spin"></span> Enviando…
+                      } @else {
+                        <span class="material-icons-outlined">send</span>
+                        Enviar comprobante y reservar
+                      }
+                    </button>
+                  </div>
+                }
+
+                <!-- Fallback: si NADA está habilitado, permite solo reservar -->
+                @if (!overview()?.enable_online_purchase && !overview()?.enable_manual_transfer) {
+                  <button type="submit" class="btn btn--primary btn--lg btn--block"
+                          [disabled]="submitting()">
+                    @if (submitting()) {
+                      <span class="btn__spin"></span> Reservando…
+                    } @else {
+                      <span class="material-icons-outlined">bookmark</span>
+                      Reservar por 24 horas
+                    }
+                  </button>
+                  <small class="muted center">
+                    Se te reserva la boleta por 24 horas. El organizador te contactará
+                    para acordar el pago.
+                  </small>
+                }
+              </div>
             </form>
 
             @if (submitError()) {
@@ -2026,6 +2118,113 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
     }
     .or::before, .or::after { content: ''; flex: 1; height: 1px; background: var(--border); }
 
+    /* ============ Métodos de pago (checkout) ============ */
+    .pay-methods {
+      display: grid;
+      gap: 14px;
+      margin-top: 4px;
+    }
+    .pay-methods__label {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      margin-bottom: 2px;
+    }
+
+    .method-block {
+      display: grid;
+      gap: 10px;
+      padding: 14px;
+      background: rgba(34, 197, 94, 0.04);
+      border: 1px solid var(--border-md);
+      border-radius: var(--r-md);
+    }
+    .method-block__head {
+      display: flex; align-items: center; gap: 10px;
+    }
+    .method-block__head .material-icons-outlined {
+      color: var(--brand-glow);
+      font-size: 22px;
+      background: var(--brand-soft);
+      padding: 6px;
+      border-radius: 8px;
+      flex-shrink: 0;
+    }
+    .method-block__head strong {
+      display: block;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .method-block__head small {
+      display: block;
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    /* Select del método de pago dentro del block */
+    .method-block .input {
+      -webkit-appearance: none;
+      appearance: none;
+      background-image:
+        url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23b5b7be' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      background-size: 16px;
+      padding-right: 36px;
+    }
+
+    /* ============ Preview del comprobante subido ============ */
+    .proof-preview {
+      position: relative;
+      display: flex; justify-content: center;
+      padding: 10px;
+      background: rgba(0, 0, 0, 0.25);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      min-height: 100px;
+    }
+    .proof-preview img {
+      max-width: 100%;
+      max-height: 240px;
+      object-fit: contain;
+      border-radius: 8px;
+    }
+    .proof-preview__doc {
+      display: flex; flex-direction: column;
+      align-items: center; gap: 8px;
+      padding: 20px;
+      color: var(--text-muted);
+    }
+    .proof-preview__doc .material-icons-outlined {
+      font-size: 40px; color: #ef4444;
+    }
+    .proof-preview__doc span:last-child {
+      font-size: 12px;
+      max-width: 200px;
+      text-align: center;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .proof-preview__remove {
+      position: absolute;
+      top: 8px; right: 8px;
+      background: rgba(0,0,0,0.6);
+      border: 1px solid var(--border-str);
+      border-radius: 50%;
+      width: 28px; height: 28px;
+      display: grid; place-items: center;
+      color: #fff;
+      cursor: pointer;
+      transition: background 120ms;
+    }
+    .proof-preview__remove:hover { background: rgba(239, 68, 68, 0.8); }
+    .proof-preview__remove .material-icons-outlined { font-size: 16px; }
+
     .alert {
       display: flex; align-items: center; gap: 10px;
       padding: 12px 14px; margin-top: 12px;
@@ -2106,6 +2305,19 @@ export class PublicPurchaseComponent implements OnInit, OnDestroy {
   previewLoading = signal(false);
   previewData = signal<PublicTicketDetail | null>(null);
   previewTicketId = signal<number | null>(null);
+
+  // ============ Transferencia manual con comprobante ============
+  /** true cuando el usuario está en el flujo de transferencia manual
+   *  (usado para spinner correcto). false = flujo Wompi/checkout. */
+  manualMode = signal(false);
+  uploadingProof = signal(false);
+  proofPreviewUrl = signal<string | null>(null);
+  proofFileName = signal<string>('');
+  proofUrl = signal<string | null>(null);  // URL en Supabase después de upload
+
+  manualForm = {
+    payment_method: 'NEQUI' as 'NEQUI' | 'DAVIPLATA' | 'BANCOLOMBIA_TRANSFER' | 'OTHER',
+  };
 
   countdown = signal<{ days: string; hours: string; minutes: string; seconds: string } | null>(null);
   private countdownInterval: ReturnType<typeof setInterval> | null = null;
@@ -2531,8 +2743,116 @@ export class PublicPurchaseComponent implements OnInit, OnDestroy {
     });
   }
 
-  switchManual() {
-    alert('Transferencia manual: pronto disponible. Contacta al organizador por WhatsApp.');
+  /** true si el comprobante subido es una imagen (se muestra thumb).
+   *  false si es PDF (se muestra icono + nombre). */
+  isProofImage(): boolean {
+    const name = this.proofFileName().toLowerCase();
+    return !name.endsWith('.pdf');
+  }
+
+  /** Handler del input file — sube el comprobante al backend, guarda la
+   *  URL pública para persistir después en el submit del manual-transfer. */
+  onProofSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      this.submitError.set('El comprobante pesa más de 5 MB. Comprímelo o usa otro.');
+      input.value = '';
+      return;
+    }
+
+    this.uploadingProof.set(true);
+    this.submitError.set(null);
+    this.proofFileName.set(file.name);
+    // Preview local mientras sube (feedback rápido).
+    this.proofPreviewUrl.set(URL.createObjectURL(file));
+
+    this.svc.uploadProof(file).subscribe({
+      next: (resp) => {
+        this.uploadingProof.set(false);
+        this.proofUrl.set(resp.proof_url);
+        input.value = '';
+      },
+      error: (e) => {
+        this.uploadingProof.set(false);
+        this.proofPreviewUrl.set(null);
+        this.proofUrl.set(null);
+        this.proofFileName.set('');
+        input.value = '';
+        this.submitError.set(
+          e?.error?.detail ?? 'No se pudo subir el comprobante. Intenta de nuevo.',
+        );
+      },
+    });
+  }
+
+  removeProof() {
+    this.proofPreviewUrl.set(null);
+    this.proofUrl.set(null);
+    this.proofFileName.set('');
+  }
+
+  /** Envía el manual-transfer al backend con el comprobante ya subido.
+   *  Crea la reserva 24h y una submission PENDING que el admin revisa. */
+  submitManualTransfer() {
+    if (this.submitting()) return;
+    if (!this.proofUrl()) {
+      this.submitError.set('Sube el comprobante primero.');
+      return;
+    }
+    if (!this.form.customer_document || !this.form.customer_name
+        || !this.form.customer_email || !this.form.customer_phone) {
+      this.submitError.set('Completa tus datos personales antes de enviar.');
+      return;
+    }
+
+    this.manualMode.set(true);
+    this.submitting.set(true);
+    this.submitError.set(null);
+
+    const ticket_ids = Array.from(this.selected());
+    const total = this.totalPrice();
+
+    this.svc.manualTransfer(this.raffleId, {
+      ticket_ids,
+      customer_document: this.form.customer_document,
+      customer_name: this.form.customer_name,
+      customer_email: this.form.customer_email,
+      customer_phone: this.form.customer_phone,
+      customer_city: this.form.customer_city || undefined,
+      amount_declared: total,
+      payment_method: this.manualForm.payment_method,
+      proof_url: this.proofUrl()!,
+      seller_slug: this.sellerSlug || undefined,
+    }).subscribe({
+      next: (resp) => {
+        this.submitting.set(false);
+        this.manualMode.set(false);
+        // Cierra checkout, muestra confirmación reutilizando la ruta de resultado.
+        try {
+          localStorage.setItem(`boletera_manual_${resp.submission_id}`, JSON.stringify({
+            ticket_labels: this.selectedLabels(),
+            raffle_id: this.raffleId,
+            proof_url: this.proofUrl(),
+            submitted_at: new Date().toISOString(),
+          }));
+        } catch {}
+        alert(resp.message ?? 'Comprobante recibido. Te llegará confirmación por email/WhatsApp cuando el organizador lo revise.');
+        this.checkoutOpen.set(false);
+        this.selected.set(new Set());
+        this.removeProof();
+        this.loadAvailable();
+      },
+      error: (e) => {
+        this.submitting.set(false);
+        this.manualMode.set(false);
+        this.submitError.set(
+          e?.error?.detail ?? 'No se pudo enviar el comprobante. Intenta de nuevo.',
+        );
+      },
+    });
   }
 
   formatNumber(n: number): string {

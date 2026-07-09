@@ -105,10 +105,17 @@ export interface ManualTransferRequest {
   customer_name: string;
   customer_email: string;
   customer_phone: string;
+  customer_city?: string;
   amount_declared: number;
   payment_method: 'NEQUI' | 'DAVIPLATA' | 'BANCOLOMBIA_TRANSFER' | 'OTHER';
   proof_url: string;
   reference?: string;
+  seller_slug?: string;
+}
+
+export interface ProofUploadResponse {
+  proof_url: string;
+  size_bytes: number;
 }
 
 export interface CustomerSession {
@@ -171,6 +178,12 @@ export class PublicSalesService {
     return this.http.post<{ submission_id: number; status: string; message: string }>(
       `${this.api}/public/raffles/${raffleId}/manual-transfer`, req,
     );
+  }
+
+  uploadProof(file: File): Observable<ProofUploadResponse> {
+    const fd = new FormData();
+    fd.append('file', file);
+    return this.http.post<ProofUploadResponse>(`${this.api}/public/upload-proof`, fd);
   }
 
   requestMagicLink(email: string): Observable<{ sent: boolean; message: string }> {

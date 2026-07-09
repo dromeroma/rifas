@@ -30,7 +30,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile, status
 from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy import Integer, and_, cast, exists, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -127,8 +127,10 @@ class ManualTransferRequest(BaseModel):
     customer_phone: str
     amount_declared: float
     payment_method: str  # NEQUI, DAVIPLATA, BANCOLOMBIA_TRANSFER, OTHER
-    proof_url: str       # URL previamente subida (frontend sube a Supabase storage)
+    proof_url: str       # URL previamente subida via /public/upload-proof
     reference: str | None = None
+    seller_slug: str | None = None
+    customer_city: str | None = None
 
 
 class MagicLinkRequest(BaseModel):
@@ -837,6 +839,54 @@ async def _maybe_notify_threshold(db: AsyncSession, raffle: Raffle, request: Req
     raffle.draw_notified_at = datetime.now(timezone.utc)
 
 
+@router.post("/upload-proof")
+async def public_upload_proof(
+    request: Request,
+    file: UploadFile = File(..., description="Comprobante de pago (JPG/PNG/WebP/PDF, máx 5MB)"),
+):
+    """Endpoint público (sin auth) para que un cliente que compra por el
+    portal suba el comprobante de su transferencia manual. Sube el
+    archivo a Supabase Storage (bucket público raffle-media) y devuelve
+    la URL pública, que el frontend luego incluye en el body del
+    /manual-transfer.
+
+    Se separa del /manual-transfer para no acoplar el upload al submit —
+    el usuario primero sube, ve preview, y después envía.
+    """
+    from io import BytesIO
+    from app.services import storage_service
+
+    if not storage_service.storage_enabled():
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            "El almacenamiento de comprobantes no está configurado en este momento. "
+            "Contacta al vendedor por WhatsApp para enviarle el comprobante directo.",
+        )
+
+    MAX_BYTES = 5 * 1024 * 1024
+    contents = await file.read()
+    if len(contents) > MAX_BYTES:
+        raise HTTPException(
+            status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            f"El archivo pesa {len(contents)//1024} KB. El máximo es 5 MB.",
+        )
+    if len(contents) < 100:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "El archivo está vacío.")
+
+    try:
+        public_url = storage_service.upload_public_media(
+            BytesIO(contents),
+            file.filename or "comprobante.jpg",
+            prefix="proofs",
+        )
+    except ValueError as e:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(e))
+    except RuntimeError as e:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(e))
+
+    return {"proof_url": public_url, "size_bytes": len(contents)}
+
+
 @router.post("/raffles/{raffle_id}/manual-transfer", status_code=201)
 async def public_manual_transfer(
     raffle_id: int,
@@ -854,6 +904,24 @@ async def public_manual_transfer(
     if not raffle.enable_manual_transfer:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "esta rifa no acepta transferencia manual")
 
+    # Resolver seller si el cliente vino por link personal (?v=<slug>)
+    expected_seller_id: int | None = None
+    if payload.seller_slug:
+        from app.models.user import User, UserRole
+        seller = (await db.execute(
+            select(User).where(
+                User.public_slug == payload.seller_slug,
+                User.role == UserRole.SELLER,
+                User.tenant_id == raffle.tenant_id,
+                User.is_active.is_(True),
+            )
+        )).scalar_one_or_none()
+        if not seller:
+            raise HTTPException(
+                status.HTTP_404_NOT_FOUND, "el enlace del vendedor no es válido",
+            )
+        expected_seller_id = seller.id
+
     tickets = (await db.execute(
         select(Ticket).where(
             Ticket.id.in_(payload.ticket_ids),
@@ -865,7 +933,10 @@ async def public_manual_transfer(
 
     unavailable = [
         t.number_label for t in tickets
-        if not (t.seller_id is None and t.customer_id is None and t.status == TicketStatus.AVAILABLE)
+        if not (
+            t.seller_id == expected_seller_id and t.customer_id is None
+            and t.status == TicketStatus.AVAILABLE
+        )
     ]
     if unavailable:
         raise HTTPException(
@@ -879,9 +950,10 @@ async def public_manual_transfer(
         email=payload.customer_email,
         phone=payload.customer_phone,
         document=payload.customer_document,
+        city=payload.customer_city,
     )
 
-    await _ensure_reservations(db, tickets, customer.id)
+    await _ensure_reservations(db, tickets, customer.id, seller_id=expected_seller_id)
 
     submission = ManualTransferSubmission(
         tenant_id=raffle.tenant_id,
