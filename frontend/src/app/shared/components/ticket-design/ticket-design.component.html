@@ -1,4 +1,12 @@
-<article class="ticket" [class.ticket--romantic]="theme() === 'romantic'" [style.--grass]="primaryColor()">
+<article class="ticket"
+         [class.ticket--romantic]="theme() === 'romantic'"
+         [class.ticket--paid]="isPaid()"
+         [style.--grass]="primaryColor()">
+  @if (isPaid()) {
+    <div class="ticket__paid-stamp" aria-hidden="true">
+      <span>PAGADA</span>
+    </div>
+  }
   <header class="ticket__header">
     <div class="ticket__title">
       <span class="brand">{{ theme() === 'romantic' ? '♥ RIFA DEL AMOR' : 'RIFA' }}</span>

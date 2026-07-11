@@ -32,7 +32,14 @@ router = APIRouter(tags=["tickets"])
 
 
 async def _load_ticket_out(db: AsyncSession, ticket_id: int) -> TicketOut | None:
-    """Carga el ticket completo y devuelve el DTO con customer, seller y expira."""
+    """Carga el ticket completo y devuelve el DTO con customer, seller y expira.
+
+    Si el ticket viene del pool general (seller_id IS NULL) pero existe una
+    reservation con is_default_seller_sale=True (activa o cerrada), se
+    puebla `seller` con el default_seller_id del tenant (Edith J. Madera
+    en Rifas El Golazo). Sin esto, la boleta impresa/PDF aparecía sin
+    vendedor y el cliente no sabía a quién se le atribuye la venta.
+    """
     res = await db.execute(
         select(Ticket)
         .options(
@@ -63,6 +70,39 @@ async def _load_ticket_out(db: AsyncSession, ticket_id: int) -> TicketOut | None
         expires_at = exp.scalar_one_or_none()
         if expires_at:
             dto.reservation_expires_at = expires_at
+
+    # Fallback: pool general → mostrar el default_seller del tenant.
+    if dto.seller is None:
+        default_res = await db.execute(
+            select(Reservation.is_default_seller_sale)
+            .where(Reservation.ticket_id == ticket.id)
+            .order_by(Reservation.id.desc())
+            .limit(1)
+        )
+        is_default_sale = default_res.scalar_one_or_none()
+        if is_default_sale:
+            from app.models.tenant import Tenant
+            from app.models.user import User as UserModel
+            raffle_row = await db.execute(
+                select(Raffle.tenant_id).where(Raffle.id == ticket.raffle_id)
+            )
+            tenant_id = raffle_row.scalar_one_or_none()
+            if tenant_id:
+                seller_row = await db.execute(
+                    select(UserModel)
+                    .join(Tenant, Tenant.default_seller_id == UserModel.id)
+                    .where(Tenant.id == tenant_id)
+                )
+                default_seller = seller_row.scalar_one_or_none()
+                if default_seller:
+                    from app.schemas.ticket import TicketSeller as TicketSellerSchema
+                    dto.seller = TicketSellerSchema(
+                        id=default_seller.id,
+                        full_name=default_seller.full_name,
+                        email=default_seller.email,
+                        phone=default_seller.phone,
+                    )
+                    dto.seller_id = default_seller.id
     return dto
 
 

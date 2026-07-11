@@ -44,6 +44,13 @@ export class TicketDesignComponent {
    *  (fondo rosa + corazones + silueta de pareja). Default soccer. */
   readonly theme = input<TicketTheme>('soccer');
 
+  /** True cuando la boleta ya fue pagada — pinta marca de agua "PAGADA"
+   *  diagonal para que quede evidente al descargar/imprimir. */
+  readonly isPaid = computed<boolean>(() => {
+    const t = this.ticket();
+    return t?.status === 'paid' || t?.status === 'winning';
+  });
+
   /** "$20.000" formateado, o null si no hay precio. */
   readonly formattedPrice = computed<string | null>(() => {
     const p = this.ticketPrice();
