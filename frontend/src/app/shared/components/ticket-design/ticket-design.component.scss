@@ -29,7 +29,7 @@
 .ticket__paid-stamp {
   position: absolute;
   inset: 0;
-  z-index: 20;
+  z-index: 3;
   pointer-events: none;
   display: flex;
   align-items: center;
@@ -39,30 +39,27 @@
   span {
     display: inline-block;
     padding: 6px 30px;
-    border: 4px solid #22a556;
+    border: 4px solid rgba(34, 165, 86, 0.55);
     border-radius: 8px;
-    color: #22a556;
-    background: rgba(255, 255, 255, 0.72);
+    color: rgba(34, 165, 86, 0.5);
+    background: transparent;
     font-family: 'Inter', system-ui, sans-serif;
     font-weight: 900;
     font-size: 42px;
     letter-spacing: 0.18em;
     text-transform: uppercase;
     transform: rotate(-18deg);
-    box-shadow:
-      0 0 0 2px rgba(34, 165, 86, 0.15),
-      0 4px 14px rgba(34, 165, 86, 0.25);
-    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.4);
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
     white-space: nowrap;
   }
 }
 .ticket--romantic .ticket__paid-stamp span {
-  border-color: #b8174d;
-  color: #b8174d;
-  box-shadow:
-    0 0 0 2px rgba(184, 23, 77, 0.15),
-    0 4px 14px rgba(184, 23, 77, 0.25);
+  border-color: rgba(184, 23, 77, 0.55);
+  color: rgba(184, 23, 77, 0.5);
 }
+/* Los chips con números quedan por encima del sello para que se sigan
+   leyendo perfectamente — el sello vive como marca de agua "debajo". */
+.player { z-index: 5; }
 
 .ticket__header {
   background: var(--ticket-border);
