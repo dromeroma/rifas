@@ -108,6 +108,19 @@ async def create_commission_for_paid_ticket(
     if not ticket.seller_id:
         return None
 
+    # Venta del pool público general (sin link de vendedor): el ticket queda
+    # asignado al default_seller del tenant SOLO para trazabilidad — NO
+    # genera comisión. Detectamos esto por la Reservation asociada.
+    from app.models.reservation import Reservation
+    default_sale = await db.scalar(
+        select(Reservation.id).where(
+            Reservation.ticket_id == ticket.id,
+            Reservation.is_default_seller_sale.is_(True),
+        ).limit(1)
+    )
+    if default_sale:
+        return None
+
     # Idempotencia: si ya hay una commission para este ticket, no la dupliques.
     existing = (
         await db.execute(

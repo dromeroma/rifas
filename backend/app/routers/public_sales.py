@@ -236,25 +236,31 @@ async def _link_referral(db: AsyncSession, customer: Customer, referral_code: st
 
 
 async def _ensure_reservations(
-    db: AsyncSession, tickets: list[Ticket], customer_id: int, seller_id: int | None = None,
+    db: AsyncSession, tickets: list[Ticket], customer_id: int,
+    seller_id: int | None = None,
+    is_default_seller_sale: bool = False,
 ) -> datetime:
     """Crea reservas de 24h para los tickets dados. Todos deben estar
-    disponibles (available, sin seller humano, sin cliente)."""
+    disponibles (available, sin seller humano, sin cliente).
+
+    Si `is_default_seller_sale=True`, la reserva queda marcada como venta
+    del pool general — el ticket se asocia al default_seller_id del tenant
+    para trazabilidad, pero NO genera comisión al aprobarse el pago.
+    """
     now = datetime.now(timezone.utc)
     expires_at = now + timedelta(hours=RESERVATION_WINDOW_HOURS)
 
     for t in tickets:
-        # Cuando la boleta se compra online, no hay vendedor humano.
-        # Usamos NULL para seller_id — el flujo público es "sin vendedor".
         t.status = TicketStatus.RESERVED
         t.customer_id = customer_id
 
         db.add(Reservation(
             ticket_id=t.id,
-            seller_id=seller_id,        # None → compra pública sin vendedor
+            seller_id=seller_id,
             customer_id=customer_id,
             expires_at=expires_at,
             is_active=True,
+            is_default_seller_sale=is_default_seller_sale,
         ))
     return expires_at
 
@@ -551,7 +557,9 @@ async def public_checkout(
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "esta rifa no acepta compras online")
 
     # 0) Resolver seller si viene por link personal
-    expected_seller_id: int | None = None
+    expected_ticket_seller_id: int | None = None   # seller_id que DEBE tener el ticket
+    reservation_seller_id: int | None = None       # seller_id que va en la reservation
+    is_default_seller_sale = False
     if payload.seller_slug:
         from app.models.user import User, UserRole
         seller = (await db.execute(
@@ -566,7 +574,21 @@ async def public_checkout(
             raise HTTPException(
                 status.HTTP_404_NOT_FOUND, "el enlace del vendedor no es válido",
             )
-        expected_seller_id = seller.id
+        expected_ticket_seller_id = seller.id
+        reservation_seller_id = seller.id
+    else:
+        # Pool general: los tickets deben tener seller_id IS NULL. La reserva
+        # queda con el default_seller_id del tenant (Edith J. Madera para
+        # "Rifas El Golazo") — la boleta se atribuye visualmente a él pero
+        # NO genera comisión (is_default_seller_sale=True).
+        from app.models.tenant import Tenant
+        tenant_default = raffle.tenant if hasattr(raffle, "tenant") else None
+        if tenant_default is None:
+            tenant_default = (await db.execute(
+                select(Tenant).where(Tenant.id == raffle.tenant_id)
+            )).scalar_one()
+        reservation_seller_id = tenant_default.default_seller_id
+        is_default_seller_sale = True
 
     # 1) Verificar tickets
     tickets = (await db.execute(
@@ -578,12 +600,13 @@ async def public_checkout(
     if len(tickets) != len(payload.ticket_ids):
         raise HTTPException(status.HTTP_404_NOT_FOUND, "una o más boletas no existen")
 
-    # Sin seller_slug → tickets deben ser del pool general (seller_id IS NULL).
-    # Con seller_slug → tickets deben pertenecer a ese vendedor.
+    # Los tickets deben ser del pool esperado:
+    #   - Con seller_slug → seller_id == seller.id
+    #   - Sin seller_slug → seller_id IS NULL (pool general)
     unavailable = [
         t.number_label for t in tickets
         if not (
-            t.seller_id == expected_seller_id and t.customer_id is None
+            t.seller_id == expected_ticket_seller_id and t.customer_id is None
             and t.status == TicketStatus.AVAILABLE
         )
     ]
@@ -618,11 +641,14 @@ async def public_checkout(
             f"máximo {MAX_CONCURRENT_RESERVATIONS_PER_CUSTOMER} boletas reservadas simultáneas por cliente.",
         )
 
-    # 3) Reservar (24h)
-    # Si vino por link personal, la reserva se atribuye al vendedor
-    # (para que la comisión, notificaciones y trazabilidad vayan a él).
+    # 3) Reservar (24h por default; el cliente puede programar fecha después).
+    # Con seller_slug → reserva al vendedor personal.
+    # Sin seller_slug → reserva al default_seller_id del tenant (para
+    # trazabilidad) con is_default_seller_sale=True (sin comisión).
     expires_at = await _ensure_reservations(
-        db, tickets, customer.id, seller_id=expected_seller_id,
+        db, tickets, customer.id,
+        seller_id=reservation_seller_id,
+        is_default_seller_sale=is_default_seller_sale,
     )
 
     # 4) Precio total
@@ -839,6 +865,215 @@ async def _maybe_notify_threshold(db: AsyncSession, raffle: Raffle, request: Req
     raffle.draw_notified_at = datetime.now(timezone.utc)
 
 
+class SchedulePaymentRequest(BaseModel):
+    """El cliente elige una fecha futura para pagar (antes del deadline).
+    Debe pasarnos su email para verificar propiedad — solo aceptamos
+    programar las reservas del customer con ese email."""
+    reference: str = Field(min_length=6, max_length=80)
+    customer_email: EmailStr
+    scheduled_date: str  # YYYY-MM-DD
+
+
+@router.post("/reservations/schedule-payment")
+async def schedule_payment(
+    payload: SchedulePaymentRequest,
+    request: Request,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    """El cliente programa una fecha futura para pagar su reserva.
+    Extiende expires_at hasta esa fecha + 24h (buffer) y registra
+    scheduled_payment_date para que el cron mande recordatorio 1 día
+    antes por WhatsApp.
+
+    Deadline duro: fecha del sorteo final de la rifa. No aceptamos fechas
+    posteriores a eso."""
+    from datetime import date as _date
+
+    try:
+        target = _date.fromisoformat(payload.scheduled_date)
+    except ValueError:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "fecha inválida (usa YYYY-MM-DD)")
+
+    today = datetime.now(timezone.utc).date()
+    if target <= today:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            "la fecha de pago debe ser posterior a hoy",
+        )
+
+    # Buscar la transacción por reference (Wompi) o submission (manual)
+    tx = (await db.execute(
+        select(WompiTransaction).where(WompiTransaction.reference == payload.reference)
+    )).scalar_one_or_none()
+    submission = None
+    if not tx:
+        submission = (await db.execute(
+            select(ManualTransferSubmission)
+            .where(ManualTransferSubmission.reference == payload.reference)
+        )).scalar_one_or_none()
+
+    customer_id: int | None = None
+    raffle_id: int | None = None
+    if tx:
+        customer_id = tx.customer_id
+        raffle_id = tx.raffle_id
+    elif submission:
+        customer_id = submission.customer_id
+        raffle_id = submission.raffle_id
+    else:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "reserva no encontrada")
+
+    # Verificar que el email coincide con el customer de la reserva
+    customer = (await db.execute(
+        select(Customer).where(Customer.id == customer_id)
+    )).scalar_one_or_none()
+    if not customer or customer.email != payload.customer_email:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            "el email no coincide con el de la reserva",
+        )
+
+    # Validar contra fecha final del sorteo
+    raffle = (await db.execute(
+        select(Raffle).where(Raffle.id == raffle_id)
+    )).scalar_one()
+    if raffle.final_draw_date and target >= raffle.final_draw_date:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            f"la fecha debe ser antes del sorteo ({raffle.final_draw_date.isoformat()})",
+        )
+
+    # Actualizar las reservas activas del customer para esa rifa
+    ticket_ids: list[int] = []
+    if tx:
+        rows = (await db.execute(
+            select(WompiTransactionTicket.ticket_id).where(
+                WompiTransactionTicket.transaction_id == tx.id,
+            )
+        )).all()
+        ticket_ids = [r[0] for r in rows]
+    elif submission:
+        ticket_ids = list(submission.ticket_ids or [])
+
+    # Extendemos expires_at a 24h después del scheduled_payment_date
+    new_expires_at = datetime.combine(target, datetime.min.time(), tzinfo=timezone.utc) + timedelta(hours=24)
+
+    result = await db.execute(
+        Reservation.__table__.update()
+        .where(
+            Reservation.ticket_id.in_(ticket_ids),
+            Reservation.customer_id == customer_id,
+            Reservation.is_active.is_(True),
+        )
+        .values(
+            scheduled_payment_date=target,
+            expires_at=new_expires_at,
+        )
+    )
+
+    await log_action(
+        db, actor_id=None, action="public.schedule_payment",
+        entity_type="reservation", entity_id=customer_id, request=request,
+        metadata={
+            "reference": payload.reference,
+            "scheduled_date": target.isoformat(),
+            "ticket_ids": ticket_ids,
+        },
+    )
+    await db.commit()
+
+    return {
+        "ok": True,
+        "scheduled_date": target.isoformat(),
+        "expires_at": new_expires_at.isoformat(),
+        "reservations_updated": result.rowcount if hasattr(result, "rowcount") else len(ticket_ids),
+        "message": f"Perfecto. Tu boleta queda reservada hasta el {target.strftime('%d/%m/%Y')}. "
+                   f"Te llegará un recordatorio por WhatsApp un día antes.",
+    }
+
+
+@router.post("/reservations/send-reminders")
+async def send_scheduled_reminders(
+    request: Request,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    """Endpoint cron para enviar recordatorios de pago por WhatsApp/email
+    a las reservas con `scheduled_payment_date == mañana`. Debe llamarse
+    diariamente (Render cron, GitHub Actions, etc). Idempotente: no
+    reenvía si `reminder_sent_at` ya está set.
+
+    Autenticación: header `X-Cron-Secret` con el CRON_SECRET del env.
+    """
+    from app.core.config import get_settings
+    settings = get_settings()
+
+    provided = request.headers.get("X-Cron-Secret", "")
+    if not settings.cron_secret or provided != settings.cron_secret:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "cron secret inválido")
+
+    now = datetime.now(timezone.utc)
+    tomorrow = (now + timedelta(days=1)).date()
+
+    # Reservas activas con fecha programada = mañana y sin recordatorio enviado
+    from sqlalchemy import and_ as sa_and
+    rows = (await db.execute(
+        select(Reservation, Customer, Raffle, Ticket)
+        .join(Ticket, Ticket.id == Reservation.ticket_id)
+        .join(Customer, Customer.id == Reservation.customer_id)
+        .join(Raffle, Raffle.id == Ticket.raffle_id)
+        .where(
+            Reservation.scheduled_payment_date == tomorrow,
+            Reservation.is_active.is_(True),
+            Reservation.reminder_sent_at.is_(None),
+        )
+    )).all()
+
+    # Agrupar por customer + raffle
+    grouped: dict[tuple[int, int], dict] = {}
+    reservation_ids: list[int] = []
+    for res, cust, raffle, tk in rows:
+        key = (cust.id, raffle.id)
+        if key not in grouped:
+            grouped[key] = {
+                "customer": cust, "raffle": raffle,
+                "ticket_labels": [], "reservation_ids": [],
+            }
+        grouped[key]["ticket_labels"].append(tk.number_label)
+        grouped[key]["reservation_ids"].append(res.id)
+        reservation_ids.append(res.id)
+
+    sent = 0
+    for group in grouped.values():
+        try:
+            await notification_service.notify_reservation_reminder(
+                customer_email=group["customer"].email,
+                customer_phone=group["customer"].phone,
+                raffle_name=group["raffle"].name,
+                ticket_labels=group["ticket_labels"],
+                hours_left=24,
+                checkout_url=None,
+            )
+            sent += 1
+        except Exception:
+            pass
+
+    # Marcar recordatorios como enviados (idempotencia)
+    if reservation_ids:
+        await db.execute(
+            Reservation.__table__.update()
+            .where(Reservation.id.in_(reservation_ids))
+            .values(reminder_sent_at=now)
+        )
+        await db.commit()
+
+    return {
+        "ok": True,
+        "date_checked": tomorrow.isoformat(),
+        "reminders_sent": sent,
+        "reservations_marked": len(reservation_ids),
+    }
+
+
 @router.post("/upload-proof")
 async def public_upload_proof(
     request: Request,
@@ -904,8 +1139,11 @@ async def public_manual_transfer(
     if not raffle.enable_manual_transfer:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "esta rifa no acepta transferencia manual")
 
-    # Resolver seller si el cliente vino por link personal (?v=<slug>)
-    expected_seller_id: int | None = None
+    # Resolver seller: si viene por link personal, es él. Si no, es el
+    # default_seller del tenant (trazabilidad sin comisión).
+    expected_ticket_seller_id: int | None = None
+    reservation_seller_id: int | None = None
+    is_default_seller_sale = False
     if payload.seller_slug:
         from app.models.user import User, UserRole
         seller = (await db.execute(
@@ -920,7 +1158,15 @@ async def public_manual_transfer(
             raise HTTPException(
                 status.HTTP_404_NOT_FOUND, "el enlace del vendedor no es válido",
             )
-        expected_seller_id = seller.id
+        expected_ticket_seller_id = seller.id
+        reservation_seller_id = seller.id
+    else:
+        from app.models.tenant import Tenant as TenantModel
+        tenant_default = (await db.execute(
+            select(TenantModel).where(TenantModel.id == raffle.tenant_id)
+        )).scalar_one()
+        reservation_seller_id = tenant_default.default_seller_id
+        is_default_seller_sale = True
 
     tickets = (await db.execute(
         select(Ticket).where(
@@ -934,7 +1180,7 @@ async def public_manual_transfer(
     unavailable = [
         t.number_label for t in tickets
         if not (
-            t.seller_id == expected_seller_id and t.customer_id is None
+            t.seller_id == expected_ticket_seller_id and t.customer_id is None
             and t.status == TicketStatus.AVAILABLE
         )
     ]
@@ -953,7 +1199,11 @@ async def public_manual_transfer(
         city=payload.customer_city,
     )
 
-    await _ensure_reservations(db, tickets, customer.id, seller_id=expected_seller_id)
+    await _ensure_reservations(
+        db, tickets, customer.id,
+        seller_id=reservation_seller_id,
+        is_default_seller_sale=is_default_seller_sale,
+    )
 
     submission = ManualTransferSubmission(
         tenant_id=raffle.tenant_id,

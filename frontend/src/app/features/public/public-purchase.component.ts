@@ -621,6 +621,108 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
       @if (checkoutOpen()) {
         <div class="modal" (click)="closeCheckout()">
           <div class="modal__card" (click)="$event.stopPropagation()">
+
+            <!-- ETAPA 3: Reserva programada exitosamente -->
+            @if (scheduleSuccess(); as msg) {
+              <div class="modal__head">
+                <div>
+                  <div class="pill pill--ok">✓ Reserva programada</div>
+                  <h2>¡Todo listo!</h2>
+                </div>
+                <button class="icon-btn" (click)="closeAll()" aria-label="Cerrar">
+                  <span class="material-icons-outlined">close</span>
+                </button>
+              </div>
+              <div class="success">
+                <span class="material-icons-outlined success__icon">event_available</span>
+                <p>{{ msg }}</p>
+                <button class="btn btn--primary btn--lg btn--block" (click)="closeAll()">
+                  Entendido
+                </button>
+              </div>
+            }
+
+            <!-- ETAPA 2b: Elegir fecha de pago -->
+            @else if (scheduleMode() && reservationDone()) {
+              <div class="modal__head">
+                <div>
+                  <div class="pill">Programar pago</div>
+                  <h2>Elige tu fecha</h2>
+                  <p class="muted">
+                    Puedes pagar hasta <strong>{{ formatDate(maxScheduleDate()) }}</strong>.
+                    Te enviaremos un recordatorio por WhatsApp 1 día antes.
+                  </p>
+                </div>
+                <button class="icon-btn" (click)="cancelSchedule()" aria-label="Volver">
+                  <span class="material-icons-outlined">close</span>
+                </button>
+              </div>
+              <div class="form">
+                <label class="field">
+                  <span class="field__label">Fecha límite para pagar</span>
+                  <input class="input" type="date"
+                         [(ngModel)]="scheduleForm.date" name="scheduleDate"
+                         [attr.min]="minScheduleDate()"
+                         [attr.max]="maxScheduleDate()" />
+                </label>
+                <button class="btn btn--primary btn--lg btn--block"
+                        (click)="confirmSchedule()" [disabled]="scheduling()">
+                  @if (scheduling()) {
+                    <span class="btn__spin"></span> Programando…
+                  } @else {
+                    <span class="material-icons-outlined">event</span>
+                    Confirmar fecha
+                  }
+                </button>
+                <button class="btn btn--ghost btn--block" (click)="cancelSchedule()">
+                  Volver
+                </button>
+                @if (scheduleError()) {
+                  <div class="alert">
+                    <span class="material-icons-outlined">error_outline</span>
+                    {{ scheduleError() }}
+                  </div>
+                }
+              </div>
+            }
+
+            <!-- ETAPA 2: Reserva creada — elegir método de pago -->
+            @else if (reservationDone(); as res) {
+              <div class="modal__head">
+                <div>
+                  <div class="pill pill--ok">✓ Boletas reservadas</div>
+                  <h2>¿Cómo quieres pagar?</h2>
+                  <p class="muted">
+                    Tus boletas <strong>{{ res.ticket_labels.join(', ') }}</strong>
+                    están apartadas. Elige:
+                  </p>
+                </div>
+                <button class="icon-btn" (click)="closeCheckout()" aria-label="Cerrar">
+                  <span class="material-icons-outlined">close</span>
+                </button>
+              </div>
+              <div class="pay-choice">
+                <button class="pay-choice__opt pay-choice__opt--primary" (click)="payNow()">
+                  <span class="material-icons-outlined pay-choice__icon">bolt</span>
+                  <div>
+                    <strong>Pagar ahora</strong>
+                    <small>@if (res.checkout_url) { Con Nequi, PSE, tarjeta } @else { Sube tu comprobante }</small>
+                  </div>
+                  <span class="material-icons-outlined pay-choice__arrow">arrow_forward</span>
+                </button>
+                <button class="pay-choice__opt" (click)="openSchedule()">
+                  <span class="material-icons-outlined pay-choice__icon">event</span>
+                  <div>
+                    <strong>Programar pago</strong>
+                    <small>Elige fecha antes del sorteo. Recordatorio por WhatsApp.</small>
+                  </div>
+                  <span class="material-icons-outlined pay-choice__arrow">arrow_forward</span>
+                </button>
+              </div>
+            }
+
+            <!-- ETAPA 1: Formulario datos personales (default) -->
+            @else {
             <div class="modal__head">
               <div>
                 <div class="pill">Checkout</div>
@@ -788,6 +890,7 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
                 {{ submitError() }}
               </div>
             }
+            } <!-- cierre @else del step 1 (form) -->
           </div>
         </div>
       }
@@ -2080,6 +2183,90 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
       font-weight: 600;
       margin-bottom: 8px;
     }
+    .pill--ok {
+      background: rgba(34, 197, 94, 0.22);
+      color: #86efac;
+      border-color: rgba(34, 197, 94, 0.45);
+    }
+
+    /* ============ Panel elegir método de pago (etapa 2) ============ */
+    .pay-choice {
+      display: flex; flex-direction: column; gap: 10px;
+      margin-top: 18px;
+    }
+    .pay-choice__opt {
+      display: flex; align-items: center; gap: 14px;
+      padding: 16px 18px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      color: var(--text);
+      font-family: inherit;
+      cursor: pointer;
+      text-align: left;
+      transition: background var(--t-fast), border-color var(--t-fast), transform var(--t-fast);
+    }
+    .pay-choice__opt:hover {
+      background: rgba(34, 197, 94, 0.06);
+      border-color: var(--border-md);
+      transform: translateY(-1px);
+    }
+    .pay-choice__opt--primary {
+      background: rgba(34, 197, 94, 0.12);
+      border-color: var(--border-md);
+    }
+    .pay-choice__opt--primary:hover {
+      background: rgba(34, 197, 94, 0.18);
+    }
+    .pay-choice__icon {
+      font-size: 24px;
+      color: var(--brand-glow);
+      background: rgba(34, 197, 94, 0.14);
+      padding: 8px;
+      border-radius: 10px;
+      flex-shrink: 0;
+    }
+    .pay-choice__opt div { flex: 1; }
+    .pay-choice__opt strong {
+      display: block;
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .pay-choice__opt small {
+      display: block;
+      font-size: 12.5px;
+      color: var(--text-muted);
+      margin-top: 2px;
+      line-height: 1.4;
+    }
+    .pay-choice__arrow {
+      font-size: 18px;
+      color: var(--text-muted);
+      flex-shrink: 0;
+    }
+
+    /* ============ Success de reserva programada (etapa 3) ============ */
+    .success {
+      display: flex; flex-direction: column; align-items: center;
+      gap: 16px;
+      padding: 12px 0 4px;
+      text-align: center;
+    }
+    .success__icon {
+      font-size: 56px;
+      color: var(--brand-glow);
+      background: rgba(34, 197, 94, 0.12);
+      padding: 20px;
+      border-radius: 50%;
+    }
+    .success p {
+      margin: 0;
+      color: var(--text);
+      font-size: 14.5px;
+      line-height: 1.6;
+      max-width: 380px;
+    }
 
     .form { display: flex; flex-direction: column; gap: 16px; margin-top: 24px; }
     .field { display: flex; flex-direction: column; gap: 6px; }
@@ -2295,6 +2482,39 @@ export class PublicPurchaseComponent implements OnInit, OnDestroy {
   checkoutOpen = signal(false);
   submitting = signal(false);
   submitError = signal<string | null>(null);
+
+  // ============ Flujo de reserva con opción de pago diferido ============
+  // Cuando el cliente terminó de reservar (checkout backend), le mostramos
+  // un panel con dos opciones: "Pagar ahora" o "Programar pago" (fecha
+  // futura antes del sorteo). El scheduleForm guarda la fecha elegida.
+  reservationDone = signal<{
+    reference: string;
+    ticket_labels: string[];
+    checkout_url: string | null;
+    expires_at: string;
+  } | null>(null);
+  scheduleMode = signal(false);
+  scheduling = signal(false);
+  scheduleError = signal<string | null>(null);
+  scheduleForm = { date: '' };
+  scheduleSuccess = signal<string | null>(null);
+
+  /** Fecha máxima permitida para programar el pago = 1 día antes del sorteo. */
+  maxScheduleDate = computed<string>(() => {
+    const r = this.overview();
+    if (!r?.final_draw_date) return '';
+    const d = new Date(r.final_draw_date.length === 10
+      ? r.final_draw_date + 'T12:00:00'
+      : r.final_draw_date);
+    d.setDate(d.getDate() - 1);
+    return d.toISOString().slice(0, 10);
+  });
+
+  minScheduleDate = computed<string>(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    return d.toISOString().slice(0, 10);
+  });
 
   searchInput = '';
   searching = signal(false);
@@ -2733,14 +2953,91 @@ export class PublicPurchaseComponent implements OnInit, OnDestroy {
             raffle_id: this.raffleId,
           }));
         } catch {}
-        if (resp.checkout_url) window.location.href = resp.checkout_url;
-        else this.router.navigate(['/rifa', this.raffleId, 'pago', resp.reference]);
+        this.submitting.set(false);
+        // Reserva creada. Mostramos el panel de elección de método de pago
+        // (pagar ya vs programar fecha). No redirigimos aún — el cliente
+        // decide.
+        this.reservationDone.set({
+          reference: resp.reference,
+          ticket_labels: resp.ticket_labels,
+          checkout_url: resp.checkout_url,
+          expires_at: resp.reservation_expires_at,
+        });
       },
       error: (e) => {
         this.submitError.set(e?.error?.detail ?? 'No se pudo iniciar el checkout');
         this.submitting.set(false);
       },
     });
+  }
+
+  /** El cliente eligió "pagar ahora": si hay Wompi, redirige; si no, va
+   *  a la página de resultado (transferencia manual pendiente). */
+  payNow() {
+    const r = this.reservationDone();
+    if (!r) return;
+    if (r.checkout_url) {
+      window.location.href = r.checkout_url;
+    } else {
+      this.router.navigate(['/rifa', this.raffleId, 'pago', r.reference]);
+    }
+  }
+
+  /** Abre el submodal para elegir fecha de pago. */
+  openSchedule() {
+    this.scheduleMode.set(true);
+    this.scheduleError.set(null);
+    this.scheduleForm.date = this.minScheduleDate();
+  }
+
+  cancelSchedule() {
+    this.scheduleMode.set(false);
+    this.scheduleError.set(null);
+  }
+
+  /** Envía la fecha programada al backend. Extiende la reserva hasta esa
+   *  fecha y activa el recordatorio por WhatsApp. */
+  confirmSchedule() {
+    const r = this.reservationDone();
+    if (!r || this.scheduling()) return;
+
+    const date = this.scheduleForm.date;
+    if (!date) {
+      this.scheduleError.set('Elige una fecha para pagar.');
+      return;
+    }
+    const max = this.maxScheduleDate();
+    if (max && date > max) {
+      this.scheduleError.set(`La fecha debe ser antes del ${max}.`);
+      return;
+    }
+
+    this.scheduling.set(true);
+    this.scheduleError.set(null);
+    this.svc.schedulePayment(
+      r.reference, this.form.customer_email, date,
+    ).subscribe({
+      next: (resp) => {
+        this.scheduling.set(false);
+        this.scheduleSuccess.set(resp.message);
+      },
+      error: (e) => {
+        this.scheduling.set(false);
+        this.scheduleError.set(
+          e?.error?.detail ?? 'No se pudo programar la fecha. Intenta de nuevo.',
+        );
+      },
+    });
+  }
+
+  /** Cierra el modal completo (después de programar exitosamente). */
+  closeAll() {
+    this.checkoutOpen.set(false);
+    this.reservationDone.set(null);
+    this.scheduleMode.set(false);
+    this.scheduleSuccess.set(null);
+    this.selected.set(new Set());
+    this.loadAvailable();
   }
 
   /** true si el comprobante subido es una imagen (se muestra thumb).

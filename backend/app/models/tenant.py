@@ -62,6 +62,14 @@ class Tenant(Base, TimestampMixin):
     # 'sandbox' o 'production'. Determina la URL base del API de Wompi.
     wompi_env: Mapped[str] = mapped_column(String(20), default="sandbox", nullable=False)
 
+    # Vendedor por defecto para ventas del pool público general (?v sin slug).
+    # Los tickets quedan asignados a este vendedor visualmente para
+    # trazabilidad, pero NO generan comisión (se marca la reservation
+    # con is_default_seller_sale=True).
+    default_seller_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True,
+    )
+
     # ========== Branding del portal público ==========
     brand_logo_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     brand_primary_color: Mapped[str | None] = mapped_column(String(20), nullable=True)

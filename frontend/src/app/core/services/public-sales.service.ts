@@ -186,6 +186,20 @@ export class PublicSalesService {
     return this.http.post<ProofUploadResponse>(`${this.api}/public/upload-proof`, fd);
   }
 
+  schedulePayment(reference: string, customerEmail: string, scheduledDate: string): Observable<{
+    ok: boolean;
+    scheduled_date: string;
+    expires_at: string;
+    reservations_updated: number;
+    message: string;
+  }> {
+    return this.http.post<any>(`${this.api}/public/reservations/schedule-payment`, {
+      reference,
+      customer_email: customerEmail,
+      scheduled_date: scheduledDate,
+    });
+  }
+
   requestMagicLink(email: string): Observable<{ sent: boolean; message: string }> {
     return this.http.post<{ sent: boolean; message: string }>(
       `${this.api}/public/auth/request-link`, { email },
