@@ -92,6 +92,19 @@ export class PublicSalesAdminService {
       `${this.api}/admin/public-sales/reservations-active${qs}`,
     );
   }
+
+  markReservationsPaid(payload: {
+    reservation_ids: number[];
+    amount: number;
+    payment_method: 'NEQUI' | 'DAVIPLATA' | 'BANCOLOMBIA_TRANSFER' | 'EFECTIVO' | 'OTHER';
+    reference?: string | null;
+    notes?: string | null;
+  }): Observable<{ submission_id: number; ticket_labels: string[]; amount: number; status: string }> {
+    return this.http.post<any>(
+      `${this.api}/admin/public-sales/reservations/mark-paid`,
+      payload,
+    );
+  }
 }
 
 export interface ActiveReservation {

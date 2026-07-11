@@ -191,12 +191,89 @@ import { ToastService } from '@core/services/toast.service';
                   } @else {
                     <span class="muted">Sin teléfono registrado</span>
                   }
+                  <button type="button" class="btn btn--primary"
+                          (click)="openMarkPaid(r)">
+                    <span class="material-icons">payments</span>
+                    Registrar pago
+                  </button>
                 </div>
               </li>
             }
           </ul>
         }
       </section>
+
+      <!-- ============ MODAL: Registrar pago manual ============ -->
+      @if (markPaidTarget(); as target) {
+        <div class="modal" (click)="closeMarkPaid()">
+          <div class="modal__card" (click)="$event.stopPropagation()">
+            <div class="modal__head">
+              <div>
+                <div class="pill">Registrar pago</div>
+                <h2>Pago recibido de {{ target.customer_name }}</h2>
+                <p class="muted">
+                  {{ target.ticket_labels.length }} boleta(s): {{ target.ticket_labels.join(', ') }}
+                  · Rifa {{ target.raffle_name }}
+                </p>
+              </div>
+              <button class="icon-btn" (click)="closeMarkPaid()" aria-label="Cerrar">
+                <span class="material-icons">close</span>
+              </button>
+            </div>
+            <form class="form" (ngSubmit)="submitMarkPaid()" autocomplete="off">
+              <label class="field">
+                <span class="field__label">Monto recibido (COP)</span>
+                <input class="input" type="number" min="1" step="1000"
+                       [(ngModel)]="markPaidForm.amount" name="amount" required />
+                <small class="muted">
+                  Total sugerido: \${{ formatNumber(target.ticket_price * target.ticket_labels.length) }}
+                </small>
+              </label>
+              <label class="field">
+                <span class="field__label">Método de pago</span>
+                <select class="input" [(ngModel)]="markPaidForm.payment_method"
+                        name="method" required>
+                  <option value="NEQUI">Nequi</option>
+                  <option value="DAVIPLATA">Daviplata</option>
+                  <option value="BANCOLOMBIA_TRANSFER">Bancolombia (transferencia)</option>
+                  <option value="EFECTIVO">Efectivo</option>
+                  <option value="OTHER">Otro</option>
+                </select>
+              </label>
+              <label class="field">
+                <span class="field__label">Referencia <small>opcional</small></span>
+                <input class="input" type="text" maxlength="80"
+                       [(ngModel)]="markPaidForm.reference" name="reference"
+                       placeholder="Ej. ID de la transacción, últimos 4 dígitos" />
+              </label>
+              <label class="field">
+                <span class="field__label">Notas <small>opcional</small></span>
+                <textarea class="input" rows="2" maxlength="500"
+                          [(ngModel)]="markPaidForm.notes" name="notes"
+                          placeholder="Ej. Comprobante recibido por WhatsApp el 11/07"></textarea>
+              </label>
+              @if (markPaidError()) {
+                <div class="alert alert--error">{{ markPaidError() }}</div>
+              }
+              <div class="modal__actions">
+                <button type="button" class="btn btn--ghost" (click)="closeMarkPaid()"
+                        [disabled]="markingPaid()">
+                  Cancelar
+                </button>
+                <button type="submit" class="btn btn--primary"
+                        [disabled]="markingPaid() || !markPaidForm.amount">
+                  @if (markingPaid()) {
+                    <span class="btn__spin"></span> Guardando…
+                  } @else {
+                    <span class="material-icons">check</span>
+                    Confirmar pago
+                  }
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      }
 
       <!-- ============ TRANSFERENCIAS PENDIENTES ============ -->
       <section class="card">
@@ -416,6 +493,21 @@ export class PublicSalesConfigComponent implements OnInit {
     integrity_key: '',
   };
 
+  markPaidTarget = signal<ActiveReservation | null>(null);
+  markingPaid = signal(false);
+  markPaidError = signal<string | null>(null);
+  markPaidForm: {
+    amount: number | null;
+    payment_method: 'NEQUI' | 'DAVIPLATA' | 'BANCOLOMBIA_TRANSFER' | 'EFECTIVO' | 'OTHER';
+    reference: string;
+    notes: string;
+  } = {
+    amount: null,
+    payment_method: 'NEQUI',
+    reference: '',
+    notes: '',
+  };
+
   ngOnInit(): void {
     this.svc.getWompiConfig().subscribe({
       next: (w) => {
@@ -470,11 +562,63 @@ Te escribo para recordarte que tienes reservada(s) la(s) boleta(s) ${boletas} de
 💰 Total a pagar: $${totalFmt}
 📅 Fecha límite para pagar: ${deadline}
 
-¿Necesitas los datos para hacer la transferencia? Me avisas cualquier cosa y coordinamos.
+📲 Puedes transferir a:
+Nequi: 3207345154
+(a nombre de Edith J. Madera)
 
-¡Gracias! 🙌`;
+Cuando hagas el pago, envíame el comprobante por aquí para confirmarlo. ¡Gracias! 🙌`;
 
     return `https://wa.me/${normalized}?text=${encodeURIComponent(msg)}`;
+  }
+
+  openMarkPaid(r: ActiveReservation) {
+    this.markPaidTarget.set(r);
+    this.markPaidError.set(null);
+    this.markPaidForm = {
+      amount: r.ticket_price * r.ticket_labels.length,
+      payment_method: 'NEQUI',
+      reference: '',
+      notes: '',
+    };
+  }
+
+  closeMarkPaid() {
+    if (this.markingPaid()) return;
+    this.markPaidTarget.set(null);
+    this.markPaidError.set(null);
+  }
+
+  submitMarkPaid() {
+    const target = this.markPaidTarget();
+    if (!target || this.markingPaid()) return;
+    const amount = Number(this.markPaidForm.amount);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      this.markPaidError.set('El monto debe ser mayor a 0.');
+      return;
+    }
+    this.markingPaid.set(true);
+    this.markPaidError.set(null);
+    this.svc.markReservationsPaid({
+      reservation_ids: target.reservation_ids,
+      amount,
+      payment_method: this.markPaidForm.payment_method,
+      reference: this.markPaidForm.reference.trim() || null,
+      notes: this.markPaidForm.notes.trim() || null,
+    }).subscribe({
+      next: (resp) => {
+        this.markingPaid.set(false);
+        this.markPaidTarget.set(null);
+        this.toast.success(
+          'Pago registrado',
+          `Boletas ${resp.ticket_labels.join(', ')} marcadas como pagadas.`,
+        );
+        this.loadReservations();
+      },
+      error: (e) => {
+        this.markingPaid.set(false);
+        this.markPaidError.set(e?.error?.detail ?? 'No se pudo registrar el pago.');
+      },
+    });
   }
 
   formatDate(iso: string | null | undefined): string {

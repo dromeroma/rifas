@@ -70,6 +70,20 @@ class ManualTransferReviewRequest(BaseModel):
     notes: str | None = None
 
 
+class MarkPaidRequest(BaseModel):
+    """Payload para registrar un pago recibido fuera de la app.
+
+    Casos típicos: el cliente pagó por Nequi/Daviplata y mandó el
+    comprobante por WhatsApp directo al admin (no lo subió en el portal).
+    El admin registra el pago manualmente desde el panel de reservas.
+    """
+    reservation_ids: list[int] = Field(min_length=1)
+    amount: float = Field(gt=0)
+    payment_method: str = Field(pattern="^(NEQUI|DAVIPLATA|BANCOLOMBIA_TRANSFER|EFECTIVO|OTHER)$")
+    reference: str | None = None  # id de transacción / últimos 4 / etc
+    notes: str | None = None
+
+
 # ============================================================
 # CONFIG WOMPI (tenant-level)
 # ============================================================
@@ -488,3 +502,131 @@ async def review_manual_transfer(
     )
     await db.commit()
     return {"submission_id": submission.id, "status": submission.status}
+
+
+@router.post("/reservations/mark-paid")
+async def mark_reservations_paid(
+    payload: MarkPaidRequest,
+    request: Request,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    actor: Annotated[User, Depends(require_roles(UserRole.ADMIN, UserRole.SUPER_ADMIN))],
+    scope: Annotated[TenantScope, Depends(get_tenant_scope)],
+):
+    """Registrar pago recibido fuera del portal (cliente pagó por Nequi/
+    Daviplata y mandó el comprobante por WhatsApp directo al admin).
+
+    Efecto:
+      - Tickets asociados → PAID con paid_amount proporcional
+      - Reservations → is_active=False, release_reason='admin_registered'
+      - Crea una ManualTransferSubmission APPROVED (proof_url=sentinel) para
+        dejar trazabilidad. El admin queda como reviewer.
+      - Notifica al cliente por email si tiene.
+    """
+    reservations = (await db.execute(
+        select(Reservation).where(
+            Reservation.id.in_(payload.reservation_ids),
+            Reservation.is_active.is_(True),
+        )
+    )).scalars().all()
+    if not reservations:
+        raise HTTPException(404, "no se encontraron reservas activas con esos ids")
+    if len(reservations) != len(payload.reservation_ids):
+        raise HTTPException(400, "una o más reservas ya no están activas")
+
+    ticket_ids = [r.ticket_id for r in reservations]
+    tickets = (await db.execute(
+        select(Ticket).where(Ticket.id.in_(ticket_ids))
+    )).scalars().all()
+    if len(tickets) != len(ticket_ids):
+        raise HTTPException(500, "inconsistencia: tickets no encontrados")
+
+    raffle_ids = {t.raffle_id for t in tickets}
+    if len(raffle_ids) != 1:
+        raise HTTPException(400, "las reservas deben pertenecer a una sola rifa")
+    raffle = (await db.execute(
+        select(Raffle).where(Raffle.id == raffle_ids.pop())
+    )).scalar_one()
+    if scope.tenant_id is not None and raffle.tenant_id != scope.tenant_id:
+        raise HTTPException(404, "reservas no encontradas")
+
+    customer_ids = {r.customer_id for r in reservations if r.customer_id is not None}
+    if len(customer_ids) > 1:
+        raise HTTPException(400, "las reservas deben ser de un solo cliente")
+    customer_id = customer_ids.pop() if customer_ids else None
+    customer = None
+    if customer_id is not None:
+        customer = (await db.execute(
+            select(Customer).where(Customer.id == customer_id)
+        )).scalar_one_or_none()
+
+    # Trazabilidad: crear un ManualTransferSubmission APPROVED sin proof.
+    # `proof_url` es NOT NULL — usamos sentinel legible.
+    now = datetime.now(timezone.utc)
+    ref = payload.reference or f"ADMIN-{actor.id}-{int(now.timestamp())}"
+    submission = ManualTransferSubmission(
+        tenant_id=raffle.tenant_id,
+        raffle_id=raffle.id,
+        customer_id=customer_id,
+        ticket_ids=ticket_ids,
+        amount_declared=payload.amount,
+        payment_method=payload.payment_method,
+        proof_url="admin://registered-without-proof",
+        reference=ref,
+        status="APPROVED",
+        reviewed_by_user_id=actor.id,
+        reviewer_notes=payload.notes,
+        submitted_at=now,
+        reviewed_at=now,
+    )
+    db.add(submission)
+
+    # Tickets → PAID
+    per_ticket = float(payload.amount) / len(tickets)
+    for t in tickets:
+        t.status = TicketStatus.PAID
+        t.paid_amount = per_ticket
+
+    # Reservations → cerradas
+    for r in reservations:
+        r.is_active = False
+        r.released_at = now
+        r.release_reason = "admin_registered"
+
+    # Notificar al cliente (best-effort)
+    if customer and customer.email:
+        base = str(request.base_url).replace("/api", "").rstrip("/")
+        verify_urls = [f"{base}/verify/{t.code}" for t in tickets]
+        try:
+            await notification_service.notify_payment_confirmed(
+                customer_email=customer.email,
+                customer_phone=customer.phone,
+                raffle_name=raffle.name,
+                ticket_labels=[t.number_label for t in tickets],
+                total_amount=float(payload.amount),
+                verify_urls=verify_urls,
+            )
+        except Exception:
+            pass
+
+    from app.routers.public_sales import _maybe_notify_threshold
+    await _maybe_notify_threshold(db, raffle, request)
+
+    await log_action(
+        db, actor_id=actor.id, action="reservation.admin_marked_paid",
+        entity_type="reservation", entity_id=reservations[0].id, request=request,
+        metadata={
+            "reservation_ids": payload.reservation_ids,
+            "ticket_ids": ticket_ids,
+            "amount": float(payload.amount),
+            "payment_method": payload.payment_method,
+            "reference": payload.reference,
+            "notes": payload.notes,
+        },
+    )
+    await db.commit()
+    return {
+        "submission_id": submission.id,
+        "ticket_labels": [t.number_label for t in tickets],
+        "amount": float(payload.amount),
+        "status": "APPROVED",
+    }
