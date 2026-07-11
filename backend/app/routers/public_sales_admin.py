@@ -269,6 +269,79 @@ async def schedule_draw_date(
 # ============================================================
 
 
+@router.get("/reservations-active")
+async def list_active_reservations(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    actor: Annotated[User, Depends(require_roles(UserRole.ADMIN, UserRole.SUPER_ADMIN))],
+    scope: Annotated[TenantScope, Depends(get_tenant_scope)],
+    raffle_id: int | None = None,
+    only_scheduled: bool = False,
+):
+    """Lista reservas ACTIVAS con info del customer para que el admin
+    pueda contactarlos manualmente por WhatsApp. Agrupa por
+    customer+raffle (una fila por combinación).
+
+    Filtros:
+      - raffle_id: solo reservas de esa rifa.
+      - only_scheduled=true: solo reservas con scheduled_payment_date
+        (las que eligieron "programar pago").
+    """
+    q = (
+        select(Reservation, Customer, Raffle, Ticket)
+        .join(Ticket, Ticket.id == Reservation.ticket_id)
+        .join(Customer, Customer.id == Reservation.customer_id, isouter=True)
+        .join(Raffle, Raffle.id == Ticket.raffle_id)
+        .where(Reservation.is_active.is_(True))
+        .order_by(Reservation.scheduled_payment_date.asc().nullslast(),
+                  Reservation.expires_at.asc())
+    )
+    if scope.tenant_id is not None:
+        q = q.where(Raffle.tenant_id == scope.tenant_id)
+    if raffle_id is not None:
+        q = q.where(Ticket.raffle_id == raffle_id)
+    if only_scheduled:
+        q = q.where(Reservation.scheduled_payment_date.is_not(None))
+
+    rows = (await db.execute(q)).all()
+
+    # Agrupa por (customer_id, raffle_id) para una vista compacta
+    grouped: dict[tuple[int | None, int], dict] = {}
+    for res, cust, raffle, tk in rows:
+        key = (cust.id if cust else None, raffle.id)
+        if key not in grouped:
+            grouped[key] = {
+                "customer_id": cust.id if cust else None,
+                "customer_name": cust.full_name if cust else "Cliente sin registro",
+                "customer_email": cust.email if cust else None,
+                "customer_phone": cust.phone if cust else None,
+                "customer_document": cust.document if cust else None,
+                "raffle_id": raffle.id,
+                "raffle_name": raffle.name,
+                "ticket_price": float(raffle.ticket_price),
+                "ticket_labels": [],
+                "reservation_ids": [],
+                "expires_at": res.expires_at.isoformat() if res.expires_at else None,
+                "scheduled_payment_date": (
+                    res.scheduled_payment_date.isoformat() if res.scheduled_payment_date else None
+                ),
+                "is_default_seller_sale": res.is_default_seller_sale,
+                "reminder_sent_at": (
+                    res.reminder_sent_at.isoformat() if res.reminder_sent_at else None
+                ),
+            }
+        grouped[key]["ticket_labels"].append(tk.number_label)
+        grouped[key]["reservation_ids"].append(res.id)
+
+    # Orden final: primero las que tienen fecha programada más cercana
+    return sorted(
+        grouped.values(),
+        key=lambda x: (
+            0 if x["scheduled_payment_date"] else 1,
+            x["scheduled_payment_date"] or x["expires_at"] or "",
+        ),
+    )
+
+
 @router.get("/manual-transfers")
 async def list_manual_transfers(
     db: Annotated[AsyncSession, Depends(get_db)],

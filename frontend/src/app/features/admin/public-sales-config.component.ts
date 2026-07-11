@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 
 import { Raffle } from '@core/models/raffle.model';
 import {
+  ActiveReservation,
   ManualTransferSubmission,
   PublicSalesAdminService,
   WompiConfig,
@@ -131,6 +132,72 @@ import { ToastService } from '@core/services/toast.service';
         }
       </section>
 
+      <!-- ============ RESERVAS ACTIVAS ============ -->
+      <section class="card">
+        <div class="card__head">
+          <h2>Reservas activas</h2>
+          <label class="filter-toggle">
+            <input type="checkbox" [(ngModel)]="onlyScheduled" (change)="loadReservations()" />
+            Solo con fecha programada
+          </label>
+        </div>
+        <p class="muted">
+          Clientes que reservaron boletas pero aún no han pagado. Toca el
+          botón de WhatsApp para escribirles directamente desde tu celular.
+        </p>
+
+        @if (reservations().length === 0) {
+          <p class="muted">No hay reservas activas.</p>
+        } @else {
+          <ul class="res-list">
+            @for (r of reservations(); track r.customer_id + '-' + r.raffle_id) {
+              <li class="res">
+                <div class="res__row">
+                  <div class="res__customer">
+                    <strong>{{ r.customer_name }}</strong>
+                    @if (r.customer_phone) {
+                      <small>{{ r.customer_phone }}</small>
+                    }
+                    @if (r.customer_email) {
+                      <small class="mono">{{ r.customer_email }}</small>
+                    }
+                  </div>
+                  <div class="res__amount">
+                    \${{ formatNumber(r.ticket_price * r.ticket_labels.length) }}
+                  </div>
+                </div>
+                <div class="res__meta">
+                  <span>{{ r.raffle_name }}</span>
+                  <span>· {{ r.ticket_labels.length }} boleta(s): {{ r.ticket_labels.slice(0, 8).join(', ') }}{{ r.ticket_labels.length > 8 ? '…' : '' }}</span>
+                  @if (r.scheduled_payment_date) {
+                    <span class="res__badge">
+                      📅 Pagará el {{ formatDate(r.scheduled_payment_date) }}
+                    </span>
+                  } @else {
+                    <span class="res__badge res__badge--warn">
+                      ⏳ Reserva vence {{ formatDate(r.expires_at) }}
+                    </span>
+                  }
+                  @if (r.reminder_sent_at) {
+                    <span class="res__badge res__badge--ok">✓ Ya se envió recordatorio</span>
+                  }
+                </div>
+                <div class="res__cta">
+                  @if (r.customer_phone) {
+                    <a class="btn wa" [href]="whatsappLink(r)" target="_blank" rel="noopener">
+                      <span class="material-icons">chat</span>
+                      Enviar WhatsApp
+                    </a>
+                  } @else {
+                    <span class="muted">Sin teléfono registrado</span>
+                  }
+                </div>
+              </li>
+            }
+          </ul>
+        }
+      </section>
+
       <!-- ============ TRANSFERENCIAS PENDIENTES ============ -->
       <section class="card">
         <h2>Transferencias por revisar</h2>
@@ -249,6 +316,69 @@ import { ToastService } from '@core/services/toast.service';
     }
     .toggle input { width: 16px; height: 16px; cursor: pointer; }
 
+    /* ============ Reservas activas ============ */
+    .card__head {
+      display: flex; justify-content: space-between; align-items: center;
+      gap: var(--s-3); flex-wrap: wrap;
+    }
+    .filter-toggle {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 12px; color: var(--text-muted);
+      cursor: pointer; user-select: none;
+    }
+    .filter-toggle input { width: 14px; height: 14px; cursor: pointer; }
+
+    .res-list { list-style: none; padding: 0; margin: var(--s-3) 0 0; display: grid; gap: var(--s-3); }
+    .res {
+      padding: var(--s-3);
+      background: var(--bg-input);
+      border-radius: var(--r-md);
+      border-left: 3px solid var(--accent);
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: var(--s-2);
+      align-items: start;
+    }
+    .res__row {
+      grid-column: 1 / -1;
+      display: flex; justify-content: space-between; align-items: flex-start;
+      gap: var(--s-3);
+    }
+    .res__customer { display: grid; gap: 2px; }
+    .res__customer strong { color: var(--text); font-size: 14px; }
+    .res__customer small {
+      color: var(--text-muted); font-size: 12px;
+    }
+    .res__customer .mono { font-family: 'Courier New', monospace; font-size: 11px; }
+    .res__amount { font-size: 16px; font-weight: 700; color: var(--accent); white-space: nowrap; }
+
+    .res__meta {
+      grid-column: 1 / -1;
+      display: flex; gap: 6px; flex-wrap: wrap;
+      font-size: 11.5px; color: var(--text-muted);
+      align-items: center;
+    }
+    .res__badge {
+      padding: 2px 8px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 999px;
+      font-size: 10.5px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .res__badge--warn { background: rgba(245, 158, 11, 0.15); color: #f59e0b; }
+    .res__badge--ok { background: rgba(34, 197, 94, 0.15); color: #22c55e; }
+
+    .res__cta { grid-column: 1 / -1; display: flex; justify-content: flex-end; }
+    .btn.wa {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: #25d366; color: #fff; border-color: transparent;
+      text-decoration: none;
+      padding: 8px 14px;
+    }
+    .btn.wa:hover { background: #1fbc59; }
+    .btn.wa .material-icons { font-size: 16px; }
+
     .transfer-list { list-style: none; padding: 0; margin: 0; display: grid; gap: var(--s-3); }
     .transfer {
       padding: var(--s-3);
@@ -273,6 +403,8 @@ export class PublicSalesConfigComponent implements OnInit {
   wompiConfig = signal<WompiConfig | null>(null);
   raffles = signal<Raffle[]>([]);
   transfers = signal<ManualTransferSubmission[]>([]);
+  reservations = signal<ActiveReservation[]>([]);
+  onlyScheduled = false;
   loadingRaffles = signal(true);
   savingWompi = signal(false);
 
@@ -300,6 +432,7 @@ export class PublicSalesConfigComponent implements OnInit {
     });
 
     this.loadTransfers();
+    this.loadReservations();
   }
 
   loadTransfers() {
@@ -307,6 +440,48 @@ export class PublicSalesConfigComponent implements OnInit {
       next: (list) => this.transfers.set(list),
       error: () => {},
     });
+  }
+
+  loadReservations() {
+    this.svc.listActiveReservations({ onlyScheduled: this.onlyScheduled }).subscribe({
+      next: (list) => this.reservations.set(list),
+      error: () => {},
+    });
+  }
+
+  /** Mensaje pre-cargado para el WhatsApp del cliente. El admin puede
+   *  editarlo antes de enviar. */
+  whatsappLink(r: ActiveReservation): string {
+    const phone = (r.customer_phone || '').replace(/[^0-9]/g, '');
+    const normalized = phone.startsWith('57') ? phone : `57${phone}`;
+    const total = r.ticket_price * r.ticket_labels.length;
+    const totalFmt = new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 }).format(total);
+    const firstName = (r.customer_name || '').trim().split(/\s+/)[0] || '';
+    const boletas = r.ticket_labels.join(', ');
+    const deadline = r.scheduled_payment_date
+      ? `el ${this.formatDate(r.scheduled_payment_date)}`
+      : `antes de ${this.formatDate(r.expires_at)}`;
+
+    const msg =
+`¡Hola ${firstName}! 👋
+
+Te escribo para recordarte que tienes reservada(s) la(s) boleta(s) ${boletas} de la rifa "${r.raffle_name}".
+
+💰 Total a pagar: $${totalFmt}
+📅 Fecha límite para pagar: ${deadline}
+
+¿Necesitas los datos para hacer la transferencia? Me avisas cualquier cosa y coordinamos.
+
+¡Gracias! 🙌`;
+
+    return `https://wa.me/${normalized}?text=${encodeURIComponent(msg)}`;
+  }
+
+  formatDate(iso: string | null | undefined): string {
+    if (!iso) return '—';
+    const d = new Date(iso.length === 10 ? iso + 'T12:00:00' : iso);
+    if (isNaN(d.getTime())) return iso;
+    return d.toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' });
   }
 
   saveWompi() {

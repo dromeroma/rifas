@@ -82,4 +82,31 @@ export class PublicSalesAdminService {
       { approve, notes },
     );
   }
+
+  listActiveReservations(opts?: { raffleId?: number; onlyScheduled?: boolean }): Observable<ActiveReservation[]> {
+    const params: string[] = [];
+    if (opts?.raffleId) params.push(`raffle_id=${opts.raffleId}`);
+    if (opts?.onlyScheduled) params.push('only_scheduled=true');
+    const qs = params.length ? '?' + params.join('&') : '';
+    return this.http.get<ActiveReservation[]>(
+      `${this.api}/admin/public-sales/reservations-active${qs}`,
+    );
+  }
+}
+
+export interface ActiveReservation {
+  customer_id: number | null;
+  customer_name: string;
+  customer_email: string | null;
+  customer_phone: string | null;
+  customer_document: string | null;
+  raffle_id: number;
+  raffle_name: string;
+  ticket_price: number;
+  ticket_labels: string[];
+  reservation_ids: number[];
+  expires_at: string | null;
+  scheduled_payment_date: string | null;
+  is_default_seller_sale: boolean;
+  reminder_sent_at: string | null;
 }
