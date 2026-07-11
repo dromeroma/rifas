@@ -141,89 +141,92 @@ import { ToastService } from '@core/services/toast.service';
             Solo con fecha programada
           </label>
         </div>
-        <p class="muted">
-          Clientes que reservaron boletas pero aún no han pagado. Toca el
-          botón de WhatsApp para escribirles directamente desde tu celular.
-        </p>
 
         <div class="res-search">
           <span class="material-icons">search</span>
-          <input type="text" [(ngModel)]="reservationSearch"
-                 placeholder="Buscar por nombre, cédula, teléfono, email o número de boleta…" />
-          @if (reservationSearch) {
+          <input type="text"
+                 [ngModel]="reservationSearch()"
+                 (ngModelChange)="reservationSearch.set($event)"
+                 placeholder="Buscar cliente por nombre, cédula, teléfono, email o boleta…" />
+          @if (reservationSearch()) {
             <button type="button" class="res-search__clear"
-                    (click)="reservationSearch = ''" aria-label="Limpiar">
+                    (click)="reservationSearch.set('')" aria-label="Limpiar">
               <span class="material-icons">close</span>
             </button>
           }
         </div>
 
         @if (filteredReservations().length === 0) {
-          @if (reservationSearch) {
-            <p class="muted">Ningún cliente coincide con "{{ reservationSearch }}".</p>
+          @if (reservationSearch()) {
+            <p class="muted">Ningún cliente coincide con "{{ reservationSearch() }}".</p>
           } @else {
             <p class="muted">No hay reservas activas.</p>
           }
         } @else {
           <p class="muted res-count">
-            Mostrando {{ filteredReservations().length }} de {{ reservations().length }}
+            {{ filteredReservations().length }} de {{ reservations().length }} reservas
           </p>
-          <ul class="res-list">
-            @for (r of filteredReservations(); track r.customer_id + '-' + r.raffle_id) {
-              <li class="res">
-                <div class="res__row">
-                  <div class="res__customer">
-                    <strong>{{ r.customer_name }}</strong>
-                    @if (r.customer_phone) {
-                      <small>{{ r.customer_phone }}</small>
-                    }
-                    @if (r.customer_email) {
-                      <small class="mono">{{ r.customer_email }}</small>
-                    }
-                  </div>
-                  <div class="res__amount">
-                    \${{ formatNumber(r.ticket_price * r.ticket_labels.length) }}
-                  </div>
-                </div>
-                <div class="res__meta">
-                  <span>{{ r.raffle_name }}</span>
-                  <span>· {{ r.ticket_labels.length }} boleta(s): {{ r.ticket_labels.slice(0, 8).join(', ') }}{{ r.ticket_labels.length > 8 ? '…' : '' }}</span>
-                  @if (r.scheduled_payment_date) {
-                    <span class="res__badge">
-                      📅 Pagará el {{ formatDate(r.scheduled_payment_date) }}
-                    </span>
-                  } @else {
-                    <span class="res__badge res__badge--warn">
-                      ⏳ Reserva vence {{ formatDate(r.expires_at) }}
-                    </span>
-                  }
-                  @if (r.paid_amount > 0) {
-                    <span class="res__badge res__badge--partial">
-                      💵 Abonado \${{ formatNumber(r.paid_amount) }} · Falta \${{ formatNumber(remainingFor(r)) }}
-                    </span>
-                  }
-                  @if (r.reminder_sent_at) {
-                    <span class="res__badge res__badge--ok">✓ Ya se envió recordatorio</span>
-                  }
-                </div>
-                <div class="res__cta">
-                  @if (r.customer_phone) {
-                    <a class="btn wa" [href]="whatsappLink(r)" target="_blank" rel="noopener">
-                      <span class="material-icons">chat</span>
-                      Enviar WhatsApp
-                    </a>
-                  } @else {
-                    <span class="muted">Sin teléfono registrado</span>
-                  }
-                  <button type="button" class="btn primary"
-                          (click)="openMarkPaid(r)">
-                    <span class="material-icons">payments</span>
-                    {{ r.paid_amount > 0 ? 'Registrar abono' : 'Registrar pago' }}
-                  </button>
-                </div>
-              </li>
-            }
-          </ul>
+          <div class="res-table__scroll">
+            <table class="res-table">
+              <thead>
+                <tr>
+                  <th>Cliente</th>
+                  <th>Rifa</th>
+                  <th class="num">Boletas</th>
+                  <th>Estado</th>
+                  <th class="num">Monto</th>
+                  <th class="act">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (r of filteredReservations(); track r.customer_id + '-' + r.raffle_id) {
+                  <tr>
+                    <td class="cell-customer">
+                      <strong>{{ r.customer_name }}</strong>
+                      @if (r.customer_phone) { <small>{{ r.customer_phone }}</small> }
+                    </td>
+                    <td class="cell-raffle">
+                      <span>{{ r.raffle_name }}</span>
+                    </td>
+                    <td class="num cell-tickets">
+                      <span class="pill-num">{{ r.ticket_labels.length }}</span>
+                      <small>{{ r.ticket_labels.slice(0, 4).join(', ') }}{{ r.ticket_labels.length > 4 ? '…' : '' }}</small>
+                    </td>
+                    <td class="cell-status">
+                      @if (r.scheduled_payment_date) {
+                        <span class="tag">📅 {{ formatDateShort(r.scheduled_payment_date) }}</span>
+                      } @else {
+                        <span class="tag tag--warn">⏳ {{ formatDateShort(r.expires_at) }}</span>
+                      }
+                      @if (r.paid_amount > 0) {
+                        <span class="tag tag--partial">💵 Falta \${{ formatNumber(remainingFor(r)) }}</span>
+                      }
+                    </td>
+                    <td class="num cell-amount">
+                      <strong>\${{ formatNumber(r.ticket_price * r.ticket_labels.length) }}</strong>
+                      @if (r.paid_amount > 0) {
+                        <small>Abonado \${{ formatNumber(r.paid_amount) }}</small>
+                      }
+                    </td>
+                    <td class="act cell-actions">
+                      @if (r.customer_phone) {
+                        <a class="icon-btn icon-btn--wa" [href]="whatsappLink(r)"
+                           target="_blank" rel="noopener"
+                           title="Enviar WhatsApp a {{ r.customer_name }}">
+                          <span class="material-icons">chat</span>
+                        </a>
+                      }
+                      <button type="button" class="icon-btn icon-btn--pay"
+                              (click)="openMarkPaid(r)"
+                              [title]="r.paid_amount > 0 ? 'Registrar abono' : 'Registrar pago'">
+                        <span class="material-icons">payments</span>
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
         }
       </section>
 
@@ -544,37 +547,72 @@ import { ToastService } from '@core/services/toast.service';
     .res-search__clear .material-icons { font-size: 16px; }
     .res-count { font-size: 12px; margin: 0 0 var(--s-2); }
 
-    .res-list { list-style: none; padding: 0; margin: var(--s-3) 0 0; display: grid; gap: var(--s-3); }
-    .res {
-      padding: var(--s-3);
-      background: var(--bg-input);
+    /* ============ Tabla compacta de reservas ============ */
+    .res-table__scroll {
+      overflow-x: auto;
       border-radius: var(--r-md);
-      border-left: 3px solid var(--accent);
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: var(--s-2);
-      align-items: start;
+      border: 1px solid var(--border, rgba(255,255,255,0.08));
     }
-    .res__row {
-      grid-column: 1 / -1;
-      display: flex; justify-content: space-between; align-items: flex-start;
-      gap: var(--s-3);
+    .res-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      background: var(--bg-input);
     }
-    .res__customer { display: grid; gap: 2px; }
-    .res__customer strong { color: var(--text); font-size: 14px; }
-    .res__customer small {
-      color: var(--text-muted); font-size: 12px;
+    .res-table th {
+      text-align: left;
+      padding: 10px 12px;
+      background: rgba(255,255,255,0.04);
+      color: var(--text-muted);
+      font-size: 10.5px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      white-space: nowrap;
+      border-bottom: 1px solid var(--border, rgba(255,255,255,0.08));
     }
-    .res__customer .mono { font-family: 'Courier New', monospace; font-size: 11px; }
-    .res__amount { font-size: 16px; font-weight: 700; color: var(--accent); white-space: nowrap; }
+    .res-table th.num { text-align: right; }
+    .res-table th.act { text-align: right; width: 1%; white-space: nowrap; }
+    .res-table td {
+      padding: 10px 12px;
+      vertical-align: middle;
+      border-bottom: 1px solid var(--border, rgba(255,255,255,0.06));
+    }
+    .res-table tbody tr:last-child td { border-bottom: none; }
+    .res-table tbody tr:hover { background: rgba(255,255,255,0.03); }
+    .res-table td.num { text-align: right; font-variant-numeric: tabular-nums; }
 
-    .res__meta {
-      grid-column: 1 / -1;
-      display: flex; gap: 6px; flex-wrap: wrap;
-      font-size: 11.5px; color: var(--text-muted);
-      align-items: center;
+    .cell-customer strong { display: block; color: var(--text); font-size: 13px; line-height: 1.25; }
+    .cell-customer small { color: var(--text-muted); font-size: 11.5px; }
+    .cell-raffle { color: var(--text-muted); font-size: 12.5px; max-width: 180px; }
+    .cell-raffle span {
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
     }
-    .res__badge {
+    .cell-tickets { min-width: 90px; }
+    .cell-tickets small {
+      display: block;
+      color: var(--text-muted); font-size: 11px;
+      font-variant-numeric: tabular-nums;
+    }
+    .pill-num {
+      display: inline-block;
+      padding: 2px 8px;
+      background: rgba(34, 197, 94, 0.18);
+      color: var(--accent, #22c55e);
+      border-radius: 999px;
+      font-size: 11.5px; font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      margin-bottom: 2px;
+    }
+    .cell-status {
+      display: flex; flex-direction: column; gap: 3px;
+      align-items: flex-start;
+    }
+    .tag {
+      display: inline-block;
       padding: 2px 8px;
       background: rgba(255,255,255,0.06);
       border-radius: 999px;
@@ -582,19 +620,44 @@ import { ToastService } from '@core/services/toast.service';
       font-weight: 600;
       white-space: nowrap;
     }
-    .res__badge--warn { background: rgba(245, 158, 11, 0.15); color: #f59e0b; }
-    .res__badge--ok { background: rgba(34, 197, 94, 0.15); color: #22c55e; }
-    .res__badge--partial { background: rgba(59, 130, 246, 0.18); color: #60a5fa; }
-
-    .res__cta { grid-column: 1 / -1; display: flex; justify-content: flex-end; }
-    .btn.wa {
-      display: inline-flex; align-items: center; gap: 6px;
-      background: #25d366; color: #fff; border-color: transparent;
-      text-decoration: none;
-      padding: 8px 14px;
+    .tag--warn { background: rgba(245, 158, 11, 0.15); color: #f59e0b; }
+    .tag--partial { background: rgba(59, 130, 246, 0.18); color: #60a5fa; }
+    .cell-amount strong {
+      display: block; font-size: 13.5px; color: var(--accent, #22c55e);
+      white-space: nowrap;
     }
-    .btn.wa:hover { background: #1fbc59; }
-    .btn.wa .material-icons { font-size: 16px; }
+    .cell-amount small { display: block; color: var(--text-muted); font-size: 10.5px; white-space: nowrap; }
+    .cell-actions { text-align: right; white-space: nowrap; }
+    .cell-actions .icon-btn { margin-left: 4px; }
+
+    .icon-btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 32px; height: 32px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border, rgba(255,255,255,0.1));
+      color: var(--text);
+      border-radius: 8px;
+      cursor: pointer;
+      text-decoration: none;
+      transition: background 0.15s, transform 0.1s;
+    }
+    .icon-btn:hover { background: rgba(255,255,255,0.1); }
+    .icon-btn:active { transform: scale(0.95); }
+    .icon-btn .material-icons { font-size: 17px; }
+    .icon-btn--wa {
+      background: #25d366; border-color: transparent; color: #fff;
+    }
+    .icon-btn--wa:hover { background: #1fbc59; }
+    .icon-btn--pay {
+      background: var(--accent, #22c55e); border-color: transparent; color: #0a0e0c;
+    }
+    .icon-btn--pay:hover { filter: brightness(1.1); }
+
+    @media (max-width: 780px) {
+      .res-table { font-size: 12.5px; }
+      .res-table th, .res-table td { padding: 8px 10px; }
+      .cell-raffle { max-width: 120px; }
+    }
 
     .transfer-list { list-style: none; padding: 0; margin: 0; display: grid; gap: var(--s-3); }
     .transfer {
@@ -633,9 +696,9 @@ export class PublicSalesConfigComponent implements OnInit {
     integrity_key: '',
   };
 
-  reservationSearch = '';
+  reservationSearch = signal('');
   filteredReservations = computed(() => {
-    const q = this.reservationSearch.trim().toLowerCase();
+    const q = this.reservationSearch().trim().toLowerCase();
     const list = this.reservations();
     if (!q) return list;
     return list.filter((r) => {
@@ -803,6 +866,13 @@ Cuando hagas el pago (total o abono), envíame el comprobante por aquí para con
     const d = new Date(iso.length === 10 ? iso + 'T12:00:00' : iso);
     if (isNaN(d.getTime())) return iso;
     return d.toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' });
+  }
+
+  formatDateShort(iso: string | null | undefined): string {
+    if (!iso) return '—';
+    const d = new Date(iso.length === 10 ? iso + 'T12:00:00' : iso);
+    if (isNaN(d.getTime())) return iso;
+    return d.toLocaleDateString('es-CO', { day: '2-digit', month: 'short' });
   }
 
   saveWompi() {
