@@ -642,6 +642,90 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
               </div>
             }
 
+            <!-- ETAPA 2c: Subir comprobante -->
+            @else if (uploadMode() && reservationDone()) {
+              <div class="modal__head">
+                <div>
+                  <div class="pill">Comprobante</div>
+                  <h2>Sube tu comprobante</h2>
+                  <p class="muted">
+                    Ya hiciste la transferencia. Adjunta la foto o PDF para
+                    que el organizador verifique tu pago.
+                  </p>
+                </div>
+                <button class="icon-btn" (click)="cancelUpload()" aria-label="Volver">
+                  <span class="material-icons-outlined">close</span>
+                </button>
+              </div>
+              <div class="form">
+                <label class="field">
+                  <span class="field__label">¿Con qué banco/billetera?</span>
+                  <select class="input" [(ngModel)]="manualForm.payment_method" name="pm">
+                    <option value="NEQUI">Nequi</option>
+                    <option value="DAVIPLATA">Daviplata</option>
+                    <option value="BANCOLOMBIA_TRANSFER">Bancolombia</option>
+                    <option value="OTHER">Otro</option>
+                  </select>
+                </label>
+
+                @if (proofPreviewUrl(); as pu) {
+                  <div class="proof-preview">
+                    @if (isProofImage()) {
+                      <img [src]="pu" alt="Comprobante" />
+                    } @else {
+                      <div class="proof-preview__doc">
+                        <span class="material-icons-outlined">picture_as_pdf</span>
+                        <span>{{ proofFileName() }}</span>
+                      </div>
+                    }
+                    <button type="button" class="proof-preview__remove"
+                            (click)="removeProof()" aria-label="Quitar comprobante">
+                      <span class="material-icons-outlined">close</span>
+                    </button>
+                  </div>
+                }
+
+                <input type="file" #proofInput2 hidden
+                       accept="image/png,image/jpeg,image/webp,application/pdf"
+                       (change)="onProofSelected($event)" />
+
+                @if (!proofPreviewUrl()) {
+                  <button type="button" class="btn btn--ghost btn--block"
+                          (click)="proofInput2.click()"
+                          [disabled]="uploadingProof()">
+                    @if (uploadingProof()) {
+                      <span class="btn__spin"></span> Subiendo…
+                    } @else {
+                      <span class="material-icons-outlined">cloud_upload</span>
+                      Elegir comprobante (JPG, PNG o PDF)
+                    }
+                  </button>
+                  <small class="muted center">Máx 5MB. Incluye tu nombre y monto.</small>
+                }
+
+                <button type="button" class="btn btn--primary btn--lg btn--block"
+                        (click)="submitManualTransfer()"
+                        [disabled]="submitting() || !proofPreviewUrl()">
+                  @if (submitting() && manualMode()) {
+                    <span class="btn__spin"></span> Enviando…
+                  } @else {
+                    <span class="material-icons-outlined">send</span>
+                    Enviar comprobante
+                  }
+                </button>
+                <button type="button" class="btn btn--ghost btn--block"
+                        (click)="cancelUpload()">
+                  Volver
+                </button>
+                @if (submitError()) {
+                  <div class="alert">
+                    <span class="material-icons-outlined">error_outline</span>
+                    {{ submitError() }}
+                  </div>
+                }
+              </div>
+            }
+
             <!-- ETAPA 2b: Elegir fecha de pago -->
             @else if (scheduleMode() && reservationDone()) {
               <div class="modal__head">
@@ -702,19 +786,21 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
                 </button>
               </div>
               <div class="pay-choice">
-                <button class="pay-choice__opt pay-choice__opt--primary" (click)="payNow()">
-                  <span class="material-icons-outlined pay-choice__icon">bolt</span>
-                  <div>
-                    <strong>Pagar ahora</strong>
-                    <small>@if (res.checkout_url) { Con Nequi, PSE, tarjeta } @else { Sube tu comprobante }</small>
-                  </div>
-                  <span class="material-icons-outlined pay-choice__arrow">arrow_forward</span>
-                </button>
+                @if (overview()?.enable_manual_transfer) {
+                  <button class="pay-choice__opt pay-choice__opt--primary" (click)="payNow()">
+                    <span class="material-icons-outlined pay-choice__icon">receipt_long</span>
+                    <div>
+                      <strong>Subir comprobante</strong>
+                      <small>Ya hice la transferencia por Nequi, Daviplata o Bancolombia.</small>
+                    </div>
+                    <span class="material-icons-outlined pay-choice__arrow">arrow_forward</span>
+                  </button>
+                }
                 <button class="pay-choice__opt" (click)="openSchedule()">
                   <span class="material-icons-outlined pay-choice__icon">event</span>
                   <div>
                     <strong>Programar pago</strong>
-                    <small>Elige fecha antes del sorteo. Recordatorio por WhatsApp.</small>
+                    <small>Elige una fecha antes del sorteo. Recibirás recordatorio.</small>
                   </div>
                   <span class="material-icons-outlined pay-choice__arrow">arrow_forward</span>
                 </button>
@@ -769,28 +855,26 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
                        placeholder="Ej. Valledupar" />
               </label>
 
-              <!-- ============ MÉTODOS DE PAGO ============ -->
+              <!-- ============ RESERVAR BOLETAS ============ -->
               <div class="pay-methods">
-                <div class="pay-methods__label">Elige cómo quieres pagar</div>
+                <div class="pay-methods__label">Reserva tus boletas</div>
+                <button type="submit" class="btn btn--primary btn--lg btn--block"
+                        [disabled]="submitting()">
+                  @if (submitting()) {
+                    <span class="btn__spin"></span> Reservando…
+                  } @else {
+                    <span class="material-icons-outlined">bookmark_add</span>
+                    Reservar mis boletas
+                    <span class="material-icons-outlined">arrow_forward</span>
+                  }
+                </button>
+                <small class="muted center">
+                  En el siguiente paso eliges cómo pagar (subir comprobante o programar fecha).
+                </small>
 
-                <!-- Método 1: Wompi (si el tenant lo configuró) -->
-                @if (overview()?.enable_online_purchase) {
-                  <button type="submit" class="btn btn--primary btn--lg btn--block"
-                          [disabled]="submitting()">
-                    @if (submitting() && !manualMode()) {
-                      <span class="btn__spin"></span> Redirigiendo…
-                    } @else {
-                      <span class="material-icons-outlined">credit_card</span>
-                      Pagar en línea con Wompi
-                      <span class="material-icons-outlined">arrow_forward</span>
-                    }
-                  </button>
-                  <small class="muted center">Nequi · PSE · Bancolombia · Tarjeta · 100% seguro</small>
-                }
-
-                @if (overview()?.enable_online_purchase && overview()?.enable_manual_transfer) {
-                  <div class="or"><span>o</span></div>
-                }
+                <!-- Bloque viejo de Wompi/manual oculto por ahora — dejamos el
+                     flujo unificado por etapa 2. -->
+                @if (false) {
 
                 <!-- Método 2: Transferencia con comprobante -->
                 @if (overview()?.enable_manual_transfer) {
@@ -865,22 +949,8 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
                   </div>
                 }
 
-                <!-- Fallback: si NADA está habilitado, permite solo reservar -->
-                @if (!overview()?.enable_online_purchase && !overview()?.enable_manual_transfer) {
-                  <button type="submit" class="btn btn--primary btn--lg btn--block"
-                          [disabled]="submitting()">
-                    @if (submitting()) {
-                      <span class="btn__spin"></span> Reservando…
-                    } @else {
-                      <span class="material-icons-outlined">bookmark</span>
-                      Reservar por 24 horas
-                    }
-                  </button>
-                  <small class="muted center">
-                    Se te reserva la boleta por 24 horas. El organizador te contactará
-                    para acordar el pago.
-                  </small>
                 }
+                <!-- cierre del @if (false) que oculta el bloque legacy -->
               </div>
             </form>
 
@@ -2499,6 +2569,9 @@ export class PublicPurchaseComponent implements OnInit, OnDestroy {
   scheduleForm = { date: '' };
   scheduleSuccess = signal<string | null>(null);
 
+  /** Etapa 2c dentro del modal: sube comprobante después de reservar. */
+  uploadMode = signal(false);
+
   /** Fecha máxima permitida para programar el pago = 1 día antes del sorteo. */
   maxScheduleDate = computed<string>(() => {
     const r = this.overview();
@@ -2971,16 +3044,16 @@ export class PublicPurchaseComponent implements OnInit, OnDestroy {
     });
   }
 
-  /** El cliente eligió "pagar ahora": si hay Wompi, redirige; si no, va
-   *  a la página de resultado (transferencia manual pendiente). */
+  /** El cliente eligió "subir comprobante" — abre la etapa 2c del modal
+   *  con el input de archivo + submit del manual-transfer. */
   payNow() {
-    const r = this.reservationDone();
-    if (!r) return;
-    if (r.checkout_url) {
-      window.location.href = r.checkout_url;
-    } else {
-      this.router.navigate(['/rifa', this.raffleId, 'pago', r.reference]);
-    }
+    this.uploadMode.set(true);
+    this.submitError.set(null);
+  }
+
+  cancelUpload() {
+    this.uploadMode.set(false);
+    this.removeProof();
   }
 
   /** Abre el submodal para elegir fecha de pago. */
@@ -3099,9 +3172,9 @@ export class PublicPurchaseComponent implements OnInit, OnDestroy {
       this.submitError.set('Sube el comprobante primero.');
       return;
     }
-    if (!this.form.customer_document || !this.form.customer_name
-        || !this.form.customer_email || !this.form.customer_phone) {
-      this.submitError.set('Completa tus datos personales antes de enviar.');
+    const res = this.reservationDone();
+    if (!res) {
+      this.submitError.set('No hay una reserva activa. Reintenta.');
       return;
     }
 
@@ -3109,38 +3182,20 @@ export class PublicPurchaseComponent implements OnInit, OnDestroy {
     this.submitting.set(true);
     this.submitError.set(null);
 
-    const ticket_ids = Array.from(this.selected());
-    const total = this.totalPrice();
-
-    this.svc.manualTransfer(this.raffleId, {
-      ticket_ids,
-      customer_document: this.form.customer_document,
-      customer_name: this.form.customer_name,
-      customer_email: this.form.customer_email,
-      customer_phone: this.form.customer_phone,
-      customer_city: this.form.customer_city || undefined,
-      amount_declared: total,
-      payment_method: this.manualForm.payment_method,
-      proof_url: this.proofUrl()!,
-      seller_slug: this.sellerSlug || undefined,
-    }).subscribe({
+    // Attach al backend contra la reserva ya creada (etapa 2c).
+    this.svc.attachProof(
+      res.reference,
+      this.form.customer_email,
+      this.proofUrl()!,
+      this.manualForm.payment_method,
+      this.totalPrice(),
+    ).subscribe({
       next: (resp) => {
         this.submitting.set(false);
         this.manualMode.set(false);
-        // Cierra checkout, muestra confirmación reutilizando la ruta de resultado.
-        try {
-          localStorage.setItem(`boletera_manual_${resp.submission_id}`, JSON.stringify({
-            ticket_labels: this.selectedLabels(),
-            raffle_id: this.raffleId,
-            proof_url: this.proofUrl(),
-            submitted_at: new Date().toISOString(),
-          }));
-        } catch {}
-        alert(resp.message ?? 'Comprobante recibido. Te llegará confirmación por email/WhatsApp cuando el organizador lo revise.');
-        this.checkoutOpen.set(false);
-        this.selected.set(new Set());
-        this.removeProof();
-        this.loadAvailable();
+        this.uploadMode.set(false);
+        // Mostrar success como etapa final
+        this.scheduleSuccess.set(resp.message);
       },
       error: (e) => {
         this.submitting.set(false);

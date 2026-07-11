@@ -186,6 +186,20 @@ export class PublicSalesService {
     return this.http.post<ProofUploadResponse>(`${this.api}/public/upload-proof`, fd);
   }
 
+  attachProof(reference: string, customerEmail: string, proofUrl: string, paymentMethod: string, amountDeclared: number): Observable<{
+    submission_id: number;
+    status: string;
+    message: string;
+  }> {
+    return this.http.post<any>(`${this.api}/public/reservations/attach-proof`, {
+      reference,
+      customer_email: customerEmail,
+      proof_url: proofUrl,
+      payment_method: paymentMethod,
+      amount_declared: amountDeclared,
+    });
+  }
+
   schedulePayment(reference: string, customerEmail: string, scheduledDate: string): Observable<{
     ok: boolean;
     scheduled_date: string;

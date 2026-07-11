@@ -992,6 +992,84 @@ async def schedule_payment(
     }
 
 
+class AttachProofRequest(BaseModel):
+    """Adjunta un comprobante a una reserva YA creada (flujo etapa 2c del
+    portal público). Valida propiedad por email del customer."""
+    reference: str = Field(min_length=6, max_length=80)
+    customer_email: EmailStr
+    proof_url: str = Field(min_length=10)
+    payment_method: str = Field(default="OTHER")
+    amount_declared: float | None = None
+
+
+@router.post("/reservations/attach-proof", status_code=201)
+async def attach_proof_to_reservation(
+    payload: AttachProofRequest,
+    request: Request,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    """El cliente ya reservó boletas (flujo unificado del checkout) y
+    ahora sube el comprobante. Crea la ManualTransferSubmission asociada
+    a esa reserva por su reference."""
+    # Buscar Wompi transaction por reference (es el que se creó en /checkout)
+    tx = (await db.execute(
+        select(WompiTransaction).where(WompiTransaction.reference == payload.reference)
+    )).scalar_one_or_none()
+    if not tx:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "reserva no encontrada")
+
+    customer = (await db.execute(
+        select(Customer).where(Customer.id == tx.customer_id)
+    )).scalar_one_or_none()
+    if not customer or customer.email != payload.customer_email:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN, "email no coincide con la reserva",
+        )
+
+    # Tickets asociados
+    rows = (await db.execute(
+        select(WompiTransactionTicket.ticket_id).where(
+            WompiTransactionTicket.transaction_id == tx.id,
+        )
+    )).all()
+    ticket_ids = [r[0] for r in rows]
+
+    submission = ManualTransferSubmission(
+        tenant_id=tx.tenant_id,
+        raffle_id=tx.raffle_id,
+        customer_id=customer.id,
+        ticket_ids=ticket_ids,
+        amount_declared=payload.amount_declared or (tx.amount_cents / 100.0),
+        payment_method=payload.payment_method,
+        proof_url=payload.proof_url,
+        reference=payload.reference,
+        status="PENDING",
+    )
+    db.add(submission)
+    await db.flush()
+
+    await log_action(
+        db, actor_id=None, action="public.proof_attached",
+        entity_type="manual_transfer_submission", entity_id=submission.id,
+        request=request,
+        metadata={
+            "reference": payload.reference,
+            "ticket_ids": ticket_ids,
+            "payment_method": payload.payment_method,
+        },
+    )
+    await db.commit()
+
+    return {
+        "submission_id": submission.id,
+        "status": "PENDING",
+        "message": (
+            "¡Listo! Recibimos tu comprobante. El organizador lo revisará "
+            "en las próximas horas y recibirás confirmación por email/WhatsApp."
+        ),
+    }
+
+
 @router.post("/reservations/send-reminders")
 async def send_scheduled_reminders(
     request: Request,
