@@ -43,7 +43,9 @@ class User(Base, TimestampMixin):
     tenant_id: Mapped[int | None] = mapped_column(
         ForeignKey("tenants.id", ondelete="RESTRICT"), nullable=True, index=True,
     )
-    tenant: Mapped["Tenant | None"] = relationship(back_populates="users")
+    tenant: Mapped["Tenant | None"] = relationship(
+        back_populates="users", foreign_keys=[tenant_id],
+    )
 
     assignments: Mapped[list["SellerAssignment"]] = relationship(
         back_populates="seller", cascade="all, delete-orphan"

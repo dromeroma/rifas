@@ -78,6 +78,12 @@ class Tenant(Base, TimestampMixin):
     terms_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
     # Relaciones inversas (lazy="select" para no cargar a menos que se pida)
-    users: Mapped[list["User"]] = relationship(back_populates="tenant", lazy="select")
+    # Multiple FK paths existen entre users y tenants: users.tenant_id → tenants.id
+    # y tenants.default_seller_id → users.id. Explicitamos foreign_keys para
+    # que SQLAlchemy sepa cuál usar en esta relación.
+    users: Mapped[list["User"]] = relationship(
+        back_populates="tenant", lazy="select",
+        foreign_keys="User.tenant_id",
+    )
     raffles: Mapped[list["Raffle"]] = relationship(back_populates="tenant", lazy="select")
     customers: Mapped[list["Customer"]] = relationship(back_populates="tenant", lazy="select")
