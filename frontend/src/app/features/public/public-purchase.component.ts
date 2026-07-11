@@ -823,6 +823,26 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
                 <span class="material-icons-outlined">close</span>
               </button>
             </div>
+            <div class="selected-summary">
+              <div class="selected-summary__title">
+                Vas a reservar {{ selected().size === 1 ? 'esta boleta' : 'estas boletas' }}:
+              </div>
+              <div class="selected-summary__chips">
+                @for (it of selectedItems(); track it.id) {
+                  <span class="chip">
+                    <span class="chip__label">{{ it.label }}</span>
+                    <button type="button" class="chip__x"
+                            (click)="removeFromSelection(it.id)"
+                            [attr.aria-label]="'Quitar boleta ' + it.label">
+                      <span class="material-icons-outlined">close</span>
+                    </button>
+                  </span>
+                }
+              </div>
+              <small class="selected-summary__hint muted">
+                Verifica que estén todas las que quieres. Si falta alguna, cierra este panel y agrégala.
+              </small>
+            </div>
             <form class="form" (ngSubmit)="submit()" autocomplete="on">
               <label class="field">
                 <span class="field__label">Cédula</span>
@@ -2403,6 +2423,44 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
       margin-bottom: 2px;
     }
 
+    .selected-summary {
+      margin: 0 0 14px;
+      padding: 12px 14px;
+      background: rgba(34, 197, 94, 0.06);
+      border: 1px solid rgba(34, 197, 94, 0.25);
+      border-radius: var(--r-md);
+      display: grid; gap: 8px;
+    }
+    .selected-summary__title {
+      font-size: 13px; font-weight: 600; color: var(--text);
+    }
+    .selected-summary__chips {
+      display: flex; flex-wrap: wrap; gap: 6px;
+    }
+    .selected-summary__hint {
+      font-size: 11.5px; line-height: 1.35;
+    }
+    .chip {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 4px 4px 4px 10px;
+      background: rgba(34, 197, 94, 0.18);
+      border: 1px solid rgba(34, 197, 94, 0.35);
+      border-radius: 999px;
+      font-size: 13px; font-weight: 700;
+      color: var(--text);
+    }
+    .chip__label { font-variant-numeric: tabular-nums; }
+    .chip__x {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 20px; height: 20px;
+      border: none; background: transparent;
+      color: var(--text-muted);
+      border-radius: 50%; cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+    .chip__x:hover { background: rgba(0,0,0,0.15); color: #b91c1c; }
+    .chip__x .material-icons-outlined { font-size: 16px; }
+
     .method-block {
       display: grid;
       gap: 10px;
@@ -2682,6 +2740,14 @@ export class PublicPurchaseComponent implements OnInit, OnDestroy {
     const set = this.selected();
     return this.available().filter((t) => set.has(t.id))
       .map((t) => t.number_label).join(', ');
+  });
+
+  selectedItems = computed(() => {
+    const set = this.selected();
+    return this.available()
+      .filter((t) => set.has(t.id))
+      .map((t) => ({ id: t.id, label: t.number_label }))
+      .sort((a, b) => a.label.localeCompare(b.label));
   });
 
   availableCount = computed(() => this.available().length);
