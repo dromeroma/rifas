@@ -564,7 +564,7 @@ Te escribo para recordarte que tienes reservada(s) la(s) boleta(s) ${boletas} de
 
 📲 Puedes transferir a:
 Nequi: 3207345154
-(a nombre de Edith J. Madera)
+(a nombre de Deimer Romero)
 
 Cuando hagas el pago, envíame el comprobante por aquí para confirmarlo. ¡Gracias! 🙌`;
 
