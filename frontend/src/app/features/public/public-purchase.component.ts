@@ -1951,6 +1951,19 @@ import { TicketDesignComponent } from '@shared/components/ticket-design/ticket-d
       margin-bottom: 20px;
       transition: border-color var(--t-fast), box-shadow var(--t-fast);
       backdrop-filter: blur(6px);
+      min-width: 0;
+    }
+    .search__input { min-width: 0; }
+    /* En móvil: el input toma toda la fila y el botón salta abajo full-width
+       para que nunca se salga del contenedor. */
+    @media (max-width: 480px) {
+      .search {
+        flex-wrap: wrap;
+        padding: 8px;
+        gap: 8px;
+      }
+      .search__input { flex: 1 1 100%; padding: 10px 12px; }
+      .search .btn { width: 100%; padding: 12px 18px; }
     }
     .search:focus-within {
       border-color: var(--brand);
