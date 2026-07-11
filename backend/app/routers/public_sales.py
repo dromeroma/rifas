@@ -582,11 +582,11 @@ async def public_checkout(
         # "Rifas El Golazo") — la boleta se atribuye visualmente a él pero
         # NO genera comisión (is_default_seller_sale=True).
         from app.models.tenant import Tenant
-        tenant_default = raffle.tenant if hasattr(raffle, "tenant") else None
-        if tenant_default is None:
-            tenant_default = (await db.execute(
-                select(Tenant).where(Tenant.id == raffle.tenant_id)
-            )).scalar_one()
+        # NUNCA usar raffle.tenant en async: dispara lazy load con
+        # MissingGreenlet. Siempre query explícito.
+        tenant_default = (await db.execute(
+            select(Tenant).where(Tenant.id == raffle.tenant_id)
+        )).scalar_one()
         reservation_seller_id = tenant_default.default_seller_id
         is_default_seller_sale = True
 
@@ -656,11 +656,12 @@ async def public_checkout(
     amount_cents = int(total_price * 100)
     reference = _generate_reference(raffle.id, customer.id)
 
-    # 5) Wompi checkout URL (solo si el tenant tiene Wompi configurado)
-    tenant = raffle.tenant if hasattr(raffle, "tenant") else None
-    if tenant is None:
-        from app.models.tenant import Tenant
-        tenant = (await db.execute(select(Tenant).where(Tenant.id == raffle.tenant_id))).scalar_one()
+    # 5) Wompi checkout URL (solo si el tenant tiene Wompi configurado).
+    # NUNCA usar raffle.tenant en async: lazy load dispara MissingGreenlet.
+    from app.models.tenant import Tenant
+    tenant = (await db.execute(
+        select(Tenant).where(Tenant.id == raffle.tenant_id)
+    )).scalar_one()
 
     wompi_cfg = wompi_service.tenant_wompi_config(tenant) if raffle.enable_online_purchase else None
     checkout_url = None
