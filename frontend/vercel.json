@@ -6,19 +6,11 @@
   "framework": null,
   "rewrites": [
     { "source": "/verify/:code", "destination": "https://rifas-nehd.onrender.com/v/:code" },
-
-    { "source": "/(?:.+/)+(styles-[A-Z0-9]+\\.css)", "destination": "/$1" },
-    { "source": "/(?:.+/)+(main-[A-Z0-9]+\\.js)", "destination": "/$1" },
-    { "source": "/(?:.+/)+(chunk-[A-Z0-9]+\\.js)", "destination": "/$1" },
-    { "source": "/(?:.+/)+(polyfills-[A-Z0-9]+\\.js)", "destination": "/$1" },
-    { "source": "/(?:.+/)+(manifest\\.webmanifest)", "destination": "/$1" },
-    { "source": "/(?:.+/)+(favicon\\.(?:svg|ico))", "destination": "/$1" },
-
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "headers": [
     {
-      "source": "/(.*\\.(?:js|css|woff2?|jpg|jpeg|png|svg|webp|ico))",
+      "source": "/:filename(styles-.*\\.css|main-.*\\.js|chunk-.*\\.js|polyfills-.*\\.js)",
       "headers": [
         { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
       ]
