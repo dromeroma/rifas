@@ -99,7 +99,16 @@ export class PublicSalesAdminService {
     payment_method: 'NEQUI' | 'DAVIPLATA' | 'BANCOLOMBIA_TRANSFER' | 'EFECTIVO' | 'OTHER';
     reference?: string | null;
     notes?: string | null;
-  }): Observable<{ submission_id: number; ticket_labels: string[]; amount: number; status: string }> {
+  }): Observable<{
+    submission_id: number;
+    ticket_labels: string[];
+    amount: number;
+    already_paid: number;
+    new_paid_total: number;
+    total_expected: number;
+    fully_paid: boolean;
+    status: 'APPROVED' | 'PARTIAL';
+  }> {
     return this.http.post<any>(
       `${this.api}/admin/public-sales/reservations/mark-paid`,
       payload,
@@ -122,4 +131,5 @@ export interface ActiveReservation {
   scheduled_payment_date: string | null;
   is_default_seller_sale: boolean;
   reminder_sent_at: string | null;
+  paid_amount: number;
 }

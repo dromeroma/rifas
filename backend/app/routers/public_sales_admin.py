@@ -345,6 +345,8 @@ async def list_active_reservations(
             }
         grouped[key]["ticket_labels"].append(tk.number_label)
         grouped[key]["reservation_ids"].append(res.id)
+        grouped[key].setdefault("paid_amount", 0.0)
+        grouped[key]["paid_amount"] += float(tk.paid_amount or 0)
 
     # Orden final: primero las que tienen fecha programada más cercana
     return sorted(
@@ -559,8 +561,15 @@ async def mark_reservations_paid(
             select(Customer).where(Customer.id == customer_id)
         )).scalar_one_or_none()
 
-    # Trazabilidad: crear un ManualTransferSubmission APPROVED sin proof.
-    # `proof_url` es NOT NULL — usamos sentinel legible.
+    # Cálculo del total esperado y pago acumulado
+    total_expected = float(raffle.ticket_price) * len(tickets)
+    already_paid = sum(float(t.paid_amount or 0) for t in tickets)
+    new_paid = already_paid + float(payload.amount)
+    # Tolerancia por redondeo de pesos
+    is_fully_paid = new_paid + 0.5 >= total_expected
+
+    # Trazabilidad: crear un ManualTransferSubmission APPROVED por cada
+    # abono (parcial o total). Sin proof — sentinel legible.
     now = datetime.now(timezone.utc)
     ref = payload.reference or f"ADMIN-{actor.id}-{int(now.timestamp())}"
     submission = ManualTransferSubmission(
@@ -580,36 +589,40 @@ async def mark_reservations_paid(
     )
     db.add(submission)
 
-    # Tickets → PAID
-    per_ticket = float(payload.amount) / len(tickets)
-    for t in tickets:
-        t.status = TicketStatus.PAID
-        t.paid_amount = per_ticket
+    if is_fully_paid:
+        # Total cubierto → tickets PAID, reservations cerradas
+        for t in tickets:
+            t.status = TicketStatus.PAID
+            t.paid_amount = float(raffle.ticket_price)
+        for r in reservations:
+            r.is_active = False
+            r.released_at = now
+            r.release_reason = "admin_registered"
 
-    # Reservations → cerradas
-    for r in reservations:
-        r.is_active = False
-        r.released_at = now
-        r.release_reason = "admin_registered"
+        # Notificar solo cuando queda totalmente pagado
+        if customer and customer.email:
+            base = str(request.base_url).replace("/api", "").rstrip("/")
+            verify_urls = [f"{base}/verify/{t.code}" for t in tickets]
+            try:
+                await notification_service.notify_payment_confirmed(
+                    customer_email=customer.email,
+                    customer_phone=customer.phone,
+                    raffle_name=raffle.name,
+                    ticket_labels=[t.number_label for t in tickets],
+                    total_amount=total_expected,
+                    verify_urls=verify_urls,
+                )
+            except Exception:
+                pass
 
-    # Notificar al cliente (best-effort)
-    if customer and customer.email:
-        base = str(request.base_url).replace("/api", "").rstrip("/")
-        verify_urls = [f"{base}/verify/{t.code}" for t in tickets]
-        try:
-            await notification_service.notify_payment_confirmed(
-                customer_email=customer.email,
-                customer_phone=customer.phone,
-                raffle_name=raffle.name,
-                ticket_labels=[t.number_label for t in tickets],
-                total_amount=float(payload.amount),
-                verify_urls=verify_urls,
-            )
-        except Exception:
-            pass
-
-    from app.routers.public_sales import _maybe_notify_threshold
-    await _maybe_notify_threshold(db, raffle, request)
+        from app.routers.public_sales import _maybe_notify_threshold
+        await _maybe_notify_threshold(db, raffle, request)
+    else:
+        # Abono parcial → mantener tickets RESERVED, sumar al paid_amount
+        # repartido proporcionalmente. Reservations siguen activas.
+        per_ticket = new_paid / len(tickets)
+        for t in tickets:
+            t.paid_amount = per_ticket
 
     await log_action(
         db, actor_id=actor.id, action="reservation.admin_marked_paid",
@@ -618,6 +631,9 @@ async def mark_reservations_paid(
             "reservation_ids": payload.reservation_ids,
             "ticket_ids": ticket_ids,
             "amount": float(payload.amount),
+            "already_paid_before": already_paid,
+            "total_expected": total_expected,
+            "fully_paid": is_fully_paid,
             "payment_method": payload.payment_method,
             "reference": payload.reference,
             "notes": payload.notes,
@@ -628,5 +644,9 @@ async def mark_reservations_paid(
         "submission_id": submission.id,
         "ticket_labels": [t.number_label for t in tickets],
         "amount": float(payload.amount),
-        "status": "APPROVED",
+        "already_paid": already_paid,
+        "new_paid_total": new_paid,
+        "total_expected": total_expected,
+        "fully_paid": is_fully_paid,
+        "status": "APPROVED" if is_fully_paid else "PARTIAL",
     }
