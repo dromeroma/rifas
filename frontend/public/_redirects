@@ -1,17 +1,18 @@
 # ============================================================
-# Cloudflare Pages redirects & rewrites
+# Cloudflare Pages redirects
 # ============================================================
-# Reglas por orden de precedencia (la primera que matchea gana).
+# Sin reglas activas por ahora:
 #
-# 1) /verify/:code  →  proxy directo al endpoint público del backend en
-#    Render que sirve HTML lite para verificación por QR físico. Status 200
-#    hace que Cloudflare Pages actúe como proxy transparente (no redirect).
+#   - /verify/:code   → lo maneja functions/verify/[code].js (Pages Function
+#                       que proxya al backend en Render preservando el dominio).
 #
-# 2) /*  →  SPA fallback: cualquier ruta desconocida sirve index.html para
-#    que Angular Router maneje el ruteo del lado del cliente. Status 200 =
-#    rewrite interno, la URL en el navegador se mantiene.
+#   - SPA fallback    → lo maneja el archivo 404.html que copia scripts/
+#                       fix-html-assets.mjs de index.html en el postbuild.
+#                       Cloudflare Pages sirve 404.html para cualquier
+#                       ruta que no exista como archivo, dejando que
+#                       Angular Router tome el control.
+#
+# No usamos `/*  /index.html  200` porque el matcher de Cloudflare Pages
+# lo detecta como loop infinito (interactua con reglas implicitas de
+# strip `.html` e `/index`).
 # ============================================================
-
-/verify/:code   https://rifas-nehd.onrender.com/v/:code   200
-
-/*              /index.html                                200

@@ -76,3 +76,13 @@ if (html.length !== originalLength) {
 } else {
   console.log('[fix-html-assets] no hay cambios — index.html ya estaba bien');
 }
+
+// PASO 3: SPA fallback para Cloudflare Pages.
+// Cloudflare sirve automaticamente 404.html cuando la URL solicitada no
+// corresponde a un archivo, sin generar loops. Copiar index.html a
+// 404.html hace que Angular Router tome el control de cualquier ruta
+// desconocida (/rifa/3/comprar, /admin/..., etc.) exactamente como lo
+// hacia Vercel con el rewrite /* -> /index.html.
+const dist404 = resolve(here, '..', 'dist', 'sistema-rifas', 'browser', '404.html');
+writeFileSync(dist404, html, 'utf8');
+console.log(`[fix-html-assets] 404.html generado (SPA fallback Cloudflare Pages)`);
