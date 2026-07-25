@@ -1,14 +1,20 @@
 // ============================================================
-// Cloudflare Pages Function: proxy transparente a Render
+// Cloudflare Pages Function: /verify/:code
 // ============================================================
-// Ruta: /verify/:code
-// Se ejecuta en el edge de Cloudflare, hace fetch al backend y devuelve
-// la respuesta al cliente sin cambiar el dominio en la barra del
-// navegador (mismo comportamiento que teniamos con el rewrite de Vercel).
+// Reemplaza el rewrite que teniamos en vercel.json:
+//   { source: "/verify/:code", destination: "https://rifas-nehd.onrender.com/v/:code" }
 //
-// Antes intentamos hacerlo con `_redirects` proxy 200, pero Cloudflare
-// solo permite proxy 200 hacia paths internos del mismo proyecto.
-// Para proxy a un origen externo la forma nativa son Pages Functions.
+// El backend `/v/{code}` responde 302 con Location relativo a la pagina
+// premium de la rifa correcta:
+//     Location: /r/{raffle_id}?b={code}
+//
+// Ese redirect DEBE llegar al navegador (no ser seguido por el fetch)
+// para que el browser navegue a /r/... dentro del dominio de Pages y
+// Angular Router cargue el component raffle-promo.
+//
+// - redirect: 'manual' evita que fetch siga el 302.
+// - Si el upstream devolvio otra cosa (404, error), la respuesta se
+//   pasa tal cual al cliente.
 // ============================================================
 
 const BACKEND_URL = 'https://rifas-nehd.onrender.com';
@@ -16,16 +22,15 @@ const BACKEND_URL = 'https://rifas-nehd.onrender.com';
 export const onRequest = async ({ params, request }) => {
   const upstream = `${BACKEND_URL}/v/${encodeURIComponent(params.code)}`;
 
-  // Reenviamos el request preservando metodo y headers relevantes.
-  // Filtramos hop-by-hop headers que fetch() reemplaza por su cuenta.
   const proxied = await fetch(upstream, {
     method: request.method,
     headers: request.headers,
-    redirect: 'follow',
+    redirect: 'manual',
   });
 
-  // Devolvemos la respuesta tal cual — el navegador la renderiza como
-  // si viniera del dominio de Pages.
+  // Devolvemos la respuesta tal cual — el 302 llega al navegador con su
+  // header Location y el browser navega a /r/{id}?b={code} en el mismo
+  // dominio de Pages, donde Angular Router toma el control.
   return new Response(proxied.body, {
     status: proxied.status,
     statusText: proxied.statusText,
