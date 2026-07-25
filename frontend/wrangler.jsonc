@@ -1,0 +1,26 @@
+/**
+ * Cloudflare Workers with Static Assets — deploy config.
+ *
+ * El proyecto en Cloudflare esta desplegado como Worker (script name
+ * "perks") con Static Assets binding. Este archivo se lo declara todo:
+ *
+ *  - `main`   : entry point JS del Worker. Nuestro worker.js maneja
+ *               /verify/:code y delega el resto a env.ASSETS.
+ *
+ *  - `assets` : directorio de estaticos + binding + SPA fallback.
+ *               `not_found_handling: "single-page-application"` hace
+ *               que cualquier request que no matchee un archivo sea
+ *               servida con index.html — Angular Router toma el
+ *               control de rutas como /rifa/3/comprar sin necesidad
+ *               de configurar redirects.
+ */
+{
+  "name": "perks",
+  "compatibility_date": "2024-11-06",
+  "main": "worker.js",
+  "assets": {
+    "directory": "./dist/sistema-rifas/browser",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application"
+  }
+}
