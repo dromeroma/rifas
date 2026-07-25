@@ -11,7 +11,9 @@
     "postbuild": "node scripts/fix-html-assets.mjs",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
-    "lint": "ng lint"
+    "lint": "ng lint",
+    "deploy": "npm run build && wrangler deploy",
+    "preview": "npm run build && wrangler dev"
   },
   "dependencies": {
     "@angular/animations": "^21.0.0",
@@ -44,6 +46,7 @@
     "karma-coverage": "~2.2.0",
     "karma-jasmine": "~5.1.0",
     "karma-jasmine-html-reporter": "~2.1.0",
-    "typescript": "~5.9.0"
+    "typescript": "~5.9.0",
+    "wrangler": "^4.114.0"
   }
 }
