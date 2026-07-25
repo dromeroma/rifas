@@ -1,0 +1,35 @@
+# ============================================================
+# Cloudflare Pages headers
+# ============================================================
+# Los bundles de Angular llevan hash en el nombre (main-XXXX.js,
+# styles-XXXX.css, etc.) → son immutable, cacheables 1 año.
+# index.html debe re-fetchearse siempre para que el navegador pida los
+# bundles nuevos tras cada deploy.
+# ============================================================
+
+/*.js
+  Cache-Control: public, max-age=31536000, immutable
+
+/*.css
+  Cache-Control: public, max-age=31536000, immutable
+
+/*.woff2
+  Cache-Control: public, max-age=31536000, immutable
+
+/*.svg
+  Cache-Control: public, max-age=604800
+
+/*.png
+  Cache-Control: public, max-age=604800
+
+/*.jpg
+  Cache-Control: public, max-age=604800
+
+/*.webp
+  Cache-Control: public, max-age=604800
+
+/index.html
+  Cache-Control: no-cache, no-store, must-revalidate
+
+/
+  Cache-Control: no-cache, no-store, must-revalidate
