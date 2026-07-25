@@ -28,6 +28,16 @@ settings = get_settings()
 
 
 def _is_locked(raffle: Raffle, prizes: list[Prize], today: date) -> bool:
+    # Override manual del admin: si la rifa define un cierre absoluto de
+    # reservas, ese instante manda — ignora la lógica automática de "N días
+    # antes del sorteo". Esto permite mantener ventas abiertas más cerca
+    # del sorteo cuando el admin lo decide (ej. cerrar solo a las 22:00 del
+    # día previo en vez de 7 días antes).
+    if raffle.reservations_close_at is not None:
+        now_utc = datetime.now(timezone.utc)
+        return now_utc >= raffle.reservations_close_at
+
+    # Fallback: lock automático N días antes del primer sorteo (default 7).
     threshold = settings.lock_days_before_draw
     dates = [p.draw_date for p in prizes] + [raffle.final_draw_date]
     for d in dates:

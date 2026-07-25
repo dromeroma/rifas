@@ -79,6 +79,16 @@ class Raffle(Base, TimestampMixin):
     # Sorteo
     final_draw_date: Mapped[date] = mapped_column(Date, nullable=False)
 
+    # Cierre absoluto de reservas (override del lock automático de N días
+    # antes de cada sorteo). Cuando está seteado, las reservas se bloquean
+    # a partir de este instante exacto en vez de usar
+    # `settings.lock_days_before_draw`. Útil cuando el admin quiere permitir
+    # ventas justo hasta pocas horas antes del sorteo (ej. hasta las 22:00
+    # del día antes) en lugar de cerrar N días completos antes.
+    reservations_close_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True,
+    )
+
     # Estado
     status: Mapped[RaffleStatus] = mapped_column(
         Enum(RaffleStatus), default=RaffleStatus.DRAFT, nullable=False
