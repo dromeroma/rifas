@@ -382,13 +382,17 @@ async def mark_paid(
     ticket_id: int,
     request: Request,
     db: Annotated[AsyncSession, Depends(get_db)],
-    # Solo SELLER — marcar boleta como pagada cierra la venta. Para
-    # correcciones administrativas existen los endpoints de payments
-    # donde el admin sí puede aprobar/editar/eliminar pagos.
-    actor: Annotated[User, Depends(require_roles(UserRole.SELLER))],
+    # SELLER puede marcar solo sus propias boletas. ADMIN / SUPER_ADMIN
+    # pueden marcar cualquier boleta de su tenant — caso comun: los
+    # vendedores no usan la plataforma y le pasan el efectivo al admin,
+    # que registra la venta a nombre del vendedor. La comision del
+    # vendedor se genera igual porque `mark_ticket_paid` toma
+    # ticket.seller_id (no el actor) para armar la commission.
+    actor: Annotated[User, Depends(require_roles(UserRole.SELLER, UserRole.ADMIN, UserRole.SUPER_ADMIN))],
     scope: Annotated[TenantScope, Depends(get_tenant_scope)],
 ):
-    """Marca la boleta como pagada. El vendedor solo puede marcar las suyas."""
+    """Marca la boleta como pagada (CASH, sin comprobante).
+    SELLER solo sus boletas; ADMIN/SUPER_ADMIN cualquier boleta del tenant."""
     ticket = await _verify_ticket_tenancy(db, ticket_id, scope)
 
     if actor.role == UserRole.SELLER and ticket.seller_id != actor.id:
@@ -398,6 +402,10 @@ async def mark_paid(
     await log_action(
         db, actor_id=actor.id, action="ticket.mark_paid",
         entity_type="ticket", entity_id=ticket_id, request=request,
+        metadata={
+            "by_admin": actor.role in (UserRole.ADMIN, UserRole.SUPER_ADMIN),
+            "ticket_seller_id": ticket.seller_id,
+        },
     )
     await db.commit()
     return await _load_ticket_out(db, ticket_id)
