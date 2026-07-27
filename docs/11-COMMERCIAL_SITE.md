@@ -398,50 +398,153 @@ Post V2/V3 del producto.
 
 ---
 
-## Preguntas antes de empezar a diseñar
+## Decisiones cerradas (2026-07-26)
 
-Necesito confirmación antes de la primera pantalla:
+Founder firmó las 6 decisiones del sitio comercial. Estas quedan como contrato de trabajo — cualquier cambio abre ADR.
 
-### C1 · Dominio final del sitio comercial
+### C1 · Dominio final del sitio comercial → `perks.savvytrix.com`
 
-Opciones:
-- **A** — `perks.savvytrix.com` (el actual). El producto vive ahí también (login → `/app`, sitio comercial → `/`). Pro: un dominio, un brand. Contra: mezcla marketing + producto en el mismo host.
-- **B** ✨ — `savvyperks.com` (nuevo, si está disponible). Marca standalone. El producto se mueve a `app.savvyperks.com`. Recomendación del equipo — separa marketing y producto, mejor para SEO y branding.
-- **C** — `www.savvytrix.com/perks`. Producto ecosistema, más difícil de distinguir.
+**Decisión**: mantener `perks.savvytrix.com` por ahora. El producto y el sitio comercial cohabitan en el mismo host:
+- `/` → sitio comercial (marketing).
+- `/app/…` o subdominio interno para el producto (a decidir en Fase 1 sin urgencia).
 
-### C2 · Marca visual — ¿construimos identidad o reusamos Savvy?
+**Consecuencia**: no compramos dominio nuevo. Ahorro de tiempo. Camino a `savvyperks.com` queda abierto para V2 sin bloquear nada.
 
-Perks es hijo del ecosistema Savvy. Opciones:
-- **A** — Idéntica identidad Savvy con "Perks" como subproducto.
-- **B** ✨ — Identidad propia de Perks (logo dedicado, color propio) pero anclada visualmente al ecosistema Savvy. Como Meta / Instagram — familia visual pero identidad clara.
-- **C** — Total independencia visual — Savvy Perks se ve como producto separado.
+**Nota técnica**: el sitio de marketing (Astro) y la app (Angular) comparten dominio pero se sirven desde builds/deploys separados en Cloudflare — cada uno con su Worker/Pages.
 
-Recomendación **B** — permite escalar el producto sin depender del brand Savvy si algún día se vende / spinoff.
+### C2 · Marca visual → identidad propia de Perks anclada a Savvy
 
-### C3 · Idioma en MVP del sitio
+**Decisión**: identidad visual dedicada para Perks — logo propio, color propio, tono propio — pero con parentesco visible con el ecosistema Savvy. Modelo mental: Meta ↔ Instagram, no Google ↔ Search.
 
-- **A** — Solo español LATAM. Recomendación del equipo — go-to-market inicial es LATAM.
-- **B** — Bilingüe desde día 1.
-- **C** — Inglés primero (si viene ronda de inversión gringa).
+**Consecuencia**: cuando arranquemos el diseño del sitio (Fase 0.5), lo primero es definir:
+- Sistema de color de Perks (base + acento cálido) que dialogue con Savvy.
+- Wordmark "Savvy Perks" con jerarquía tipográfica clara.
+- Iconografía y estilo ilustrativo consistente entre productos.
 
-### C4 · Waitlist vs Trial vs Booking en Fase 0.5
+### C3 · Idioma → español LATAM en MVP; multilenguaje después
 
-- **A** — Solo waitlist (menor fricción, cero infra de billing).
-- **B** ✨ — Waitlist + booking de demo con Calendly/Cal.com. Recomendación — filtra prospectos serios y agenda pipeline.
-- **C** — Trial abierto sin waitlist. Requiere producto listo.
+**Decisión**: MVP del sitio y del producto salen **solo en español LATAM**.
 
-### C5 · Diseñador — ¿lo hacemos in-house o contratamos?
+**Roadmap declarado del founder**: agregar en fases posteriores:
+- 🇬🇧 **Inglés** (mercado hispano-US + LATAM tech + inversión internacional).
+- 🇧🇷 **Portugués** (Brasil — el mayor mercado LATAM por PIB).
+- 🇫🇷 **Francés** (Canadá + Norte de África — mercado subestimado).
 
-Un sitio "super hiper mega superior" no lo sale por defecto de código. Recomendación:
-- Contratar **diseñador senior freelance** o **estudio pequeño** para 2-3 semanas.
-- Deliverables: Figma con hero + 4-5 secciones clave + design tokens de landing + 6-10 ilustraciones + kit de motion.
-- Presupuesto orientativo LATAM: USD 3–8k. Es la mejor inversión posible en la etapa.
+**Consecuencia técnica no negociable** (aunque no se implemente ya): todo copy del sitio y del producto vive desde el día 1 en **archivos de contenido separados** (JSON/YAML o `.md` por locale). Nada de strings hardcodeados en componentes.
 
-Sin esto, salimos con un sitio "bueno para nosotros" pero no "super premium".
+Estructura propuesta:
 
-### C6 · Copywriter
+```
+apps/marketing/
+├── src/
+│   ├── content/
+│   │   ├── es/
+│   │   │   ├── home.md
+│   │   │   ├── modules.md
+│   │   │   ├── verticals.md
+│   │   │   └── faq.md
+│   │   ├── en/    (V2 — vacío por ahora)
+│   │   ├── pt/    (V3)
+│   │   └── fr/    (V4)
+│   └── i18n/
+│       ├── es.json    (strings de UI del sitio)
+│       └── ...
+```
 
-Recomendación adicional: **copywriter LATAM** por 1 semana para pulir el copy final. Un buen copy premium marca la diferencia entre "otro SaaS" y "Perks se ve serio".
+Esto convierte "internacionalizar" en un trabajo de traducción, no de refactor. El costo hoy de armarlo así es ~15 minutos; el costo mañana de retrofitear es ~2 semanas.
+
+En el producto (Angular) se aplica el mismo principio: `@ngx-translate/core` o Angular i18n nativo desde el arranque de Fase 1, con solo el locale `es-CO` activo. Todo texto pasa por `t('key')`, nunca hardcodeado.
+
+### C4 · Fase 0.5 → waitlist + booking de demo
+
+**Decisión**: la captura de leads en la fase premium tiene ambos:
+- **Waitlist** para prospectos que aún no están listos para agendar (barrera baja).
+- **Booking de demo** vía Cal.com o Calendly embebido para prospectos calientes (agenda pipeline real).
+
+**Consecuencia**: dos CTAs coexisten. Diseño diferencia claramente "Únete a la lista" (secundario) vs "Agenda tu demo" (primario para prospectos calificados).
+
+Infra necesaria en MVP: tabla `waitlist_leads` en Postgres (email, teléfono opcional, empresa, vertical, origen UTM, timestamp) + integración de Cal.com (link embebido, webhook a `platform.lead.demo_booked`).
+
+### C5 · Diseñador → Claude actuando como Senior Product Designer
+
+**Decisión**: no contratamos diseñador externo. Cuando llegue Fase 0.5, actúo como **Senior Product Designer con especialización en SaaS premium**.
+
+**Qué significa esto operativamente**:
+- El diseño se produce **directamente en código** (HTML/CSS con tokens + componentes Astro). No hay ida y vuelta a Figma.
+- Ventaja: iteración instantánea. Cada mockup es ya un prototipo real, servible.
+- Trabajo en pasadas: v1 wireframe navegable → v2 con tipografía y color final → v3 con motion e ilustraciones vectoriales → v4 pulido premium.
+- Cada pasada se sube a un subdominio de preview (`preview-perks.savvytrix.com`) para revisión visual antes de merge a main.
+
+**Contrato de calidad**: cada pantalla debe pasar el filtro "¿se ve como Linear/Stripe/Vercel?". Si un componente se ve "correcto" pero no "excelente", se rehace.
+
+**Ilustraciones**: SVG puro escrito a mano cuando el layout lo pida. Sin dependencias externas de librerías de ilustraciones (que se ven todas iguales).
+
+**Dependencia razonable**: para **fotos originales** de clientes reales (cuando lleguen), sí se necesita fotógrafo/producción. Ese costo queda en el backlog para V2 del sitio, cuando el sitio esté validado.
+
+### C6 · Copywriter → Claude actuando como Senior Copywriter LATAM
+
+**Decisión**: no contratamos copywriter externo. Cuando llegue Fase 0.5, actúo como **Senior Copywriter con voz LATAM natural y experiencia en SaaS premium**.
+
+**Qué significa esto operativamente**:
+- Cada headline, subhead, CTA, párrafo de sección, microcopy y mensaje de estado se escribe **con criterio editorial senior**, no "traducido de inglés".
+- Trabajo en pasadas: v1 mensaje esencial → v2 con voz y ritmo → v3 con testeo A/B implícito (2-3 variaciones por sección clave).
+- Cada headline pasa por 3 versiones. La ganadora se justifica.
+
+**Regla dura de estilo** (aplica a todo el copy del sitio y del producto):
+- Frases cortas. 6–12 palabras es el rango ideal.
+- Segunda persona directa ("Tú convierte", no "los negocios convierten").
+- Números concretos, nunca vaguedades.
+- Español LATAM natural — cero "engagement", "empoderamos", "soluciones". Palabras que un dueño de negocio dice en su día a día.
+- Cero adjetivos comodín ("innovador", "vanguardia", "líder"). Se muestra, no se dice.
+
+**Contrato editorial**: cada texto se prueba leyéndolo en voz alta. Si al leerlo se siente "corporativo", se reescribe.
+
+---
+
+## Consecuencias prácticas para el arranque de Fase 0.5
+
+Con las 6 decisiones cerradas, el flujo de trabajo para arrancar el sitio queda así:
+
+1. **Kickoff** de Fase 0.5 (post cutover de rifas, 5-ago-2026):
+   - Definir sistema de color de Perks (paleta con anclaje visual a Savvy — 1 sesión).
+   - Elegir tipografías (display + sans + mono — 1 sesión).
+   - Wordmark de Perks (1 pasada + iteración).
+
+2. **v1 del sitio** (semana 1):
+   - Estructura Astro creada en `apps/marketing/`.
+   - Content en español en `content/es/`.
+   - Hero + Cómo funciona + Módulos (versión reducida) + Waitlist + Footer.
+   - Preview desplegado en subdominio.
+
+3. **v2 del sitio** (semana 2):
+   - Motion en las secciones clave.
+   - Ilustraciones SVG del hero y de "Módulos".
+   - Integración Cal.com para booking de demo.
+   - Integración PostHog/Plausible.
+   - SEO base (meta tags, sitemap, OG, LD-JSON).
+
+4. **v3 pulido y launch** (semana 3):
+   - Auditoría de accesibilidad y perf (Lighthouse ≥ 95).
+   - Auditoría editorial del copy completo.
+   - Copy testeado en voz alta y ajustado.
+   - Anuncio de launch a la red del founder.
+
+Ninguna de estas semanas se hace hasta que ADR-006 permita el cutover de rifas.
+
+## Presupuesto revisado (post decisiones)
+
+| Ítem | Costo | Estado |
+|---|---|---|
+| Diseñador senior freelance | ~~USD 3–8k~~ → **USD 0** | Claude actúa como Senior Designer (C5) |
+| Copywriter LATAM | ~~USD 300–1k~~ → **USD 0** | Claude actúa como Senior Copywriter (C6) |
+| Desarrollo Astro landing | 2–3 semanas dev | interno |
+| Dominio + hosting Cloudflare | USD 0 | ya cubierto (`perks.savvytrix.com`) |
+| Cal.com | USD 0 en tier free | suficiente al inicio |
+| PostHog / Plausible | USD 0 en tier free | suficiente al inicio |
+| Fotos/videos originales | USD 0 | backlog para V2 del sitio |
+| **Total Fase 0.5** | **~USD 0** | inversión en tiempo, no en dinero |
+
+Trade-off asumido: velocidad y control absoluto a cambio de la iteración humana de un tercero. Si en algún momento el resultado no pasa el filtro "se ve como Linear/Stripe", el founder puede reabrir C5/C6 y contratar externamente.
 
 ---
 

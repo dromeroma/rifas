@@ -32,13 +32,24 @@ Este set de docs corresponde a la **Fase 0 — Comprensión y arquitectura**. Ni
 2. Los ADRs iniciales estén aprobados.
 3. El roadmap MVP esté firmado.
 
-**Decisiones fundacionales cerradas** (2026-07-26):
+**Fase 0 cerrada** — decisiones fundacionales firmadas (2026-07-26):
+
+Arquitectura del producto:
 - ✅ Foco comercial MVP: 3 verticales (restaurantes/gimnasios/rifas). Arquitectura horizontal.
 - ✅ Consumer Wallet: V3 como producto independiente ("Savvy Wallet").
 - ✅ Rename del repo GitHub `rifas` → `savvy-perks` al cierre de Fase 0.
 - ✅ Freeze de Boletera hasta pasar sorteo del 4-ago-2026. Cutover el 5-ago.
 - ✅ ADR-007: estrategia zero-downtime obligatoria durante toda la transformación.
-- ✅ Sitio comercial premium en paralelo a Fase 1 del producto (Fase 0.5).
+
+Sitio comercial (Fase 0.5, arranca post-cutover):
+- ✅ C1 — Dominio: `perks.savvytrix.com` por ahora (marketing + producto cohabitan).
+- ✅ C2 — Marca: identidad propia de Perks anclada al ecosistema Savvy.
+- ✅ C3 — Idioma MVP: español LATAM. Roadmap declarado: EN/PT/FR en fases posteriores. Arquitectura de contenido preparada para i18n desde día 1.
+- ✅ C4 — Captura de leads: waitlist + booking de demo (Cal.com).
+- ✅ C5 — Diseño: Claude actúa como Senior Product Designer. Sin proveedor externo.
+- ✅ C6 — Copy: Claude actúa como Senior Copywriter LATAM. Sin proveedor externo.
+
+Próximo hito: cutover de Rifas (5-ago-2026). Fase 1 y Fase 0.5 arrancan en paralelo desde esa fecha.
 
 Los cuestionamientos que el equipo fundador le hace al founder están marcados con **🚦 A validar** o **⚠️ Riesgo**. No son bloqueos — son puntos donde el founder debe decidir con contexto.
 

@@ -43,9 +43,11 @@ Filtro obligatorio para cada ítem del roadmap:
 - Deploy independiente del producto (Astro standalone en Cloudflare Pages).
 
 **Prerrequisitos**:
-- Decisiones C1-C6 del doc de sitio comercial cerradas.
-- Diseñador senior contratado.
-- Copywriter LATAM contratado (1 semana).
+- ✅ Decisiones C1-C6 del doc de sitio comercial cerradas (2026-07-26).
+- ✅ Diseño y copy in-house: Claude actúa como Senior Designer + Senior Copywriter (C5/C6).
+- ⏳ Cutover de rifas ejecutado (5-ago-2026).
+
+**Costo de infraestructura externa**: USD 0. Todo el trabajo es interno.
 
 **Métrica de éxito**:
 - 100+ leads calificados en waitlist antes del launch del MVP.
