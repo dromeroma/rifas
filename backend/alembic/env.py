@@ -9,7 +9,8 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from app.core.config import get_settings
 from app.core.database import Base
-from app import models  # noqa: F401  -- importa los modelos para metadata
+from app import models  # noqa: F401  -- modelos legacy (rifas)
+from app.modules import _alembic_metadata  # noqa: F401  -- modelos de módulos nuevos
 
 config = context.config
 if config.config_file_name is not None:

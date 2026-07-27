@@ -1,0 +1,15 @@
+# ============================================================
+# Dependencias de desarrollo — NO se instalan en Render.
+#
+# Uso:
+#   pip install -r requirements.txt -r requirements-dev.txt
+# ============================================================
+
+-r requirements.txt
+
+# Enforcement de reglas de dependencia entre módulos
+# (ver pyproject.toml [tool.importlinter]).
+import-linter==2.1
+
+# pytest ya está en requirements.txt (8.3.4). Aquí solo extras de dev.
+pytest-cov==6.0.0

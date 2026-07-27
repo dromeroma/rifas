@@ -1,0 +1,105 @@
+# ============================================================
+# Savvy Perks — backend (FastAPI + SQLAlchemy async + Alembic)
+#
+# Este archivo es solo config de herramientas (pytest, import-linter).
+# Las dependencias de runtime siguen en requirements.txt (Render las lee
+# tal cual). Las dependencias de dev están en requirements-dev.txt.
+# ============================================================
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+addopts = [
+    "-ra",                     # resumen de skips/fails al final
+    "--strict-markers",        # marker no declarado = error
+    "--strict-config",
+]
+testpaths = ["tests"]
+asyncio_mode = "auto"          # sin decorador @pytest.mark.asyncio en cada test
+markers = [
+    "integration: requiere Postgres real vía DATABASE_URL_TEST. Se saltea en unit runs.",
+    "slow: tests que tardan >1s. Excluibles con -m 'not slow'.",
+]
+filterwarnings = [
+    "error",
+    "ignore::DeprecationWarning:pydantic._internal.*",
+    "ignore::DeprecationWarning:sqlalchemy.*",
+]
+
+# ============================================================
+# import-linter — enforcement de reglas de dependencia entre módulos.
+# Ver docs/03-ARCHITECTURE.md — "Reglas de dependencia".
+# ============================================================
+
+[tool.importlinter]
+root_packages = ["app"]
+
+# Contract 1: platform es leaf — no importa de módulos de dominio.
+[[tool.importlinter.contracts]]
+name = "platform no depende de módulos de negocio"
+type = "forbidden"
+source_modules = ["app.modules.platform"]
+forbidden_modules = [
+    "app.modules.identity",
+    "app.modules.customer",
+    "app.modules.wallet",
+    "app.modules.rewards",
+    "app.modules.gamification",
+    "app.modules.rules",
+    "app.modules.campaigns",
+    "app.modules.notifications",
+    "app.modules.analytics",
+    "app.modules.ai",
+    "app.modules.raffles",
+]
+
+# Contract 2: identity y customer son leaf — no importan de otros
+# módulos de negocio (sí pueden usar platform).
+[[tool.importlinter.contracts]]
+name = "identity y customer son módulos hoja"
+type = "forbidden"
+source_modules = [
+    "app.modules.identity",
+    "app.modules.customer",
+]
+forbidden_modules = [
+    "app.modules.wallet",
+    "app.modules.rewards",
+    "app.modules.gamification",
+    "app.modules.rules",
+    "app.modules.campaigns",
+    "app.modules.notifications",
+    "app.modules.analytics",
+    "app.modules.ai",
+    "app.modules.raffles",
+]
+
+# Contract 3: wallet, rewards, gamification no se hablan entre sí
+# directamente — solo por eventos vía platform.events.
+[[tool.importlinter.contracts]]
+name = "wallet / rewards / gamification se comunican solo por eventos"
+type = "independence"
+modules = [
+    "app.modules.wallet",
+    "app.modules.rewards",
+    "app.modules.gamification",
+]
+
+# Contract 4: los adapters de terceros no importan lógica interna —
+# solo la superficie pública (interfaces + eventos).
+[[tool.importlinter.contracts]]
+name = "adapters solo tocan platform (bus + envelope)"
+type = "forbidden"
+source_modules = ["app.modules.adapters"]
+forbidden_modules = [
+    "app.modules.wallet",
+    "app.modules.rewards",
+    "app.modules.gamification",
+    "app.modules.rules",
+    "app.modules.campaigns",
+    "app.modules.notifications",
+    "app.modules.analytics",
+    "app.modules.ai",
+]
+ignore_imports = [
+    # los adapters sí pueden importar tipos públicos de identity/customer.
+]
