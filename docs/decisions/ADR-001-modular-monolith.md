@@ -1,7 +1,8 @@
 # ADR-001 · Modular monolith (no microservicios)
 
-- **Estado**: Proposed
+- **Estado**: Accepted
 - **Fecha**: 2026-07-26
+- **Firmado por**: Deimer Romero (founder) — 2026-07-26
 - **Relacionado con**: [`03-ARCHITECTURE.md`](../03-ARCHITECTURE.md)
 
 ## Contexto
@@ -65,5 +66,5 @@ Balance correcto entre simplicidad operativa y disciplina arquitectónica.
 
 ## Aprobación
 
-- [ ] Founder
+- [x] Founder — 2026-07-26
 - [ ] Tech lead (cuando se una)

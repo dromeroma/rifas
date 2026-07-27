@@ -1,7 +1,8 @@
 # ADR-005 · Rename del repo GitHub `rifas` → `savvy-perks`
 
-- **Estado**: Proposed
+- **Estado**: Accepted
 - **Fecha**: 2026-07-26
+- **Firmado por**: Deimer Romero (founder) — 2026-07-26
 
 ## Contexto
 
@@ -60,5 +61,5 @@ Rechazado. Pierde historial de commits, issues, PRs.
 
 ## Aprobación
 
-- [ ] Founder (autorizar ventana)
+- [x] Founder — 2026-07-26 (autorizado; ejecutar al cierre de Fase 0)
 - [ ] Verificación post-rename de Render + Cloudflare

@@ -8,17 +8,49 @@ Filtro obligatorio para cada ítem del roadmap:
 
 ---
 
-## Fase 0 · Comprensión y arquitectura (actual)
+## Fase 0 · Comprensión y arquitectura (cerrada 2026-07-26)
 
-**Duración estimada**: 1–2 semanas.
+**Duración**: 1 semana.
 
 **Salidas**:
-- Docs completos (los que estás leyendo).
-- ADRs iniciales firmados.
-- Repo renombrado / rama principal establecida.
-- Freeze de features en Boletera hasta pasar el sorteo del 4-ago-2026.
+- ✅ Docs completos (los 11 documentos numerados).
+- ✅ ADRs iniciales firmados (ADR-001 a ADR-007).
+- ✅ Decisiones fundacionales cerradas por el founder.
+- ✅ Freeze de features en Boletera confirmado hasta 5-ago-2026.
 
-**No hay código nuevo hasta cerrar Fase 0.**
+**Decisiones cerradas**:
+- Foco comercial MVP: 3 verticales (restaurantes, gimnasios, rifas). Arquitectura horizontal.
+- Consumer Wallet: V3 como producto independiente ("Savvy Wallet").
+- Rename del repo `dromeroma/rifas` → `dromeroma/savvy-perks` al cierre de Fase 0.
+- Estrategia zero-downtime obligatoria (ADR-007) durante toda la transformación.
+- Sitio comercial premium arranca en paralelo (Fase 0.5).
+
+---
+
+## Fase 0.5 · Sitio comercial premium (en paralelo con Fase 1)
+
+**Duración estimada**: 2–3 semanas.
+
+**Objetivo**: presencia web premium que genere pipeline antes de que el MVP del producto esté listo. Ver [`11-COMMERCIAL_SITE.md`](11-COMMERCIAL_SITE.md).
+
+**Alcance de Fase 0.5**:
+- Hero premium con animación viva + CTAs.
+- Secciones: Cómo funciona · Módulos (versión reducida) · Verticales · Waitlist + booking de demo · Footer.
+- Sin pricing público todavía.
+- Copy definitivo en español LATAM.
+- SEO base: meta tags, sitemap, OG, LD-JSON.
+- Analítica: PostHog o Plausible con eventos de conversión.
+- Deploy independiente del producto (Astro standalone en Cloudflare Pages).
+
+**Prerrequisitos**:
+- Decisiones C1-C6 del doc de sitio comercial cerradas.
+- Diseñador senior contratado.
+- Copywriter LATAM contratado (1 semana).
+
+**Métrica de éxito**:
+- 100+ leads calificados en waitlist antes del launch del MVP.
+- 30+ demos agendadas con prospectos serios.
+- Lighthouse ≥ 95 en Performance, SEO, Accesibilidad.
 
 ---
 

@@ -15,6 +15,7 @@ Documentos fundacionales del producto. Se leen en orden.
 | 08 | [AI](08-AI.md) | Roadmap de inteligencia aplicada |
 | 09 | [Roadmap](09-ROADMAP.md) | MVP → V2 → Enterprise |
 | 10 | [UI Guidelines](10-UI_GUIDELINES.md) | Sistema visual y de motion |
+| 11 | [Sitio Comercial](11-COMMERCIAL_SITE.md) | Rediseño premium de savvyperks.com |
 
 Anexos:
 - [`CLAUDE.md`](CLAUDE.md) — instrucciones específicas para Claude Code en este repo.
@@ -30,6 +31,14 @@ Este set de docs corresponde a la **Fase 0 — Comprensión y arquitectura**. Ni
 1. Todo doc con sección **🚦 A validar** tenga decisiones cerradas.
 2. Los ADRs iniciales estén aprobados.
 3. El roadmap MVP esté firmado.
+
+**Decisiones fundacionales cerradas** (2026-07-26):
+- ✅ Foco comercial MVP: 3 verticales (restaurantes/gimnasios/rifas). Arquitectura horizontal.
+- ✅ Consumer Wallet: V3 como producto independiente ("Savvy Wallet").
+- ✅ Rename del repo GitHub `rifas` → `savvy-perks` al cierre de Fase 0.
+- ✅ Freeze de Boletera hasta pasar sorteo del 4-ago-2026. Cutover el 5-ago.
+- ✅ ADR-007: estrategia zero-downtime obligatoria durante toda la transformación.
+- ✅ Sitio comercial premium en paralelo a Fase 1 del producto (Fase 0.5).
 
 Los cuestionamientos que el equipo fundador le hace al founder están marcados con **🚦 A validar** o **⚠️ Riesgo**. No son bloqueos — son puntos donde el founder debe decidir con contexto.
 

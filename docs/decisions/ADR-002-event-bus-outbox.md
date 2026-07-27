@@ -1,7 +1,8 @@
 # ADR-002 · Event bus interno con outbox pattern + Postgres LISTEN/NOTIFY
 
-- **Estado**: Proposed
+- **Estado**: Accepted
 - **Fecha**: 2026-07-26
+- **Firmado por**: Deimer Romero (founder) — 2026-07-26
 - **Relacionado con**: [`04-EVENTS.md`](../04-EVENTS.md), [ADR-001](ADR-001-modular-monolith.md)
 
 ## Contexto
@@ -65,4 +66,4 @@ Balance entre garantías y simplicidad. Camino claro a mayor escala.
 
 ## Aprobación
 
-- [ ] Founder
+- [x] Founder — 2026-07-26

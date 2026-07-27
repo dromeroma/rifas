@@ -1,7 +1,8 @@
 # ADR-003 · Multi-tenant con shared DB y `tenant_id` en cada tabla
 
-- **Estado**: Proposed
+- **Estado**: Accepted
 - **Fecha**: 2026-07-26
+- **Firmado por**: Deimer Romero (founder) — 2026-07-26
 - **Relacionado con**: [`03-ARCHITECTURE.md`](../03-ARCHITECTURE.md)
 
 ## Contexto
@@ -53,4 +54,4 @@ Balance correcto entre simplicidad, escala razonable y camino de salida para cas
 
 ## Aprobación
 
-- [ ] Founder
+- [x] Founder — 2026-07-26

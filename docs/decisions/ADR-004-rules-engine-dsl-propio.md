@@ -1,7 +1,8 @@
 # ADR-004 · DSL JSON propio para Rules Engine (vs motor externo)
 
-- **Estado**: Proposed
+- **Estado**: Accepted
 - **Fecha**: 2026-07-26
+- **Firmado por**: Deimer Romero (founder) — 2026-07-26
 - **Relacionado con**: [`05-RULES_ENGINE.md`](../05-RULES_ENGINE.md)
 
 ## Contexto
@@ -59,4 +60,4 @@ Coste inicial mayor, control total, alineación con producto, camino claro a edi
 
 ## Aprobación
 
-- [ ] Founder
+- [x] Founder — 2026-07-26

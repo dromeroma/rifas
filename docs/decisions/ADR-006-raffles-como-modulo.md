@@ -1,8 +1,9 @@
 # ADR-006 · Migración de Boletera al módulo `raffles/` con freeze hasta 4-ago-2026
 
-- **Estado**: Proposed
+- **Estado**: Accepted
 - **Fecha**: 2026-07-26
-- **Relacionado con**: [`02-DOMAIN.md`](../02-DOMAIN.md), [`09-ROADMAP.md`](../09-ROADMAP.md)
+- **Firmado por**: Deimer Romero (founder) — 2026-07-26
+- **Relacionado con**: [`02-DOMAIN.md`](../02-DOMAIN.md), [`09-ROADMAP.md`](../09-ROADMAP.md), [ADR-007](ADR-007-zero-downtime-cutover.md)
 
 ## Contexto
 
@@ -69,4 +70,4 @@ Balance correcto: cero riesgo para el cliente, cero pérdida de tiempo del equip
 
 ## Aprobación
 
-- [ ] Founder (confirmar que el sorteo del 4-ago es la última fecha crítica en la ventana)
+- [x] Founder — 2026-07-26 (confirma freeze hasta pasar sorteo del 4-ago-2026)
