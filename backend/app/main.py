@@ -14,6 +14,7 @@ from app.core.exceptions import (
     ReservationLockedError,
     TicketUnavailableError,
 )
+from app.modules import _handlers  # noqa: F401 -- registra handlers cross-módulo
 from app.modules.platform.events import Dispatcher
 from app.modules.platform.flags import is_enabled
 from app.routers import (

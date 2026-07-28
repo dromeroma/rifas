@@ -17,3 +17,6 @@ from app.modules.platform.flags import models as _platform_flags_models  # noqa:
 
 # customer
 from app.modules.customer import models as _customer_models  # noqa: F401
+
+# wallet
+from app.modules.wallet import models as _wallet_models  # noqa: F401

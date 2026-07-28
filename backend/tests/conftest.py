@@ -99,4 +99,15 @@ async def integration_db(
         await db.execute(
             sql_text("TRUNCATE customer_consents RESTART IDENTITY CASCADE")
         )
+        # wallet module — CASCADE limpia balances/ledger/vouchers.
+        await db.execute(sql_text("TRUNCATE wallets RESTART IDENTITY CASCADE"))
+        await db.execute(
+            sql_text("TRUNCATE wallet_balances RESTART IDENTITY CASCADE")
+        )
+        await db.execute(
+            sql_text("TRUNCATE wallet_ledger RESTART IDENTITY CASCADE")
+        )
+        await db.execute(
+            sql_text("TRUNCATE wallet_vouchers RESTART IDENTITY CASCADE")
+        )
         await db.commit()
