@@ -1,3 +1,4 @@
+import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -6,12 +7,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.core.config import get_settings
+from app.core.database import AsyncSessionLocal
 from app.core.exceptions import (
     DomainError,
     ImmutableRaffleError,
     ReservationLockedError,
     TicketUnavailableError,
 )
+from app.modules.platform.events import Dispatcher
+from app.modules.platform.flags import is_enabled
 from app.routers import (
     admin, assignments, audit, auth, customers, payments, public,
     public_sales, public_sales_admin, raffles,
@@ -19,13 +23,50 @@ from app.routers import (
 )
 
 settings = get_settings()
+logger = logging.getLogger(__name__)
+
+
+# Nombre del flag que gobierna el arranque del dispatcher del event bus.
+# Registrado en app.modules.platform.flags.registry con default=False —
+# el dispatcher permanece apagado hasta el cutover post-freeze (ADR-006/007).
+_DISPATCHER_FLAG = "platform.event_dispatcher"
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Asegura que el directorio de uploads exista (en Render free es /tmp/uploads)
     Path(settings.upload_dir).mkdir(parents=True, exist_ok=True)
-    yield
+
+    # ── Event dispatcher (opt-in por feature flag) ──────────────
+    # Consulta el flag directo desde BD para reflejar cambios sin restart.
+    # Si el flag está off (default), el dispatcher NO arranca — cero
+    # impacto en flujos legacy que no publican eventos todavía.
+    dispatcher: Dispatcher | None = None
+    try:
+        async with AsyncSessionLocal() as db:
+            flag_on = await is_enabled(_DISPATCHER_FLAG, db=db)
+    except Exception:
+        logger.exception(
+            "no se pudo consultar %r al arrancar — dispatcher OFF por seguridad",
+            _DISPATCHER_FLAG,
+        )
+        flag_on = False
+
+    if flag_on:
+        dispatcher = Dispatcher(sessionmaker=AsyncSessionLocal)
+        await dispatcher.start()
+        logger.info("event dispatcher arrancado (flag %s=on)", _DISPATCHER_FLAG)
+    else:
+        logger.info(
+            "event dispatcher NO arrancado (flag %s=off) — comportamiento legacy",
+            _DISPATCHER_FLAG,
+        )
+
+    try:
+        yield
+    finally:
+        if dispatcher is not None:
+            await dispatcher.stop()
 
 
 app = FastAPI(
