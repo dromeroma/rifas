@@ -82,6 +82,23 @@ known_flags.register(
     )
 )
 
+known_flags.register(
+    FlagDefinition(
+        name="perks.admin_api",
+        description=(
+            "Expone las rutas /api/v1/customers/* y /api/v1/rules/* del "
+            "admin panel de Savvy Perks. Off por default hasta que el "
+            "panel frontend esté listo y estable. Con flag off los "
+            "endpoints devuelven 404 (no aparecen en OpenAPI ni en "
+            "runtime) — cero riesgo para el flujo legacy de rifas."
+        ),
+        default=False,
+        expires_on=date(2026, 12, 31),
+        owner="perks",
+        related_adr="ADR-007",
+    )
+)
+
 
 # Diccionario derivado para lookups rápidos.
 FLAG_DEFAULTS: dict[str, bool] = {

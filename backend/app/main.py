@@ -15,13 +15,21 @@ from app.core.exceptions import (
     TicketUnavailableError,
 )
 from app.modules import _handlers  # noqa: F401 -- registra handlers cross-módulo
+from app.modules.customer.router import router as perks_customers_router
 from app.modules.platform.events import Dispatcher
 from app.modules.platform.flags import is_enabled
+from app.modules.rules.router import router as perks_rules_router
 from app.routers import (
     admin, assignments, audit, auth, customers, payments, public,
     public_sales, public_sales_admin, raffles,
     stats, tenants, tickets, users, verify,
 )
+from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import Depends, HTTPException
+from typing import Annotated
+
+from app.core.database import get_db
+from app.core.deps import TenantScope, get_tenant_scope
 
 settings = get_settings()
 logger = logging.getLogger(__name__)
@@ -31,6 +39,28 @@ logger = logging.getLogger(__name__)
 # Registrado en app.modules.platform.flags.registry con default=False —
 # el dispatcher permanece apagado hasta el cutover post-freeze (ADR-006/007).
 _DISPATCHER_FLAG = "platform.event_dispatcher"
+
+# Flag que expone las rutas /api/v1/customers/* y /api/v1/rules/* del
+# admin panel de Perks. Default OFF — con flag off los endpoints
+# devuelven 404 (no aparecen efectivamente en runtime).
+_PERKS_ADMIN_API_FLAG = "perks.admin_api"
+
+
+async def require_perks_admin_api_enabled(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    scope: Annotated[TenantScope, Depends(get_tenant_scope)],
+) -> None:
+    """Guard que corta cualquier request a /api/v1/* si el flag está OFF.
+
+    Cache in-process del flag service (TTL 5s) mantiene el overhead
+    bajo. Usa is_enabled con tenant_id — permite habilitar por tenant
+    específico antes de un rollout global.
+    """
+    enabled = await is_enabled(
+        _PERKS_ADMIN_API_FLAG, tenant_id=scope.tenant_id, db=db,
+    )
+    if not enabled:
+        raise HTTPException(status_code=404, detail="not found")
 
 
 @asynccontextmanager
@@ -124,3 +154,17 @@ app.include_router(public.router)
 app.include_router(public_sales.router)         # /public/raffles/:id/available, checkout, webhook, auth
 app.include_router(public_sales_admin.router)   # /admin/public-sales/*
 app.include_router(tenants.router)
+
+# ── Perks admin API (opt-in por flag perks.admin_api) ───────
+# Routes bajo /api/v1/* con guard de flag que retorna 404 cuando
+# está off. Auth ADMIN/SUPER_ADMIN + tenant scope obligatorio en
+# cada endpoint. Cero exposición al usuario hasta que el panel
+# frontend esté listo (Sprint 6b).
+app.include_router(
+    perks_customers_router,
+    dependencies=[Depends(require_perks_admin_api_enabled)],
+)
+app.include_router(
+    perks_rules_router,
+    dependencies=[Depends(require_perks_admin_api_enabled)],
+)
