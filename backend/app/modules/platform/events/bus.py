@@ -54,17 +54,26 @@ MAX_CAUSATION_DEPTH = 20
 Handler = Callable[[Event, "AsyncSession"], Awaitable[None]]
 
 
+WILDCARD_EVENT_TYPE = "*"
+
+
 class EventRegistry:
     """Registro in-process de handlers por tipo de evento.
 
     Múltiples handlers pueden registrarse para el mismo tipo. Cada uno
     se identifica por `handler_id` — nombre estable que usa el
     dispatcher para trazabilidad e idempotencia en `event_handled`.
+
+    Wildcard: `@registry.on("*")` registra un handler que recibe TODOS
+    los eventos. Uso principal: el rules_engine que evalúa reglas del
+    tenant contra cualquier evento entrante. Los wildcard handlers se
+    ejecutan DESPUÉS de los específicos.
     """
 
     def __init__(self) -> None:
         # tipo → lista de (handler_id, handler_fn)
         self._handlers: dict[str, list[tuple[str, Handler]]] = defaultdict(list)
+        self._wildcard: list[tuple[str, Handler]] = []
 
     def on(
         self,
@@ -77,33 +86,46 @@ class EventRegistry:
         Si `handler_id` no se pasa, se deriva como `module.function`.
         Registrar el mismo (event_type, handler_id) dos veces es
         idempotente: sobrescribe la referencia y loguea warning.
+
+        Usa `event_type="*"` para suscribir un handler universal.
         """
 
         def decorator(func: Handler) -> Handler:
             hid = handler_id or f"{func.__module__}.{func.__qualname__}"
-            existing = self._handlers[event_type]
-            for i, (registered_id, _) in enumerate(existing):
+            bucket = (
+                self._wildcard
+                if event_type == WILDCARD_EVENT_TYPE
+                else self._handlers[event_type]
+            )
+            for i, (registered_id, _) in enumerate(bucket):
                 if registered_id == hid:
                     logger.warning(
                         "handler %r ya estaba registrado para %r — sobrescribiendo",
                         hid,
                         event_type,
                     )
-                    existing[i] = (hid, func)
+                    bucket[i] = (hid, func)
                     return func
-            existing.append((hid, func))
+            bucket.append((hid, func))
             logger.debug("registrado handler %r para %r", hid, event_type)
             return func
 
         return decorator
 
     def handlers_for(self, event_type: str) -> list[tuple[str, Handler]]:
-        """Lista inmutable de handlers registrados para un tipo."""
-        return list(self._handlers.get(event_type, []))
+        """Handlers específicos + wildcard, en ese orden.
+
+        Los específicos corren primero (patrón "más específico gana");
+        los wildcard corren después. Los handler_id son únicos entre
+        ambos grupos por convención de naming (`<module>.<action>`).
+        """
+        specific = list(self._handlers.get(event_type, []))
+        return specific + list(self._wildcard)
 
     def clear(self) -> None:
         """Vacía el registro. Para uso solo en tests."""
         self._handlers.clear()
+        self._wildcard.clear()
 
 
 # Registro global — cada import de un módulo con handlers agrega al mismo.

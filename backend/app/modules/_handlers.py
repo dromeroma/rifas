@@ -12,3 +12,8 @@ línea, alfabetizado.
 """
 # wallet
 from app.modules.wallet import handlers as _wallet_handlers  # noqa: F401
+
+# rules — importa el módulo entero para que actions bundled y el
+# handler universal se registren (rules.actions se dispara desde
+# rules/__init__.py).
+from app.modules import rules as _rules  # noqa: F401

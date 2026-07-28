@@ -11,7 +11,11 @@ Exporta la superficie mínima que otros módulos deben conocer:
 
 Ver docs/04-EVENTS.md para el modelo completo.
 """
-from app.modules.platform.events.bus import publish, registry
+from app.modules.platform.events.bus import (
+    WILDCARD_EVENT_TYPE,
+    publish,
+    registry,
+)
 from app.modules.platform.events.dispatcher import Dispatcher
 from app.modules.platform.events.envelope import (
     Actor,
@@ -46,6 +50,7 @@ __all__ = [
     "LoopDetectedError",
     "OutboxStatus",
     "Subject",
+    "WILDCARD_EVENT_TYPE",
     "publish",
     "registry",
 ]
