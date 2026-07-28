@@ -14,3 +14,6 @@ línea, alfabetizado.
 # platform
 from app.modules.platform.events import models as _platform_events_models  # noqa: F401
 from app.modules.platform.flags import models as _platform_flags_models  # noqa: F401
+
+# customer
+from app.modules.customer import models as _customer_models  # noqa: F401

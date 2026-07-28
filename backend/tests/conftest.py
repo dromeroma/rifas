@@ -88,4 +88,15 @@ async def integration_db(
 
         await db.execute(sql_text("TRUNCATE event_outbox RESTART IDENTITY CASCADE"))
         await db.execute(sql_text("TRUNCATE event_handled CASCADE"))
+        # customer module — CASCADE limpia identities/preferences/consents
+        # y también las filas de la tabla customers legacy que dependan.
+        await db.execute(
+            sql_text("TRUNCATE customer_identities RESTART IDENTITY CASCADE")
+        )
+        await db.execute(
+            sql_text("TRUNCATE customer_preferences RESTART IDENTITY CASCADE")
+        )
+        await db.execute(
+            sql_text("TRUNCATE customer_consents RESTART IDENTITY CASCADE")
+        )
         await db.commit()
