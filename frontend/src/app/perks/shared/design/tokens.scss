@@ -1,0 +1,179 @@
+// ============================================================
+// Savvy Perks — Design Tokens
+// ============================================================
+// Sistema visual del panel admin. Modo dark primero (referencias:
+// Linear, Vercel, Stripe). Modo light disponible via [data-theme="light"]
+// en el shell.
+//
+// Todo componente del design system usa estas variables — nada
+// hex/px inline en el código.
+// ============================================================
+
+.perks-scope {
+  color-scheme: dark;
+
+  // ── Superficies ──────────────────────────────────────────
+  --p-surface-canvas: #0a0b0d;         // fondo global
+  --p-surface-card: #111318;           // cards, panels
+  --p-surface-elevated: #171a20;       // popovers, dropdowns
+  --p-surface-inset: #0e1015;          // inputs, code blocks
+  --p-surface-hover: rgba(255, 255, 255, 0.03);
+  --p-surface-selected: rgba(94, 234, 212, 0.08);
+
+  // ── Bordes ───────────────────────────────────────────────
+  --p-border-subtle: rgba(255, 255, 255, 0.06);
+  --p-border-strong: rgba(255, 255, 255, 0.14);
+  --p-border-focus: rgba(94, 234, 212, 0.55);
+
+  // ── Texto ────────────────────────────────────────────────
+  --p-text-primary: #f4f5f7;
+  --p-text-secondary: #a0a4ad;
+  --p-text-muted: #6a6f79;
+  --p-text-inverse: #0a0b0d;
+
+  // ── Brand (Perks) ────────────────────────────────────────
+  // Verde-teal como acento principal (dialoga con Savvy). Cálido
+  // dorado para destacar hitos y celebraciones puntuales.
+  --p-brand-primary: #5eead4;
+  --p-brand-primary-hover: #7cf3dd;
+  --p-brand-primary-active: #46d5bd;
+  --p-brand-primary-soft: rgba(94, 234, 212, 0.12);
+  --p-brand-accent: #f0c674;
+  --p-brand-accent-soft: rgba(240, 198, 116, 0.14);
+
+  // ── Estado ───────────────────────────────────────────────
+  --p-state-success: #4ade80;
+  --p-state-success-soft: rgba(74, 222, 128, 0.14);
+  --p-state-warning: #fbbf24;
+  --p-state-warning-soft: rgba(251, 191, 36, 0.14);
+  --p-state-danger: #f87171;
+  --p-state-danger-soft: rgba(248, 113, 113, 0.14);
+  --p-state-info: #60a5fa;
+  --p-state-info-soft: rgba(96, 165, 250, 0.14);
+
+  // ── Espaciado (base 4px) ─────────────────────────────────
+  --p-space-1: 2px;
+  --p-space-2: 4px;
+  --p-space-3: 6px;
+  --p-space-4: 8px;
+  --p-space-5: 12px;
+  --p-space-6: 16px;
+  --p-space-7: 24px;
+  --p-space-8: 32px;
+  --p-space-9: 48px;
+  --p-space-10: 64px;
+  --p-space-11: 96px;
+
+  // ── Radios ───────────────────────────────────────────────
+  --p-radius-xs: 4px;
+  --p-radius-sm: 6px;
+  --p-radius-md: 10px;
+  --p-radius-lg: 14px;
+  --p-radius-xl: 20px;
+  --p-radius-full: 999px;
+
+  // ── Sombras ──────────────────────────────────────────────
+  --p-shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.25);
+  --p-shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.28);
+  --p-shadow-md: 0 8px 24px rgba(0, 0, 0, 0.35);
+  --p-shadow-lg: 0 20px 48px rgba(0, 0, 0, 0.45);
+  --p-shadow-focus: 0 0 0 3px rgba(94, 234, 212, 0.28);
+
+  // ── Tipografía ───────────────────────────────────────────
+  --p-font-sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --p-font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --p-text-xs: 11px;
+  --p-text-sm: 12px;
+  --p-text-md: 13px;          // base de la mayoría del UI
+  --p-text-lg: 15px;
+  --p-text-xl: 18px;
+  --p-text-2xl: 22px;
+  --p-text-3xl: 28px;
+  --p-text-4xl: 36px;
+
+  --p-line-tight: 1.2;
+  --p-line-normal: 1.45;
+  --p-line-loose: 1.65;
+
+  --p-weight-normal: 400;
+  --p-weight-medium: 500;
+  --p-weight-semibold: 600;
+  --p-weight-bold: 700;
+
+  // ── Layout ───────────────────────────────────────────────
+  --p-sidebar-width: 240px;
+  --p-topbar-height: 52px;
+  --p-content-max-width: 1400px;
+
+  // ── Motion ───────────────────────────────────────────────
+  --p-motion-fast: 120ms;
+  --p-motion-base: 200ms;
+  --p-motion-slow: 320ms;
+  --p-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --p-ease-in: cubic-bezier(0.7, 0, 0.84, 0);
+  --p-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+// ── Light mode override ─────────────────────────────────────
+.perks-scope[data-theme="light"] {
+  color-scheme: light;
+
+  --p-surface-canvas: #f7f8fa;
+  --p-surface-card: #ffffff;
+  --p-surface-elevated: #ffffff;
+  --p-surface-inset: #f0f2f5;
+  --p-surface-hover: rgba(0, 0, 0, 0.03);
+  --p-surface-selected: rgba(70, 213, 189, 0.10);
+
+  --p-border-subtle: rgba(15, 20, 30, 0.08);
+  --p-border-strong: rgba(15, 20, 30, 0.18);
+
+  --p-text-primary: #14181f;
+  --p-text-secondary: #4d5460;
+  --p-text-muted: #7d838f;
+  --p-text-inverse: #ffffff;
+
+  --p-brand-primary: #0d9488;
+  --p-brand-primary-hover: #0f766e;
+  --p-brand-primary-active: #115e59;
+  --p-brand-primary-soft: rgba(13, 148, 136, 0.10);
+  --p-brand-accent: #b45309;
+  --p-brand-accent-soft: rgba(180, 83, 9, 0.12);
+
+  --p-shadow-xs: 0 1px 2px rgba(15, 20, 30, 0.06);
+  --p-shadow-sm: 0 2px 6px rgba(15, 20, 30, 0.08);
+  --p-shadow-md: 0 8px 24px rgba(15, 20, 30, 0.10);
+  --p-shadow-lg: 0 20px 48px rgba(15, 20, 30, 0.14);
+}
+
+// ── Reset ligero + base tipográfica (aplica solo dentro del scope) ──
+.perks-scope,
+.perks-scope * {
+  box-sizing: border-box;
+}
+
+.perks-scope {
+  font-family: var(--p-font-sans);
+  font-size: var(--p-text-md);
+  line-height: var(--p-line-normal);
+  color: var(--p-text-primary);
+  background: var(--p-surface-canvas);
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.perks-scope :focus-visible {
+  outline: 2px solid var(--p-border-focus);
+  outline-offset: 2px;
+  border-radius: var(--p-radius-xs);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .perks-scope,
+  .perks-scope * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

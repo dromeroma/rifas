@@ -22,6 +22,7 @@
     "paths": {
       "@core/*": ["src/app/core/*"],
       "@shared/*": ["src/app/shared/*"],
+      "@perks/*": ["src/app/perks/*"],
       "@features/*": ["src/app/features/*"],
       "@env/*": ["src/environments/*"]
     }

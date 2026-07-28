@@ -1,0 +1,50 @@
+/**
+ * Rutas del admin panel de Savvy Perks.
+ *
+ * Todas viven bajo `/perks/*` y comparten el shell (topbar + sidebar).
+ * Auth + role guard ya se aplican desde app.routes.ts al padre.
+ */
+import { Routes } from '@angular/router';
+
+export const PERKS_ROUTES: Routes = [
+  {
+    path: '',
+    loadComponent: () =>
+      import('./layout/perks-shell.component').then((m) => m.PerksShellComponent),
+    children: [
+      {
+        path: '',
+        pathMatch: 'full',
+        redirectTo: 'customers',
+      },
+      {
+        path: 'customers',
+        loadComponent: () =>
+          import('./features/customers/customers-list.component').then(
+            (m) => m.CustomersListComponent,
+          ),
+      },
+      {
+        path: 'rules',
+        loadComponent: () =>
+          import('./features/rules/rules-list.component').then(
+            (m) => m.RulesListComponent,
+          ),
+      },
+      {
+        path: 'rules/new',
+        loadComponent: () =>
+          import('./features/rules/rule-editor.component').then(
+            (m) => m.RuleEditorComponent,
+          ),
+      },
+      {
+        path: 'rules/:id',
+        loadComponent: () =>
+          import('./features/rules/rule-editor.component').then(
+            (m) => m.RuleEditorComponent,
+          ),
+      },
+    ],
+  },
+];

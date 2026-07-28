@@ -1,0 +1,10 @@
+// ============================================================
+// Perks — bundle único de estilos base para el admin panel.
+//
+// Cada componente del panel referencia este archivo con
+// `styleUrl` (o styleUrls) — así hereda tokens + primitives
+// sin duplicar imports.
+// ============================================================
+
+@use "./tokens";
+@use "./primitives";

@@ -114,6 +114,17 @@ export const routes: Routes = [
     loadChildren: () => import('./features/admin/admin.routes').then((m) => m.ADMIN_ROUTES),
   },
 
+  // /perks — nuevo admin panel de Savvy Perks (Fase 1 sprint 6b).
+  // Coexiste con /admin legacy; sin merge a main hasta post-cutover.
+  // Access: SUPER_ADMIN + ADMIN. Solo visible cuando el flag
+  // `perks.admin_api` del backend está ON (guard de flag interno).
+  {
+    path: 'perks',
+    canActivate: [authGuard, roleGuard(['super_admin', 'admin'])],
+    loadChildren: () =>
+      import('./perks/perks.routes').then((m) => m.PERKS_ROUTES),
+  },
+
   {
     // /seller — flujo operativo de VENTA (reservar boletas, registrar pagos,
     // gestionar clientes propios). EXCLUSIVO para SELLER: los admins NO
