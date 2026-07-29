@@ -252,6 +252,54 @@ export interface ExecutionsResponse {
   items: RuleExecutionOut[];
 }
 
+// ── Overview ──────────────────────────────────────────────
+
+export interface OverviewCounters {
+  customers_total: number;
+  wallets_total: number;
+  rules_total: number;
+  rules_active: number;
+  events_last_24h: number;
+  executions_last_7d: number;
+  executions_fired_last_7d: number;
+  executions_errored_last_7d: number;
+}
+
+export interface TopRule {
+  rule_id: number;
+  code: string;
+  name: string;
+  fires_last_7d: number;
+}
+
+export interface RecentExecution {
+  id: number;
+  rule_id: number;
+  rule_code: string;
+  rule_name: string;
+  event_type: string;
+  customer_id?: number | null;
+  status: ExecutionStatus;
+  latency_ms?: number | null;
+  created_at: string;
+}
+
+export interface RecentEvent {
+  id: number;
+  event_id: string;
+  type: string;
+  subject_kind?: string | null;
+  subject_id?: string | null;
+  occurred_at: string;
+}
+
+export interface OverviewResponse {
+  counters: OverviewCounters;
+  top_rules: TopRule[];
+  recent_executions: RecentExecution[];
+  recent_events: RecentEvent[];
+}
+
 // ────────────────────────────────────────────────────────────────
 // Errores tipados
 // ────────────────────────────────────────────────────────────────
@@ -461,6 +509,13 @@ export class PerksApiService {
     if (opts?.limit != null) params = params.set('limit', String(opts.limit));
     return this.http
       .get<ExecutionsResponse>(`${this.base}/rules/${id}/executions`, { params })
+      .pipe(catchError(toPerksError));
+  }
+
+  // ── Overview ─────────────────────────────────────────────
+  getOverview(): Observable<OverviewResponse> {
+    return this.http
+      .get<OverviewResponse>(`${this.base}/overview`)
       .pipe(catchError(toPerksError));
   }
 }

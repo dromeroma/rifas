@@ -21,19 +21,21 @@ import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/rou
 
 import { AuthService } from '@core/services/auth.service';
 import { PerksApiService } from '../shared/services/perks-api.service';
+import { ToastHostComponent } from '../shared/ui/toast-host.component';
 
 interface NavItem {
   label: string;
   path: string;
   icon: string;   // material icon name
   badge?: string;
+  exact?: boolean;
 }
 
 @Component({
   selector: 'perks-shell',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, RouterOutlet, RouterLink, RouterLinkActive],
+  imports: [CommonModule, RouterOutlet, RouterLink, RouterLinkActive, ToastHostComponent],
   styleUrl: '../shared/design/perks.scss',
   template: `
     <div class="perks-scope perks-shell" [attr.data-theme]="theme()">
@@ -85,6 +87,7 @@ interface NavItem {
                 <a
                   [routerLink]="item.path"
                   routerLinkActive="nav__item--active"
+                  [routerLinkActiveOptions]="{ exact: !!item.exact }"
                   class="nav__item"
                 >
                   <span class="material-icons-outlined nav__icon">{{ item.icon }}</span>
@@ -127,6 +130,9 @@ interface NavItem {
           }
         </main>
       </div>
+
+      <!-- Toasts globales del panel -->
+      <perks-toast-host></perks-toast-host>
     </div>
   `,
   styles: [`
@@ -328,8 +334,9 @@ export class PerksShellComponent {
   readonly apiUnavailable = signal<boolean>(false);
 
   readonly nav: NavItem[] = [
-    { label: 'Customers', path: 'customers', icon: 'person' },
-    { label: 'Rules', path: 'rules', icon: 'bolt' },
+    { label: 'Overview', path: '/perks', icon: 'dashboard', exact: true },
+    { label: 'Customers', path: '/perks/customers', icon: 'person' },
+    { label: 'Rules', path: '/perks/rules', icon: 'bolt' },
   ];
 
   readonly userName = computed(() => this.auth.user()?.full_name ?? 'Admin');

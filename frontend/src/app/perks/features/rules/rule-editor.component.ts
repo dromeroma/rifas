@@ -31,6 +31,7 @@ import {
   RuleDetail,
   RuleExecutionOut,
 } from '../../shared/services/perks-api.service';
+import { PerksToastService } from '../../shared/services/perks-toast.service';
 
 
 // Plantilla mostrada al crear regla nueva — cubre el 80% de casos comunes.
@@ -355,6 +356,7 @@ export class RuleEditorComponent {
   private readonly api = inject(PerksApiService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly toast = inject(PerksToastService);
 
   readonly ruleId = signal<number | null>(null);
   readonly isNew = computed(() => this.ruleId() === null);
@@ -464,11 +466,13 @@ export class RuleEditorComponent {
       this.api.createRule({ code, definition }).subscribe({
         next: (r) => {
           this.saving.set(false);
+          this.toast.success('Regla creada', `${r.code} está lista`);
           this.router.navigate(['/perks/rules', r.id]);
         },
         error: (err: PerksApiError) => {
           this.saving.set(false);
           this.saveError.set(err?.userMessage ?? 'Error al crear');
+          this.toast.error('No se pudo crear la regla', err?.userMessage);
         },
       });
     } else {
@@ -476,11 +480,13 @@ export class RuleEditorComponent {
       this.api.updateRule(id, { definition }).subscribe({
         next: () => {
           this.saving.set(false);
+          this.toast.success('Versión nueva guardada');
           this.load(id);
         },
         error: (err: PerksApiError) => {
           this.saving.set(false);
           this.saveError.set(err?.userMessage ?? 'Error al guardar');
+          this.toast.error('No se pudo guardar', err?.userMessage);
         },
       });
     }
@@ -497,8 +503,15 @@ export class RuleEditorComponent {
       next: (r) => {
         this.toggling.set(false);
         this.detail.set({ ...d, rule: r });
+        this.toast.info(
+          r.enabled ? 'Regla activada' : 'Regla apagada',
+          r.code,
+        );
       },
-      error: () => this.toggling.set(false),
+      error: (err: PerksApiError) => {
+        this.toggling.set(false);
+        this.toast.error('No se pudo cambiar el estado', err?.userMessage);
+      },
     });
   }
 

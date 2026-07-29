@@ -15,7 +15,10 @@ export const PERKS_ROUTES: Routes = [
       {
         path: '',
         pathMatch: 'full',
-        redirectTo: 'customers',
+        loadComponent: () =>
+          import('./features/overview/overview.component').then(
+            (m) => m.OverviewComponent,
+          ),
       },
       {
         path: 'customers',

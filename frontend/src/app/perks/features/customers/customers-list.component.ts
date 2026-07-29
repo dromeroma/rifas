@@ -27,6 +27,7 @@ import {
   PerksApiService,
   WalletSnapshot,
 } from '../../shared/services/perks-api.service';
+import { PerksToastService } from '../../shared/services/perks-toast.service';
 
 interface OpenState {
   customer_id: number;
@@ -436,6 +437,7 @@ interface OpenState {
 })
 export class CustomersListComponent {
   private readonly api = inject(PerksApiService);
+  private readonly toast = inject(PerksToastService);
 
   readonly search = signal('');
   readonly customers = signal<CustomerSummary[]>([]);
@@ -569,12 +571,20 @@ export class CustomersListComponent {
         this.identifying.set(false);
         this.identifyOpen.set(false);
         this.reload();
+        this.toast.success(
+          result.first_time ? 'Customer creado' : 'Customer reconocido',
+          `${payload.identity.kind} ${payload.identity.value}`,
+        );
         // Abre el detalle del customer creado/encontrado.
         this.openDetail(result.customer_id);
       },
       error: (err: PerksApiError) => {
         this.identifyError.set(err.userMessage ?? 'Error al identificar');
         this.identifying.set(false);
+        this.toast.error(
+          'No se pudo identificar',
+          err.userMessage ?? 'Revisa el formato del valor',
+        );
       },
     });
   }
