@@ -17,3 +17,8 @@ from app.modules.wallet import handlers as _wallet_handlers  # noqa: F401
 # handler universal se registren (rules.actions se dispara desde
 # rules/__init__.py).
 from app.modules import rules as _rules  # noqa: F401
+
+# notifications — importar el módulo dispara el registro de la action
+# `notifications.send` en action_registry del Rules Engine, además de
+# registrar los providers bundled (in_app, email fake, webhook).
+from app.modules import notifications as _notifications  # noqa: F401

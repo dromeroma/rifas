@@ -118,4 +118,11 @@ async def integration_db(
         await db.execute(
             sql_text("TRUNCATE rule_executions RESTART IDENTITY CASCADE")
         )
+        # notifications module
+        await db.execute(
+            sql_text("TRUNCATE notification_deliveries RESTART IDENTITY CASCADE")
+        )
+        await db.execute(
+            sql_text("TRUNCATE notification_templates RESTART IDENTITY CASCADE")
+        )
         await db.commit()

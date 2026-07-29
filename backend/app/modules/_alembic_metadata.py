@@ -23,3 +23,6 @@ from app.modules.wallet import models as _wallet_models  # noqa: F401
 
 # rules
 from app.modules.rules import models as _rules_models  # noqa: F401
+
+# notifications
+from app.modules.notifications import models as _notifications_models  # noqa: F401

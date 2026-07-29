@@ -16,6 +16,7 @@ from app.core.exceptions import (
 )
 from app.modules import _handlers  # noqa: F401 -- registra handlers cross-módulo
 from app.modules.customer.router import router as perks_customers_router
+from app.modules.notifications.router import router as perks_notifications_router
 from app.modules.perks_overview.router import router as perks_overview_router
 from app.modules.platform.events import Dispatcher
 from app.modules.platform.flags import is_enabled
@@ -171,5 +172,9 @@ app.include_router(
 )
 app.include_router(
     perks_overview_router,
+    dependencies=[Depends(require_perks_admin_api_enabled)],
+)
+app.include_router(
+    perks_notifications_router,
     dependencies=[Depends(require_perks_admin_api_enabled)],
 )
