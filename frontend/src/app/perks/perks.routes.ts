@@ -21,6 +21,13 @@ export const PERKS_ROUTES: Routes = [
           ),
       },
       {
+        path: 'onboarding',
+        loadComponent: () =>
+          import('./features/onboarding/onboarding.component').then(
+            (m) => m.OnboardingComponent,
+          ),
+      },
+      {
         path: 'customers',
         loadComponent: () =>
           import('./features/customers/customers-list.component').then(

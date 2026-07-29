@@ -300,6 +300,82 @@ export interface OverviewResponse {
   recent_events: RecentEvent[];
 }
 
+// ── Tenant profile ────────────────────────────────────────
+
+export type TenantStatus = 'draft' | 'active' | 'paused' | 'archived';
+
+export type TenantVertical =
+  | 'retail' | 'restaurant' | 'gym' | 'isp' | 'saas' | 'service'
+  | 'hospitality' | 'education' | 'healthcare' | 'other';
+
+export interface TenantProfileIn {
+  brand_name?: string | null;
+  brand_color_primary?: string | null;
+  brand_color_secondary?: string | null;
+  brand_logo_url?: string | null;
+  vertical?: TenantVertical | null;
+  timezone?: string | null;
+  locale?: string | null;
+  currency?: string | null;
+  contact_email?: string | null;
+  contact_phone?: string | null;
+  support_url?: string | null;
+}
+
+export interface TenantProfileOut {
+  tenant_id: number;
+  brand_name: string | null;
+  brand_color_primary: string | null;
+  brand_color_secondary: string | null;
+  brand_logo_url: string | null;
+  vertical: TenantVertical | null;
+  timezone: string;
+  locale: string;
+  currency: string;
+  contact_email: string | null;
+  contact_phone: string | null;
+  support_url: string | null;
+  status: TenantStatus;
+  activated_at: string | null;
+  activated_by: string | null;
+  paused_at: string | null;
+  config: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
+// ── Onboarding ────────────────────────────────────────────
+
+export type OnboardingStepStatus =
+  | 'pending' | 'in_progress' | 'completed' | 'skipped';
+
+export interface OnboardingStep {
+  key: string;
+  title: string;
+  description: string;
+  required: boolean;
+  weight: number;
+  cta: string | null;
+  status: OnboardingStepStatus;
+  completed_at: string | null;
+  completed_by: string | null;
+  trigger_event_id: string | null;
+  meta: Record<string, unknown>;
+}
+
+export interface OnboardingChecklist {
+  tenant_id: number;
+  steps: OnboardingStep[];
+  total: number;
+  completed: number;
+  skipped: number;
+  pending: number;
+  progress: number;
+  required_missing: string[];
+  activation_ready: boolean;
+  activated: boolean;
+}
+
 // ────────────────────────────────────────────────────────────────
 // Errores tipados
 // ────────────────────────────────────────────────────────────────
@@ -516,6 +592,65 @@ export class PerksApiService {
   getOverview(): Observable<OverviewResponse> {
     return this.http
       .get<OverviewResponse>(`${this.base}/overview`)
+      .pipe(catchError(toPerksError));
+  }
+
+  // ── Tenant profile ───────────────────────────────────────
+  getTenantProfile(): Observable<TenantProfileOut> {
+    return this.http
+      .get<TenantProfileOut>(`${this.base}/tenant/me/profile`)
+      .pipe(catchError(toPerksError));
+  }
+
+  updateTenantProfile(payload: TenantProfileIn): Observable<TenantProfileOut> {
+    return this.http
+      .put<TenantProfileOut>(`${this.base}/tenant/me/profile`, payload)
+      .pipe(catchError(toPerksError));
+  }
+
+  pauseTenant(reason?: string): Observable<TenantProfileOut> {
+    return this.http
+      .post<TenantProfileOut>(`${this.base}/tenant/me/pause`, { reason })
+      .pipe(catchError(toPerksError));
+  }
+
+  // ── Onboarding ───────────────────────────────────────────
+  getOnboarding(): Observable<OnboardingChecklist> {
+    return this.http
+      .get<OnboardingChecklist>(`${this.base}/onboarding`)
+      .pipe(catchError(toPerksError));
+  }
+
+  completeOnboardingStep(key: string): Observable<OnboardingStep> {
+    return this.http
+      .post<OnboardingStep>(
+        `${this.base}/onboarding/steps/${key}/complete`,
+        {},
+      )
+      .pipe(catchError(toPerksError));
+  }
+
+  skipOnboardingStep(key: string, reason?: string): Observable<OnboardingStep> {
+    return this.http
+      .post<OnboardingStep>(
+        `${this.base}/onboarding/steps/${key}/skip`,
+        { reason },
+      )
+      .pipe(catchError(toPerksError));
+  }
+
+  reopenOnboardingStep(key: string): Observable<OnboardingStep> {
+    return this.http
+      .post<OnboardingStep>(
+        `${this.base}/onboarding/steps/${key}/reopen`,
+        {},
+      )
+      .pipe(catchError(toPerksError));
+  }
+
+  activateTenant(): Observable<TenantProfileOut> {
+    return this.http
+      .post<TenantProfileOut>(`${this.base}/onboarding/activate`, {})
       .pipe(catchError(toPerksError));
   }
 }

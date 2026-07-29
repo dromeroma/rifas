@@ -335,6 +335,7 @@ export class PerksShellComponent {
 
   readonly nav: NavItem[] = [
     { label: 'Overview', path: '/perks', icon: 'dashboard', exact: true },
+    { label: 'Onboarding', path: '/perks/onboarding', icon: 'flag' },
     { label: 'Customers', path: '/perks/customers', icon: 'person' },
     { label: 'Rules', path: '/perks/rules', icon: 'bolt' },
   ];

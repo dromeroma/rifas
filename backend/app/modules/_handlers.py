@@ -22,3 +22,7 @@ from app.modules import rules as _rules  # noqa: F401
 # `notifications.send` en action_registry del Rules Engine, además de
 # registrar los providers bundled (in_app, email fake, webhook).
 from app.modules import notifications as _notifications  # noqa: F401
+
+# onboarding — al importarse registra handlers que auto-completan
+# steps del checklist al escuchar los eventos relevantes del bus.
+from app.modules import onboarding as _onboarding  # noqa: F401

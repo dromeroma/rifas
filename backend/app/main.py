@@ -17,10 +17,12 @@ from app.core.exceptions import (
 from app.modules import _handlers  # noqa: F401 -- registra handlers cross-módulo
 from app.modules.customer.router import router as perks_customers_router
 from app.modules.notifications.router import router as perks_notifications_router
+from app.modules.onboarding.router import router as perks_onboarding_router
 from app.modules.perks_overview.router import router as perks_overview_router
 from app.modules.platform.events import Dispatcher
 from app.modules.platform.flags import is_enabled
 from app.modules.rules.router import router as perks_rules_router
+from app.modules.tenant.router import router as perks_tenant_router
 from app.routers import (
     admin, assignments, audit, auth, customers, payments, public,
     public_sales, public_sales_admin, raffles,
@@ -176,5 +178,13 @@ app.include_router(
 )
 app.include_router(
     perks_notifications_router,
+    dependencies=[Depends(require_perks_admin_api_enabled)],
+)
+app.include_router(
+    perks_tenant_router,
+    dependencies=[Depends(require_perks_admin_api_enabled)],
+)
+app.include_router(
+    perks_onboarding_router,
     dependencies=[Depends(require_perks_admin_api_enabled)],
 )

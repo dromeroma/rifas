@@ -26,3 +26,9 @@ from app.modules.rules import models as _rules_models  # noqa: F401
 
 # notifications
 from app.modules.notifications import models as _notifications_models  # noqa: F401
+
+# tenant
+from app.modules.tenant import models as _tenant_models  # noqa: F401
+
+# onboarding
+from app.modules.onboarding import models as _onboarding_models  # noqa: F401

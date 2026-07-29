@@ -125,4 +125,11 @@ async def integration_db(
         await db.execute(
             sql_text("TRUNCATE notification_templates RESTART IDENTITY CASCADE")
         )
+        # onboarding + tenant modules
+        await db.execute(
+            sql_text("TRUNCATE onboarding_steps RESTART IDENTITY CASCADE")
+        )
+        await db.execute(
+            sql_text("TRUNCATE tenant_profile RESTART IDENTITY CASCADE")
+        )
         await db.commit()
