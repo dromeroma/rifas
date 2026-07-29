@@ -344,6 +344,105 @@ export interface TenantProfileOut {
   updated_at: string;
 }
 
+// ── Analytics ─────────────────────────────────────────────
+
+export type AnalyticsWindow = '1h' | '24h' | '7d' | '30d';
+
+export interface ActivityItem {
+  id: number;
+  event_id: string;
+  type: string;
+  tenant_id: number | null;
+  actor_kind: string | null;
+  actor_id: string | null;
+  subject_kind: string | null;
+  subject_id: string | null;
+  occurred_at: string;
+  data: Record<string, unknown>;
+  trigger_event_id: string | null;
+}
+
+export interface ActivityResponse {
+  items: ActivityItem[];
+  next_before_id: number | null;
+  limit: number;
+}
+
+export interface TimelineEntry {
+  kind: 'event' | 'rule_exec' | 'notification' | 'wallet_ledger';
+  when: string;
+  title: string;
+  subtitle: string | null;
+  payload: Record<string, unknown>;
+}
+
+export interface TimelineResponse {
+  customer_id: number;
+  entries: TimelineEntry[];
+}
+
+export interface KpisResponse {
+  window: AnalyticsWindow;
+  customers_total: number;
+  customers_new_in_window: number;
+  wallets_total: number;
+  events_in_window: number;
+  events_by_type: Record<string, number>;
+  executions_in_window: number;
+  executions_fired: number;
+  executions_errored: number;
+  executions_skipped: number;
+  notifications_sent: number;
+  notifications_delivered: number;
+  notifications_failed: number;
+  notifications_blocked: number;
+  wallet_points_credited: string;
+  wallet_points_debited: string;
+}
+
+export interface RuleStat {
+  rule_id: number;
+  code: string;
+  name: string;
+  fires: number;
+  errored: number;
+  skipped: number;
+  avg_latency_ms: number | null;
+  error_rate: number;
+}
+
+export interface RulesLeaderboardResponse {
+  window: AnalyticsWindow;
+  rules: RuleStat[];
+}
+
+export interface ChannelStat {
+  channel: string;
+  queued: number;
+  sent: number;
+  delivered: number;
+  failed: number;
+  blocked: number;
+  success_rate: number;
+}
+
+export interface ChannelsResponse {
+  window: AnalyticsWindow;
+  channels: ChannelStat[];
+}
+
+export interface HistogramBucket {
+  bucket_start: string;
+  total: number;
+  by_type: Record<string, number>;
+}
+
+export interface HistogramResponse {
+  window: AnalyticsWindow;
+  bucket: string;
+  buckets: HistogramBucket[];
+}
+
 // ── Onboarding ────────────────────────────────────────────
 
 export type OnboardingStepStatus =
@@ -651,6 +750,83 @@ export class PerksApiService {
   activateTenant(): Observable<TenantProfileOut> {
     return this.http
       .post<TenantProfileOut>(`${this.base}/onboarding/activate`, {})
+      .pipe(catchError(toPerksError));
+  }
+
+  // ── Analytics ────────────────────────────────────────────
+  getActivity(opts?: {
+    limit?: number;
+    before_id?: number;
+    type_prefix?: string;
+    subject_kind?: string;
+  }): Observable<ActivityResponse> {
+    let params = new HttpParams();
+    if (opts?.limit != null) params = params.set('limit', String(opts.limit));
+    if (opts?.before_id != null)
+      params = params.set('before_id', String(opts.before_id));
+    if (opts?.type_prefix) params = params.set('type_prefix', opts.type_prefix);
+    if (opts?.subject_kind) params = params.set('subject_kind', opts.subject_kind);
+    return this.http
+      .get<ActivityResponse>(`${this.base}/analytics/activity`, { params })
+      .pipe(catchError(toPerksError));
+  }
+
+  getCustomerTimeline(
+    customerId: number,
+    opts?: { limit?: number },
+  ): Observable<TimelineResponse> {
+    let params = new HttpParams();
+    if (opts?.limit != null) params = params.set('limit', String(opts.limit));
+    return this.http
+      .get<TimelineResponse>(
+        `${this.base}/analytics/timeline/${customerId}`,
+        { params },
+      )
+      .pipe(catchError(toPerksError));
+  }
+
+  getAnalyticsKpis(window: AnalyticsWindow = '24h'): Observable<KpisResponse> {
+    const params = new HttpParams().set('window', window);
+    return this.http
+      .get<KpisResponse>(`${this.base}/analytics/kpis`, { params })
+      .pipe(catchError(toPerksError));
+  }
+
+  getRulesLeaderboard(
+    opts?: { window?: AnalyticsWindow; limit?: number },
+  ): Observable<RulesLeaderboardResponse> {
+    let params = new HttpParams();
+    if (opts?.window) params = params.set('window', opts.window);
+    if (opts?.limit != null) params = params.set('limit', String(opts.limit));
+    return this.http
+      .get<RulesLeaderboardResponse>(
+        `${this.base}/analytics/rules-leaderboard`,
+        { params },
+      )
+      .pipe(catchError(toPerksError));
+  }
+
+  getChannelsBreakdown(
+    window: AnalyticsWindow = '7d',
+  ): Observable<ChannelsResponse> {
+    const params = new HttpParams().set('window', window);
+    return this.http
+      .get<ChannelsResponse>(`${this.base}/analytics/channels`, { params })
+      .pipe(catchError(toPerksError));
+  }
+
+  getEventsHistogram(opts?: {
+    window?: AnalyticsWindow;
+    bucket?: 'hour' | 'day';
+  }): Observable<HistogramResponse> {
+    let params = new HttpParams();
+    if (opts?.window) params = params.set('window', opts.window);
+    if (opts?.bucket) params = params.set('bucket', opts.bucket);
+    return this.http
+      .get<HistogramResponse>(
+        `${this.base}/analytics/events-histogram`,
+        { params },
+      )
       .pipe(catchError(toPerksError));
   }
 }
