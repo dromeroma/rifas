@@ -339,6 +339,7 @@ export class PerksShellComponent {
     { label: 'Activity', path: '/perks/activity', icon: 'timeline' },
     { label: 'Customers', path: '/perks/customers', icon: 'person' },
     { label: 'Rules', path: '/perks/rules', icon: 'bolt' },
+    { label: 'Audit', path: '/perks/audit', icon: 'gavel' },
   ];
 
   readonly userName = computed(() => this.auth.user()?.full_name ?? 'Admin');

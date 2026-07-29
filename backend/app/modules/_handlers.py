@@ -26,3 +26,8 @@ from app.modules import notifications as _notifications  # noqa: F401
 # onboarding — al importarse registra handlers que auto-completan
 # steps del checklist al escuchar los eventos relevantes del bus.
 from app.modules import onboarding as _onboarding  # noqa: F401
+
+# audit — al importarse registra el wildcard handler que captura
+# acciones administrativas en audit_logs. Cero acoplamiento con
+# los services de otros módulos.
+from app.modules import audit as _audit  # noqa: F401

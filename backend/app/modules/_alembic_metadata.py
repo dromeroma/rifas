@@ -32,3 +32,6 @@ from app.modules.tenant import models as _tenant_models  # noqa: F401
 
 # onboarding
 from app.modules.onboarding import models as _onboarding_models  # noqa: F401
+
+# audit
+from app.modules.audit import models as _audit_models  # noqa: F401

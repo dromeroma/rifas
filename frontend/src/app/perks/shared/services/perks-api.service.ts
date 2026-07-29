@@ -344,6 +344,34 @@ export interface TenantProfileOut {
   updated_at: string;
 }
 
+// ── Audit ─────────────────────────────────────────────────
+
+export type AuditSeverity = 'info' | 'notice' | 'warn' | 'critical';
+
+export interface AuditLogItem {
+  id: number;
+  tenant_id: number | null;
+  actor_kind: string;
+  actor_id: string | null;
+  actor_label: string;
+  action: string;
+  severity: AuditSeverity;
+  resource_kind: string | null;
+  resource_id: string | null;
+  changes: Record<string, unknown>;
+  reason: string | null;
+  source_event_id: string | null;
+  trigger_event_id: string | null;
+  occurred_at: string;
+  created_at: string;
+}
+
+export interface AuditLogResponse {
+  items: AuditLogItem[];
+  next_before_id: number | null;
+  limit: number;
+}
+
 // ── Analytics ─────────────────────────────────────────────
 
 export type AnalyticsWindow = '1h' | '24h' | '7d' | '30d';
@@ -827,6 +855,36 @@ export class PerksApiService {
         `${this.base}/analytics/events-histogram`,
         { params },
       )
+      .pipe(catchError(toPerksError));
+  }
+
+  // ── Audit ────────────────────────────────────────────────
+  getAuditLog(opts?: {
+    limit?: number;
+    before_id?: number;
+    action_prefix?: string;
+    actor_kind?: string;
+    actor_id?: string;
+    resource_kind?: string;
+    resource_id?: string;
+    severity?: AuditSeverity;
+    since?: string;
+  }): Observable<AuditLogResponse> {
+    let params = new HttpParams();
+    if (opts?.limit != null) params = params.set('limit', String(opts.limit));
+    if (opts?.before_id != null)
+      params = params.set('before_id', String(opts.before_id));
+    if (opts?.action_prefix)
+      params = params.set('action_prefix', opts.action_prefix);
+    if (opts?.actor_kind) params = params.set('actor_kind', opts.actor_kind);
+    if (opts?.actor_id) params = params.set('actor_id', opts.actor_id);
+    if (opts?.resource_kind)
+      params = params.set('resource_kind', opts.resource_kind);
+    if (opts?.resource_id) params = params.set('resource_id', opts.resource_id);
+    if (opts?.severity) params = params.set('severity', opts.severity);
+    if (opts?.since) params = params.set('since', opts.since);
+    return this.http
+      .get<AuditLogResponse>(`${this.base}/audit/log`, { params })
       .pipe(catchError(toPerksError));
   }
 }

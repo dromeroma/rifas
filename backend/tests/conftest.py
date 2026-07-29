@@ -132,4 +132,8 @@ async def integration_db(
         await db.execute(
             sql_text("TRUNCATE tenant_profile RESTART IDENTITY CASCADE")
         )
+        # audit module
+        await db.execute(
+            sql_text("TRUNCATE perks_audit_logs RESTART IDENTITY CASCADE")
+        )
         await db.commit()

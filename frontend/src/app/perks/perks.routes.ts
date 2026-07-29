@@ -42,6 +42,13 @@ export const PERKS_ROUTES: Routes = [
           ),
       },
       {
+        path: 'audit',
+        loadComponent: () =>
+          import('./features/audit/audit.component').then(
+            (m) => m.AuditComponent,
+          ),
+      },
+      {
         path: 'rules',
         loadComponent: () =>
           import('./features/rules/rules-list.component').then(
